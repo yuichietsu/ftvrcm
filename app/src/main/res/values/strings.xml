@@ -27,6 +27,9 @@
     <string name="prefs_mouse_key_swipe_left">左スワイプキー</string>
     <string name="prefs_mouse_key_swipe_right">右スワイプキー</string>
 
+    <string name="prefs_swipe_fallback_enabled">スワイプ失敗時のフォールバック</string>
+    <string name="prefs_swipe_fallback_enabled_summary">ジェスチャ注入がキャンセルされた場合に、アクセシビリティのスクロール操作で代替します</string>
+
     <string name="prefs_category_actions">ボタンアクション</string>
     <string name="prefs_action_key">アクション割当キー</string>
     <string name="prefs_action_type">割り当てるアクション</string>

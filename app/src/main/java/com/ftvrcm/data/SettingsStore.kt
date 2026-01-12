@@ -57,6 +57,8 @@ class SettingsStore(context: Context) {
             putString(SettingsKeys.MOUSE_KEY_SWIPE_LEFT, "89")
             putString(SettingsKeys.MOUSE_KEY_SWIPE_RIGHT, "90")
 
+            putBoolean(SettingsKeys.SWIPE_FALLBACK_ENABLED, true)
+
             // Cursor start position in mouse mode
             putString(SettingsKeys.MOUSE_CURSOR_START_POSITION, "center")
 
@@ -180,6 +182,8 @@ class SettingsStore(context: Context) {
     fun getMouseKeySwipeDown(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SWIPE_DOWN, "166")?.toIntOrNull() ?: 166
     fun getMouseKeySwipeLeft(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SWIPE_LEFT, "89")?.toIntOrNull() ?: 89
     fun getMouseKeySwipeRight(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SWIPE_RIGHT, "90")?.toIntOrNull() ?: 90
+
+    fun isSwipeFallbackEnabled(): Boolean = prefs.getBoolean(SettingsKeys.SWIPE_FALLBACK_ENABLED, true)
 
     fun getActionKeyCode(): Int = prefs.getString(SettingsKeys.ACTION_KEYCODE, "4")?.toIntOrNull() ?: 4
     fun getActionType(): String = prefs.getString(SettingsKeys.ACTION_TYPE, "none") ?: "none"

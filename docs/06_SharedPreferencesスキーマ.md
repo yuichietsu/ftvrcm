@@ -21,6 +21,7 @@ com.ftvrcm_preferences.xml
     ├── mouse_key_swipe_down
     ├── mouse_key_swipe_left
     ├── mouse_key_swipe_right
+    ├── swipe_fallback_enabled
     ├── mouse_cursor_start_position
     ├── key_mapping
     ├── button_actions
@@ -183,6 +184,22 @@ com.ftvrcm_preferences.xml
 **例**：
 ```xml
 <boolean name="background_monitoring_enabled" value="true" />
+```
+
+---
+
+### 7. スワイプ失敗時フォールバック（swipe_fallback_enabled）
+
+| 項目 | 値 |
+|------|-----|
+| **キー** | `swipe_fallback_enabled` |
+| **型** | Boolean |
+| **デフォルト** | `true` |
+| **説明** | `dispatchGesture` がキャンセルされた場合に、アクセシビリティの `ACTION_SCROLL_*` にフォールバックするか |
+
+**例**：
+```xml
+<boolean name="swipe_fallback_enabled" value="true" />
 ```
 
 ---

@@ -101,6 +101,12 @@
             android:entryValues="@array/key_values"
             android:defaultValue="90" />
 
+        <SwitchPreferenceCompat
+            android:key="swipe_fallback_enabled"
+            android:title="@string/prefs_swipe_fallback_enabled"
+            android:summary="@string/prefs_swipe_fallback_enabled_summary"
+            android:defaultValue="true" />
+
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/prefs_category_actions">

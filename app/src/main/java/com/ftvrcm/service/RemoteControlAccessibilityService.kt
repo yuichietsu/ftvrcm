@@ -252,7 +252,13 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             val distance = (minDim * 0.25f).toInt().coerceIn(200, 800)
             val endX = (c.x + dx * distance).coerceIn(0, dm.widthPixels - 1)
             val endY = (c.y + dy * distance).coerceIn(0, dm.heightPixels - 1)
-            gestures.swipe(c.x, c.y, endX, endY)
+            gestures.swipe(
+                startX = c.x,
+                startY = c.y,
+                endX = endX,
+                endY = endY,
+                enableFallback = settings.isSwipeFallbackEnabled(),
+            )
             return true
         }
 
