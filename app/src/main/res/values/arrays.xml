@@ -1,4 +1,14 @@
 <resources>
+    <string-array name="emulation_method_entries">
+        <item>Accessibility Service</item>
+        <item>ADB</item>
+    </string-array>
+
+    <string-array name="emulation_method_values">
+        <item>ACCESSIBILITY_SERVICE</item>
+        <item>ADB</item>
+    </string-array>
+
     <string-array name="key_entries">
         <item>DPAD_UP</item>
         <item>DPAD_DOWN</item>

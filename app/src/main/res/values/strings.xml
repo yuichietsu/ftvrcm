@@ -16,16 +16,20 @@
 
     <string name="prefs_mouse_cursor_start_position">タッチ操作開始時のカーソル位置</string>
 
-    <string name="prefs_mouse_key_up">上移動キー</string>
-    <string name="prefs_mouse_key_down">下移動キー</string>
-    <string name="prefs_mouse_key_left">左移動キー</string>
-    <string name="prefs_mouse_key_right">右移動キー</string>
-    <string name="prefs_mouse_key_click">タップキー</string>
+    <string name="prefs_emulation_method">エミュレーション方法</string>
 
-    <string name="prefs_mouse_key_scroll_up">上スクロールキー</string>
-    <string name="prefs_mouse_key_scroll_down">下スクロールキー</string>
-    <string name="prefs_mouse_key_scroll_left">左スクロールキー</string>
-    <string name="prefs_mouse_key_scroll_right">右スクロールキー</string>
+    <string name="prefs_category_key_mapping">キー割り当て</string>
+
+    <string name="prefs_mouse_key_up">上移動</string>
+    <string name="prefs_mouse_key_down">下移動</string>
+    <string name="prefs_mouse_key_left">左移動</string>
+    <string name="prefs_mouse_key_right">右移動</string>
+    <string name="prefs_mouse_key_click">タップ</string>
+
+    <string name="prefs_mouse_key_scroll_up">上スクロール/スワイプ</string>
+    <string name="prefs_mouse_key_scroll_down">下スクロール/スワイプ</string>
+    <string name="prefs_mouse_key_scroll_left">左スクロール/スワイプ</string>
+    <string name="prefs_mouse_key_scroll_right">右スクロール/スワイプ</string>
 
     <string name="prefs_mouse_key_cursor_dpad_toggle">カーソル/方向キー切り替え</string>
 

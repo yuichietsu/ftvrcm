@@ -12,6 +12,7 @@ com.ftvrcm_preferences.xml
     ├── toggle_longpress
     ├── operation_mode
     ├── mouse_pointer_speed
+    ├── emulation_method
     ├── mouse_key_up
     ├── mouse_key_down
     ├── mouse_key_left
@@ -84,6 +85,21 @@ com.ftvrcm_preferences.xml
 
 ---
 
+### 3.1 エミュレーション方法（emulation_method）
+
+| 項目 | 値 |
+|------|-----|
+| **キー** | `emulation_method` |
+| **型** | String |
+| **値** | `ACCESSIBILITY_SERVICE` \| `ADB` |
+| **デフォルト** | `ACCESSIBILITY_SERVICE` |
+| **説明** | タップ/スクロール系の注入方法を選択します（`ADB`の場合は`input tap/swipe`を使用） |
+
+**例**：
+```xml
+<string name="emulation_method">ADB</string>
+```
+
 ### 4. キーマッピング（key_mapping）
 
 | 項目 | 値 |
@@ -133,10 +149,10 @@ com.ftvrcm_preferences.xml
 | `mouse_left` | ポインタ左移動 |
 | `mouse_right` | ポインタ右移動 |
 | `mouse_click` | タップ（短押し）/ロングタップ（長押し） |
-| `mouse_scroll_up` | 上スクロール（短押し: `ACTION_SCROLL_UP`（失敗時は`ACTION_SCROLL_BACKWARD`も試行）） |
-| `mouse_scroll_down` | 下スクロール（短押し: `ACTION_SCROLL_DOWN`（失敗時は`ACTION_SCROLL_FORWARD`も試行）） |
-| `mouse_scroll_left` | 左スクロール（短押し: `ACTION_SCROLL_LEFT`） |
-| `mouse_scroll_right` | 右スクロール（短押し: `ACTION_SCROLL_RIGHT`） |
+| `mouse_scroll_up` | 上スクロール（`ACCESSIBILITY_SERVICE`）/ 上スワイプ（`ADB`） |
+| `mouse_scroll_down` | 下スクロール（`ACCESSIBILITY_SERVICE`）/ 下スワイプ（`ADB`） |
+| `mouse_scroll_left` | 左スクロール（`ACCESSIBILITY_SERVICE`）/ 左スワイプ（`ADB`） |
+| `mouse_scroll_right` | 右スクロール（`ACCESSIBILITY_SERVICE`）/ 右スワイプ（`ADB`） |
 | `mouse_key_cursor_dpad_toggle` | 入力モード（カーソル/方向キー）切り替えキー（デフォルト: `MEDIA_PLAY_PAUSE`） |
 
 

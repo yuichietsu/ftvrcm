@@ -6,7 +6,9 @@ import android.os.Looper
 import android.view.ViewConfiguration
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
+import com.ftvrcm.adb.AdbInputClient
 import com.ftvrcm.data.SettingsStore
+import com.ftvrcm.domain.EmulationMethod
 import com.ftvrcm.domain.OperationMode
 import com.ftvrcm.mouse.CursorOverlay
 import com.ftvrcm.mouse.GestureController
@@ -16,6 +18,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private lateinit var settings: SettingsStore
     private lateinit var cursor: CursorOverlay
     private lateinit var gestures: GestureController
+    private var adbInput: AdbInputClient? = null
 
     private var mode: OperationMode = OperationMode.NORMAL
 
@@ -37,7 +40,10 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         tapKeyLongPressTriggered = true
         clearMoveRepeat()
         val c = cursor.center()
-        gestures.longPress(c.x, c.y)
+        when (settings.getEmulationMethod()) {
+            EmulationMethod.ACCESSIBILITY_SERVICE -> gestures.longPress(c.x, c.y)
+            EmulationMethod.ADB -> adbInput?.longPress(c.x, c.y)
+        }
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -78,6 +84,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             settings = SettingsStore(this).also { it.initializeDefaultsIfNeeded() }
             cursor = CursorOverlay(this)
             gestures = GestureController(this)
+            adbInput = AdbInputClient(this)
 
             mode = settings.getOperationMode()
             if (mode == OperationMode.MOUSE) {
@@ -234,7 +241,10 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
                     clearMoveRepeat()
                     val c = cursor.center()
-                    gestures.tap(c.x, c.y)
+                    when (settings.getEmulationMethod()) {
+                        EmulationMethod.ACCESSIBILITY_SERVICE -> gestures.tap(c.x, c.y)
+                        EmulationMethod.ADB -> adbInput?.tap(c.x, c.y)
+                    }
                     return true
                 }
 
@@ -261,11 +271,53 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
                     clearMoveRepeat()
                     val c = cursor.center()
-                    when (keyCode) {
-                        mouseKeyScrollUp -> gestures.scrollUp(c.x, c.y)
-                        mouseKeyScrollDown -> gestures.scrollDown(c.x, c.y)
-                        mouseKeyScrollLeft -> gestures.scrollLeft(c.x, c.y)
-                        mouseKeyScrollRight -> gestures.scrollRight(c.x, c.y)
+                    when (settings.getEmulationMethod()) {
+                        EmulationMethod.ACCESSIBILITY_SERVICE -> {
+                            when (keyCode) {
+                                mouseKeyScrollUp -> gestures.scrollUp(c.x, c.y)
+                                mouseKeyScrollDown -> gestures.scrollDown(c.x, c.y)
+                                mouseKeyScrollLeft -> gestures.scrollLeft(c.x, c.y)
+                                mouseKeyScrollRight -> gestures.scrollRight(c.x, c.y)
+                            }
+                        }
+                        EmulationMethod.ADB -> {
+                            val dm = resources.displayMetrics
+                            val w = dm.widthPixels
+                            val h = dm.heightPixels
+                            val distance = (minOf(w, h) * 0.28).toInt().coerceAtLeast(120)
+
+                            fun clampX(x: Int) = x.coerceIn(0, w - 1)
+                            fun clampY(y: Int) = y.coerceIn(0, h - 1)
+
+                            // Swipe around cursor center.
+                            val half = distance / 2
+                            when (keyCode) {
+                                mouseKeyScrollUp -> adbInput?.swipe(
+                                    clampX(c.x),
+                                    clampY(c.y + half),
+                                    clampX(c.x),
+                                    clampY(c.y - half),
+                                )
+                                mouseKeyScrollDown -> adbInput?.swipe(
+                                    clampX(c.x),
+                                    clampY(c.y - half),
+                                    clampX(c.x),
+                                    clampY(c.y + half),
+                                )
+                                mouseKeyScrollLeft -> adbInput?.swipe(
+                                    clampX(c.x + half),
+                                    clampY(c.y),
+                                    clampX(c.x - half),
+                                    clampY(c.y),
+                                )
+                                mouseKeyScrollRight -> adbInput?.swipe(
+                                    clampX(c.x - half),
+                                    clampY(c.y),
+                                    clampX(c.x + half),
+                                    clampY(c.y),
+                                )
+                            }
+                        }
                     }
                     return true
                 }
@@ -310,6 +362,8 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         clearPendingTapKey()
         clearMoveRepeat()
         cursor.hide()
+        adbInput?.close()
+        adbInput = null
         super.onDestroy()
     }
 

@@ -10,6 +10,8 @@ object SettingsKeys {
 
     const val MOUSE_POINTER_SPEED = "mouse_pointer_speed" // int
 
+    const val EMULATION_METHOD = "emulation_method" // String: ACCESSIBILITY_SERVICE|ADB
+
     const val MOUSE_KEY_UP = "mouse_key_up" // String/int
     const val MOUSE_KEY_DOWN = "mouse_key_down"
     const val MOUSE_KEY_LEFT = "mouse_key_left"

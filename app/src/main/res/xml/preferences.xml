@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <PreferenceCategory android:title="@string/prefs_category_mode">
 
@@ -24,6 +25,14 @@
 
     <PreferenceCategory android:title="@string/prefs_category_mouse">
 
+        <ListPreference
+            android:key="emulation_method"
+            android:title="@string/prefs_emulation_method"
+            android:entries="@array/emulation_method_entries"
+            android:entryValues="@array/emulation_method_values"
+            android:defaultValue="ACCESSIBILITY_SERVICE"
+            app:useSimpleSummaryProvider="true" />
+
         <SeekBarPreference
             android:key="mouse_pointer_speed"
             android:title="@string/prefs_mouse_speed"
@@ -37,6 +46,10 @@
             android:entries="@array/cursor_start_position_entries"
             android:entryValues="@array/cursor_start_position_values"
             android:defaultValue="center" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/prefs_category_key_mapping">
 
         <ListPreference
             android:key="mouse_key_up"

@@ -3,6 +3,7 @@ package com.ftvrcm.data
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import com.ftvrcm.domain.EmulationMethod
 import com.ftvrcm.domain.OperationMode
 
 class SettingsStore(context: Context) {
@@ -43,6 +44,8 @@ class SettingsStore(context: Context) {
             putBoolean(SettingsKeys.TOGGLE_LONGPRESS, true)
 
             putInt(SettingsKeys.MOUSE_POINTER_SPEED, 10)
+
+            putString(SettingsKeys.EMULATION_METHOD, EmulationMethod.ACCESSIBILITY_SERVICE.name)
 
             putString(SettingsKeys.MOUSE_KEY_UP, "19")
             putString(SettingsKeys.MOUSE_KEY_DOWN, "20")
@@ -110,6 +113,11 @@ class SettingsStore(context: Context) {
     fun isToggleLongPress(): Boolean = prefs.getBoolean(SettingsKeys.TOGGLE_LONGPRESS, true)
 
     fun getMousePointerSpeedPx(): Int = prefs.getInt(SettingsKeys.MOUSE_POINTER_SPEED, 10).coerceIn(1, 200)
+
+    fun getEmulationMethod(): EmulationMethod {
+        val value = prefs.getString(SettingsKeys.EMULATION_METHOD, EmulationMethod.ACCESSIBILITY_SERVICE.name)
+        return if (value == EmulationMethod.ADB.name) EmulationMethod.ADB else EmulationMethod.ACCESSIBILITY_SERVICE
+    }
 
     fun getMouseKeyUp(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_UP, "19")?.toIntOrNull() ?: 19
     fun getMouseKeyDown(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_DOWN, "20")?.toIntOrNull() ?: 20
