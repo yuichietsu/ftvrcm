@@ -110,29 +110,6 @@
 
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="@string/prefs_category_actions">
-
-        <ListPreference
-            android:key="action_keycode"
-            android:title="@string/prefs_action_key"
-            android:entries="@array/key_entries"
-            android:entryValues="@array/key_values"
-            android:defaultValue="4" />
-
-        <ListPreference
-            android:key="action_type"
-            android:title="@string/prefs_action_type"
-            android:entries="@array/action_entries"
-            android:entryValues="@array/action_values"
-            android:defaultValue="none" />
-
-        <EditTextPreference
-            android:key="action_param"
-            android:title="@string/prefs_action_param"
-            android:defaultValue="" />
-
-    </PreferenceCategory>
-
     <PreferenceCategory android:title="@string/prefs_category_system">
 
         <Preference
@@ -169,7 +146,7 @@
         <Preference
             android:key="open_touch_test"
             android:title="タッチ操作テストを開く"
-            android:summary="タップ/ダブルタップ/ロングタップ/スワイプを検知して表示します" />
+            android:summary="タップ/ダブルタップ/ロングタップを検知して表示します" />
 
     </PreferenceCategory>
 

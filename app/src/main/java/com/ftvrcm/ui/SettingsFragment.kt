@@ -59,8 +59,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 SettingsKeys.OPERATION_MODE,
                 SettingsKeys.TOGGLE_KEYCODE,
                 SettingsKeys.MOUSE_POINTER_SPEED,
-                SettingsKeys.ACTION_TYPE,
-                SettingsKeys.ACTION_PARAM,
                 -> refreshModeSummary()
             }
 
@@ -76,11 +74,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 SettingsKeys.MOUSE_KEY_SCROLL_RIGHT,
                 SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE,
                 -> SettingsStore(requireContext()).upsertMouseKeyMapping()
-
-                SettingsKeys.ACTION_KEYCODE,
-                SettingsKeys.ACTION_TYPE,
-                SettingsKeys.ACTION_PARAM,
-                -> SettingsStore(requireContext()).upsertButtonActionFromUi()
             }
         }
 

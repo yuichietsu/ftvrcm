@@ -23,20 +23,12 @@ object SettingsKeys {
 
     const val MOUSE_KEY_CURSOR_DPAD_TOGGLE = "mouse_key_cursor_dpad_toggle" // String/int
 
-    // Backward-compatible (was used for "scroll/select long-press toggle")
-    const val MOUSE_KEY_SCROLL_SELECT_LONGPRESS_TOGGLE = "mouse_key_scroll_select_longpress_toggle" // String/int
-
     const val MOUSE_CURSOR_START_POSITION = "mouse_cursor_start_position" // String
     const val MOUSE_CURSOR_LAST_X = "mouse_cursor_last_x" // int
     const val MOUSE_CURSOR_LAST_Y = "mouse_cursor_last_y" // int
 
     // docs/06
     const val KEY_MAPPING = "key_mapping" // StringSet: {keyCode}:{actionId}
-    const val BUTTON_ACTIONS = "button_actions" // StringSet: JSON {keyCode, actionId}
-
-    const val ACTION_KEYCODE = "action_keycode" // String/int
-    const val ACTION_TYPE = "action_type" // String
-    const val ACTION_PARAM = "action_param" // String
 
     const val BACKGROUND_MONITORING_ENABLED = "background_monitoring_enabled" // boolean
 

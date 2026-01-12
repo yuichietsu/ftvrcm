@@ -2,7 +2,6 @@ package com.ftvrcm.data
 
 import android.content.Context
 import android.content.SharedPreferences
-import org.json.JSONObject
 import androidx.core.content.edit
 import com.ftvrcm.domain.OperationMode
 
@@ -78,12 +77,6 @@ class SettingsStore(context: Context) {
                 ),
             )
 
-            putStringSet(SettingsKeys.BUTTON_ACTIONS, emptySet())
-
-            putString(SettingsKeys.ACTION_KEYCODE, "4")
-            putString(SettingsKeys.ACTION_TYPE, "none")
-            putString(SettingsKeys.ACTION_PARAM, "")
-
             putBoolean(SettingsKeys.BACKGROUND_MONITORING_ENABLED, true)
         }
     }
@@ -102,61 +95,6 @@ class SettingsStore(context: Context) {
         set += "${getMouseKeyScrollLeft()}:mouse_scroll_left"
         set += "${getMouseKeyScrollRight()}:mouse_scroll_right"
         prefs.edit { putStringSet(SettingsKeys.KEY_MAPPING, set) }
-    }
-
-    fun getButtonActions(): Map<Int, String> {
-        val set = prefs.getStringSet(SettingsKeys.BUTTON_ACTIONS, emptySet()) ?: emptySet()
-        val map = mutableMapOf<Int, String>()
-        for (raw in set) {
-            try {
-                val json = JSONObject(raw)
-                val keyCode = json.optInt("keyCode", -1)
-                val actionId = json.optString("actionId", "")
-                if (keyCode > 0 && actionId.isNotBlank()) {
-                    map[keyCode] = actionId
-                }
-            } catch (_: Exception) {
-                // ignore broken entry
-            }
-        }
-        return map
-    }
-
-    fun upsertButtonActionFromUi() {
-        val keyCode = getActionKeyCode()
-        val type = getActionType()
-        val param = getActionParam()
-        upsertButtonAction(keyCode, type, param)
-    }
-
-    fun upsertButtonAction(keyCode: Int, type: String, param: String) {
-        val actionId = when (type) {
-            "none" -> "none"
-            "launch_app" -> "launch_app_${param.trim()}"
-            "open_url" -> "open_url_${param.trim()}"
-            "volume_up" -> "adjust_volume_1"
-            "volume_down" -> "adjust_volume_-1"
-            else -> "none"
-        }
-
-        val current = prefs.getStringSet(SettingsKeys.BUTTON_ACTIONS, emptySet())?.toMutableSet() ?: mutableSetOf()
-        val filtered = current.filterNot {
-            try {
-                JSONObject(it).optInt("keyCode", -1) == keyCode
-            } catch (_: Exception) {
-                false
-            }
-        }.toMutableSet()
-
-        if (actionId != "none") {
-            val json = JSONObject().apply {
-                put("keyCode", keyCode)
-                put("actionId", actionId)
-            }
-            filtered.add(json.toString())
-        }
-
-        prefs.edit { putStringSet(SettingsKeys.BUTTON_ACTIONS, filtered) }
     }
 
     fun getOperationMode(): OperationMode {
@@ -184,23 +122,8 @@ class SettingsStore(context: Context) {
     fun getMouseKeyScrollLeft(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_LEFT, "89")?.toIntOrNull() ?: 89
     fun getMouseKeyScrollRight(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_RIGHT, "90")?.toIntOrNull() ?: 90
 
-    fun getMouseKeyCursorDpadToggle(): Int {
-        val newValue = prefs.getString(SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE, null)
-        if (newValue != null) return newValue.toIntOrNull() ?: 85
-
-        // Migration: reuse old key if present.
-        val oldValue = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_SELECT_LONGPRESS_TOGGLE, null)
-        if (oldValue != null) {
-            prefs.edit { putString(SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE, oldValue) }
-            return oldValue.toIntOrNull() ?: 85
-        }
-
-        return 85
-    }
-
-    fun getActionKeyCode(): Int = prefs.getString(SettingsKeys.ACTION_KEYCODE, "4")?.toIntOrNull() ?: 4
-    fun getActionType(): String = prefs.getString(SettingsKeys.ACTION_TYPE, "none") ?: "none"
-    fun getActionParam(): String = prefs.getString(SettingsKeys.ACTION_PARAM, "") ?: ""
+    fun getMouseKeyCursorDpadToggle(): Int =
+        prefs.getString(SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE, "85")?.toIntOrNull() ?: 85
 
     fun isBackgroundMonitoringEnabled(): Boolean = prefs.getBoolean(SettingsKeys.BACKGROUND_MONITORING_ENABLED, true)
 }

@@ -6,7 +6,6 @@ import android.os.Looper
 import android.view.ViewConfiguration
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
-import com.ftvrcm.action.ActionFactory
 import com.ftvrcm.data.SettingsStore
 import com.ftvrcm.domain.OperationMode
 import com.ftvrcm.mouse.CursorOverlay
@@ -17,7 +16,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private lateinit var settings: SettingsStore
     private lateinit var cursor: CursorOverlay
     private lateinit var gestures: GestureController
-    private lateinit var actions: ActionFactory
 
     private var mode: OperationMode = OperationMode.NORMAL
 
@@ -80,7 +78,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             settings = SettingsStore(this).also { it.initializeDefaultsIfNeeded() }
             cursor = CursorOverlay(this)
             gestures = GestureController(this)
-            actions = ActionFactory(this)
 
             mode = settings.getOperationMode()
             if (mode == OperationMode.MOUSE) {
@@ -116,7 +113,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         // 1) Toggle mode (always available)
         val toggleKey = settings.getToggleKeyCode()
         val toggleLongPress = settings.isToggleLongPress()
-        val isToggleKey = keyCode == toggleKey || (toggleKey == KeyEvent.KEYCODE_MENU && keyCode == KeyEvent.KEYCODE_SETTINGS)
+        val isToggleKey = keyCode == toggleKey
         if (isToggleKey) {
             if (!toggleLongPress) {
                 if (event.action == KeyEvent.ACTION_DOWN) {
@@ -161,24 +158,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             }
         }
 
-        // 2) Custom action (available in both modes)
-        if (event.action == KeyEvent.ACTION_DOWN) {
-            val mapped = settings.getButtonActions()[keyCode]
-            if (mapped != null) {
-                val action = actions.createFromActionId(mapped)
-                action?.execute()
-                return action != null
-            }
-
-            // Backward-compatible: single mapping in UI
-            if (keyCode == settings.getActionKeyCode()) {
-                val action = actions.create(settings.getActionType(), settings.getActionParam())
-                action?.execute()
-                return action != null
-            }
-        }
-
-        // 3) Mouse mode key mapping
+        // 2) Mouse mode key mapping
         if (mode != OperationMode.MOUSE) return false
 
         val mouseKeyUp = settings.getMouseKeyUp()

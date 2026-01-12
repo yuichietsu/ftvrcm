@@ -1,7 +1,7 @@
 # SharedPreferences スキーマ
 
 ## 概要
-ftvrcm の設定データは SharedPreferences で保存されます。本ドキュメントは、スキーマ定義、データ形式、マイグレーション戦略を記載します。
+ftvrcm の設定データは SharedPreferences で保存されます。本ドキュメントは、スキーマ定義とデータ形式を記載します。
 
 ## SharedPreferences ファイル
 
@@ -21,12 +21,9 @@ com.ftvrcm_preferences.xml
     ├── mouse_key_scroll_down
     ├── mouse_key_scroll_left
     ├── mouse_key_scroll_right
+    ├── mouse_key_cursor_dpad_toggle
     ├── mouse_cursor_start_position
     ├── key_mapping
-    ├── button_actions
-    ├── action_keycode
-    ├── action_type
-    ├── action_param
     ├── background_monitoring_enabled
     ├── last_gesture_type
     ├── last_gesture_status
@@ -95,7 +92,7 @@ com.ftvrcm_preferences.xml
 | **型** | StringSet |
 | **形式** | `{keyCode}:{actionId}` (カンマ区切り) |
 | **デフォルト** | 空集合（初期化時に作成） |
-| **説明** | リモコンキーとタッチ操作/アクションのマッピング |
+| **説明** | リモコンキーとタッチ操作のマッピング |
 
 **例**：
 ```xml
@@ -109,7 +106,6 @@ com.ftvrcm_preferences.xml
         <string>167:mouse_scroll_down</string>
                 <string>89:mouse_scroll_left</string>
                 <string>90:mouse_scroll_right</string>
-  <string>4:launch_app_com.android.chrome</string>
 </set>
 ```
 
@@ -143,39 +139,8 @@ com.ftvrcm_preferences.xml
 | `mouse_scroll_right` | 右スクロール（短押し: `ACTION_SCROLL_RIGHT`） |
 | `mouse_key_cursor_dpad_toggle` | 入力モード（カーソル/方向キー）切り替えキー（デフォルト: `MEDIA_PLAY_PAUSE`） |
 
----
 
-### 5. ボタンアクション（button_actions）
-
-| 項目 | 値 |
-|------|-----|
-| **キー** | `button_actions` |
-| **型** | StringSet |
-| **形式** | JSON: `{"keyCode": <int>, "actionId": "<string>"}` |
-| **デフォルト** | 空集合 |
-| **説明** | リモコンボタンに割り当てたカスタムアクション |
-
-**例**：
-```xml
-<set name="button_actions">
-  <string>{"keyCode": 3, "actionId": "launch_app_com.netflix"}</string>
-  <string>{"keyCode": 4, "actionId": "open_url_https://example.com"}</string>
-  <string>{"keyCode": 8, "actionId": "adjust_volume_1"}</string>
-</set>
-```
-
-**JSON スキーマ**：
-```json
-{
-  "keyCode": 3,
-  "actionId": "launch_app_com.netflix",
-  "timestamp": 1705000000000
-}
-```
-
----
-
-### 6. バックグラウンド監視有効フラグ（background_monitoring_enabled）
+### 5. バックグラウンド監視有効フラグ（background_monitoring_enabled）
 
 | 項目 | 値 |
 |------|-----|
@@ -192,7 +157,7 @@ com.ftvrcm_preferences.xml
 
 ---
 
-### 7. 最終ジェスチャ記録（last_gesture_*）
+### 6. 最終ジェスチャ記録（last_gesture_*）
 
 TouchTestActivity（動作確認画面）で「最後に注入したジェスチャがどう処理されたか（成功/キャンセル/フォールバック等）」を確認するためのデバッグ用途の記録です。
 
@@ -242,7 +207,6 @@ class SettingsStore(context: Context) {
                     "90:mouse_scroll_right",
                 ),
             )
-            putStringSet("button_actions", emptySet())
             putBoolean("background_monitoring_enabled", true)
             apply()
         }

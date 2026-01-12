@@ -88,36 +88,4 @@
         android:dividerHeight="1dp"
         android:scrollbars="vertical" />
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="スクロール領域（模様付き）"
-        android:textStyle="bold" />
-
-    <HorizontalScrollView
-        android:id="@+id/scrollAreaH"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="8dp"
-        android:layout_weight="1"
-        android:scrollbars="horizontal">
-
-        <ScrollView
-            android:id="@+id/scrollAreaV"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:fillViewport="true"
-            android:scrollbars="vertical">
-
-            <LinearLayout
-                android:id="@+id/patternContainer"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical" />
-
-        </ScrollView>
-
-    </HorizontalScrollView>
-
 </LinearLayout>

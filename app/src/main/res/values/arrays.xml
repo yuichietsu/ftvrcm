@@ -29,22 +29,6 @@
         <item>167</item>
     </string-array>
 
-    <string-array name="action_entries">
-        <item>@string/action_none</item>
-        <item>@string/action_launch_app</item>
-        <item>@string/action_open_url</item>
-        <item>@string/action_volume_up</item>
-        <item>@string/action_volume_down</item>
-    </string-array>
-
-    <string-array name="action_values">
-        <item>none</item>
-        <item>launch_app</item>
-        <item>open_url</item>
-        <item>volume_up</item>
-        <item>volume_down</item>
-    </string-array>
-
     <string-array name="cursor_start_position_entries">
         <item>中央</item>
         <item>左上</item>
