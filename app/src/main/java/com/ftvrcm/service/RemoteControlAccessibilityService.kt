@@ -34,6 +34,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         settings = SettingsStore(this).also { it.initializeDefaultsIfNeeded() }
+        settings.setDebugServiceConnected()
         cursor = CursorOverlay(this)
         gestures = GestureController(this)
         actions = ActionFactory(this)

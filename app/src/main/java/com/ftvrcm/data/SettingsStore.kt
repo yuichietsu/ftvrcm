@@ -159,6 +159,12 @@ class SettingsStore(context: Context) {
         }
     }
 
+    fun setDebugServiceConnected() {
+        prefs.edit {
+            putLong(SettingsKeys.DEBUG_SERVICE_CONNECTED_AT, SystemClock.elapsedRealtime())
+        }
+    }
+
     data class DebugLastKey(
         val keyCode: Int,
         val keyName: String,
@@ -172,4 +178,7 @@ class SettingsStore(context: Context) {
         val at = prefs.getLong(SettingsKeys.DEBUG_LAST_KEY_AT, 0L)
         return DebugLastKey(keyCode = keyCode, keyName = keyName, atElapsedRealtimeMs = at)
     }
+
+    fun getDebugServiceConnectedAtElapsed(): Long =
+        prefs.getLong(SettingsKeys.DEBUG_SERVICE_CONNECTED_AT, 0L)
 }

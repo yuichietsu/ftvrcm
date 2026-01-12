@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
 import android.content.SharedPreferences
+import android.os.SystemClock
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import com.ftvrcm.R
@@ -26,7 +27,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         }
 
         refreshModeSummary()
-    refreshDebugSummary()
+        refreshDebugSummary()
 
         val prefs = preferenceManager.sharedPreferences ?: return
         val l = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -89,13 +90,32 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
     private fun refreshDebugSummary() {
         val store = SettingsStore(requireContext())
+
+        val serviceStatusPref = findPreference<Preference>("debug_service_status")
+        val connectedAt = store.getDebugServiceConnectedAtElapsed()
+        serviceStatusPref?.summary = if (connectedAt <= 0L) {
+            getString(R.string.prefs_debug_service_status_summary)
+        } else {
+            "接続済み（${formatAge(connectedAt)}）"
+        }
+
         val pref = findPreference<Preference>(SettingsKeys.DEBUG_LAST_KEYCODE)
         val last = store.getDebugLastKey()
         pref?.summary = if (last == null) {
             getString(R.string.prefs_debug_last_key_summary)
         } else {
             val name = last.keyName.ifBlank { "KEYCODE_${last.keyCode}" }
-            "$name (${last.keyCode})"
+            "$name (${last.keyCode})（${formatAge(last.atElapsedRealtimeMs)}）"
+        }
+    }
+
+    private fun formatAge(atElapsedRealtimeMs: Long): String {
+        val deltaMs = (SystemClock.elapsedRealtime() - atElapsedRealtimeMs).coerceAtLeast(0L)
+        val sec = deltaMs / 1000
+        return when {
+            sec < 60 -> "${sec}秒前"
+            sec < 60 * 60 -> "${sec / 60}分前"
+            else -> "${sec / 3600}時間前"
         }
     }
 }

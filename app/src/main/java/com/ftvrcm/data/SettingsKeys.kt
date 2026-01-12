@@ -35,4 +35,5 @@ object SettingsKeys {
     const val DEBUG_LAST_KEYCODE = "debug_last_keycode" // int
     const val DEBUG_LAST_KEYNAME = "debug_last_keyname" // String
     const val DEBUG_LAST_KEY_AT = "debug_last_key_at" // long (elapsedRealtime)
+    const val DEBUG_SERVICE_CONNECTED_AT = "debug_service_connected_at" // long (elapsedRealtime)
 }
