@@ -182,7 +182,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         val mouseKeyLeft = settings.getMouseKeyLeft()
         val mouseKeyRight = settings.getMouseKeyRight()
         val mouseKeyClick = settings.getMouseKeyClick()
-        val mouseKeyDoubleTap = settings.getMouseKeyDoubleTap()
         val mouseKeySwipeUp = settings.getMouseKeySwipeUp()
         val mouseKeySwipeDown = settings.getMouseKeySwipeDown()
         val mouseKeySwipeLeft = settings.getMouseKeySwipeLeft()
@@ -193,23 +192,10 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             keyCode == mouseKeyLeft ||
             keyCode == mouseKeyRight ||
             keyCode == mouseKeyClick ||
-            keyCode == mouseKeyDoubleTap ||
             keyCode == mouseKeySwipeUp ||
             keyCode == mouseKeySwipeDown ||
             keyCode == mouseKeySwipeLeft ||
             keyCode == mouseKeySwipeRight
-
-        // Dedicated double-tap key
-        if (keyCode == mouseKeyDoubleTap) {
-            if (event.action == KeyEvent.ACTION_DOWN) {
-                if (event.repeatCount > 0) return true
-                clearMoveRepeat()
-                val c = cursor.center()
-                gestures.doubleTap(c.x, c.y)
-                return true
-            }
-            return true
-        }
 
         // Tap key handling (single tap / long tap)
         if (keyCode == mouseKeyClick) {

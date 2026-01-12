@@ -353,7 +353,7 @@ class GestureController(
                 return false
             }
 
-            val ret = tryOnChain(onlyPreferred = true)
+            val ret = tryOnChain(onlyPreferred = true) || tryOnChain(onlyPreferred = false)
 
             for (n in chain) {
                 try {

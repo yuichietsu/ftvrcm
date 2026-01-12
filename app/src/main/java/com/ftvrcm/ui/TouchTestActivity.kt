@@ -60,9 +60,29 @@ class TouchTestActivity : AppCompatActivity() {
             items,
         )
 
-        var lastClickAtMs = 0L
-        var lastClickPos = ListView.INVALID_POSITION
         val doubleTapTimeoutMs = ViewConfiguration.getDoubleTapTimeout().toLong()
+
+        var pendingClickAtMs = 0L
+        var pendingClickPos = ListView.INVALID_POSITION
+        val commitSingleClick = Runnable {
+            val pos = pendingClickPos
+            if (pos != ListView.INVALID_POSITION) {
+                setEvent("リスト: クリック (${items[pos]})")
+            }
+            pendingClickAtMs = 0L
+            pendingClickPos = ListView.INVALID_POSITION
+        }
+
+        fun cancelPendingSingleClick() {
+            lastEvent.removeCallbacks(commitSingleClick)
+            pendingClickAtMs = 0L
+            pendingClickPos = ListView.INVALID_POSITION
+        }
+
+        fun commitDoubleTap(position: Int) {
+            cancelPendingSingleClick()
+            setEvent("リスト: ダブルタップ (${items[position]})")
+        }
 
         list.setOnItemClickListener { _, _, position, _ ->
             list.setItemChecked(position, true)
@@ -70,19 +90,19 @@ class TouchTestActivity : AppCompatActivity() {
 
             // If injection falls back to ACTION_CLICK, MotionEvent-based double tap detection may not run.
             // Detect double tap using consecutive item clicks as a backup.
-            if (position == lastClickPos && now - lastClickAtMs <= doubleTapTimeoutMs) {
-                setEvent("リスト: ダブルタップ (${items[position]})")
-                lastClickAtMs = 0L
-                lastClickPos = ListView.INVALID_POSITION
+            if (position == pendingClickPos && now - pendingClickAtMs <= doubleTapTimeoutMs) {
+                commitDoubleTap(position)
             } else {
-                setEvent("リスト: クリック (${items[position]})")
-                lastClickAtMs = now
-                lastClickPos = position
+                cancelPendingSingleClick()
+                pendingClickAtMs = now
+                pendingClickPos = position
+                lastEvent.postDelayed(commitSingleClick, doubleTapTimeoutMs)
             }
         }
 
         list.setOnItemLongClickListener { _, _, position, _ ->
             list.setItemChecked(position, true)
+            cancelPendingSingleClick()
             setEvent("リスト: ロングクリック (${items[position]})")
             true
         }
@@ -96,9 +116,10 @@ class TouchTestActivity : AppCompatActivity() {
                     val pos = list.pointToPosition(e.x.toInt(), e.y.toInt())
                     if (pos != ListView.INVALID_POSITION) {
                         list.setItemChecked(pos, true)
-                        setEvent("リスト: ダブルタップ (${items[pos]})")
+                        commitDoubleTap(pos)
                         return true
                     }
+                    cancelPendingSingleClick()
                     setEvent("リスト: ダブルタップ")
                     return true
                 }

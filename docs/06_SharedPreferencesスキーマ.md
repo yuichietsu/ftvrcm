@@ -17,7 +17,6 @@ com.ftvrcm_preferences.xml
     ├── mouse_key_left
     ├── mouse_key_right
     ├── mouse_key_click
-    ├── mouse_key_double_tap
     ├── mouse_key_swipe_up
     ├── mouse_key_swipe_down
     ├── mouse_key_swipe_left
@@ -29,7 +28,7 @@ com.ftvrcm_preferences.xml
     ├── action_type
     ├── action_param
     ├── background_monitoring_enabled
-    └── settings_version
+    
 ```
 
 ## データスキーマ
@@ -102,7 +101,6 @@ com.ftvrcm_preferences.xml
   <string>21:mouse_left</string>
   <string>22:mouse_right</string>
   <string>23:mouse_click</string>
-    <string>82:mouse_double_tap</string>
     <string>167:mouse_swipe_up</string>
     <string>166:mouse_swipe_down</string>
     <string>89:mouse_swipe_left</string>
@@ -135,7 +133,6 @@ com.ftvrcm_preferences.xml
 | `mouse_left` | ポインタ左移動 |
 | `mouse_right` | ポインタ右移動 |
 | `mouse_click` | タップ（短押し）/ロングタップ（長押し） |
-| `mouse_double_tap` | ダブルタップ |
 | `mouse_swipe_up` | 上スワイプ |
 | `mouse_swipe_down` | 下スワイプ |
 | `mouse_swipe_left` | 左スワイプ |
@@ -190,109 +187,37 @@ com.ftvrcm_preferences.xml
 
 ---
 
-### 7. 設定スキーマバージョン（settings_version）
-
-| 項目 | 値 |
-|------|-----|
-| **キー** | `settings_version` |
-| **型** | Integer |
-| **現在バージョン** | 2 |
-| **説明** | スキーマバージョン（マイグレーション用） |
-
-**例**：
-```xml
-<int name="settings_version" value="2" />
-```
-
----
-
 ## デフォルト値初期化
 
 アプリ初回起動時、以下のデフォルト値で初期化：
 
 ```kotlin
-class SharedPreferencesDataSource(private val context: Context) {
-    private val sharedPrefs = context.getSharedPreferences(
-        "ftvrcm_settings", Context.MODE_PRIVATE
-    )
-    
-    fun initializeDefaults() {
-        if (!isInitialized()) {
-            sharedPrefs.edit().apply {
-                putString("operation_mode", "NORMAL")
-                putInt("mouse_sensitivity", 10)
-                putInt("mouse_pointer_speed", 10)
-                putStringSet("key_mapping", defaultKeyMappingSet())
-                putStringSet("button_actions", emptySet())
-                putBoolean("background_monitoring_enabled", true)
-                putInt("settings_version", 1)
-                apply()
-            }
-        }
-    }
-    
-    private fun defaultKeyMappingSet(): Set<String> = setOf(
-        "19:mouse_up",
-        "20:mouse_down",
-        "21:mouse_left",
-        "22:mouse_right",
-        "23:mouse_click"
-    )
-    
-    private fun isInitialized(): Boolean =
-        sharedPrefs.contains("settings_version")
-}
-```
+class SettingsStore(context: Context) {
+    private val prefs = context.getSharedPreferences("ftvrcm_settings", Context.MODE_PRIVATE)
 
----
+    fun initializeDefaultsIfNeeded() {
+        // operation_mode が無ければ未初期化とみなす
+        if (prefs.contains("operation_mode")) return
 
-## マイグレーション戦略
-
-### バージョン管理フロー
-
-```
-[アプリ起動]
-    ↓
-[SharedPreferencesDataSource.initialize()]
-    ↓
-[settings_version 確認]
-    ├─ 存在しない（初回起動）
-    │  → デフォルト値初期化、version=1 設定
-    ├─ version=1
-    │  → マイグレーション不要
-    └─ version < 現在バージョン
-       → マイグレーション実行 → version更新
-```
-
-### マイグレーション実装例
-
-```kotlin
-class SharedPreferencesDataSource(private val context: Context) {
-    
-    fun initialize() {
-        val currentVersion = sharedPrefs.getInt("settings_version", 0)
-        
-        when {
-            currentVersion == 0 -> initializeDefaults()
-            currentVersion < 2 -> migrateV1ToV2()
-            currentVersion < 3 -> migrateV2ToV3()
-        }
-    }
-    
-    private fun migrateV1ToV2() {
-        // v1 → v2 マイグレーション処理
-        // 例：新しいキーを追加
-        sharedPrefs.edit().apply {
-            putString("new_feature_enabled", "false")
-            putInt("settings_version", 2)
-            apply()
-        }
-    }
-    
-    private fun migrateV2ToV3() {
-        // v2 → v3 マイグレーション処理
-        sharedPrefs.edit().apply {
-            putInt("settings_version", 3)
+        prefs.edit().apply {
+            putString("operation_mode", "NORMAL")
+            putInt("mouse_pointer_speed", 10)
+            putStringSet(
+                "key_mapping",
+                setOf(
+                    "19:mouse_up",
+                    "20:mouse_down",
+                    "21:mouse_left",
+                    "22:mouse_right",
+                    "23:mouse_click",
+                    "167:mouse_swipe_up",
+                    "166:mouse_swipe_down",
+                    "89:mouse_swipe_left",
+                    "90:mouse_swipe_right",
+                ),
+            )
+            putStringSet("button_actions", emptySet())
+            putBoolean("background_monitoring_enabled", true)
             apply()
         }
     }
@@ -383,6 +308,5 @@ fun repairData() {
 ## まとめ
 
 - **シンプルなスキーマ**：StringSet と基本型のみ使用
-- **拡張性**：settings_version によるマイグレーション対応
 - **保守性**：デフォルト値明記、初期化ロジック統一
-- **互換性**：バージョン管理により将来のスキーマ変更に対応
+- **互換性**：開発中のためスキーマ互換を保証しない（必要に応じてリセット）
