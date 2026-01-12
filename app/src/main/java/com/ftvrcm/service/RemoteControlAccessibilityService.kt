@@ -5,7 +5,9 @@ import android.os.Handler
 import android.os.Looper
 import android.view.ViewConfiguration
 import android.view.KeyEvent
+import android.graphics.Rect
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import com.ftvrcm.action.ActionFactory
 import com.ftvrcm.data.SettingsStore
 import com.ftvrcm.domain.OperationMode
@@ -26,6 +28,27 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
     private var tapKeyIsDown: Boolean = false
     private var tapKeyLongPressTriggered: Boolean = false
+
+    private var scrollSelectKeyIsDown: Boolean = false
+    private var scrollSelectKeyLongPressTriggered: Boolean = false
+    private var scrollSelectKeyDirection: Int = 0
+
+    private val scrollSelectKeyLongPressRunnable = Runnable {
+        if (mode != OperationMode.MOUSE) return@Runnable
+        if (!scrollSelectKeyIsDown) return@Runnable
+        if (scrollSelectKeyLongPressTriggered) return@Runnable
+
+        scrollSelectKeyLongPressTriggered = true
+        clearMoveRepeat()
+        moveCursorToFocusedControl()
+
+        when (scrollSelectKeyDirection) {
+            0 -> gestures.dpadUp()
+            1 -> gestures.dpadDown()
+            2 -> gestures.dpadLeft()
+            3 -> gestures.dpadRight()
+        }
+    }
 
     private val tapKeyLongPressRunnable = Runnable {
         if (mode != OperationMode.MOUSE) return@Runnable
@@ -183,8 +206,8 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         val mouseKeyClick = settings.getMouseKeyClick()
         val mouseKeyScrollUp = settings.getMouseKeyScrollUp()
         val mouseKeyScrollDown = settings.getMouseKeyScrollDown()
-        val mouseKeyDpadLeft = settings.getMouseKeyDpadLeft()
-        val mouseKeyDpadRight = settings.getMouseKeyDpadRight()
+        val mouseKeyScrollLeft = settings.getMouseKeyScrollLeft()
+        val mouseKeyScrollRight = settings.getMouseKeyScrollRight()
 
         val isHandledMouseKey = keyCode == mouseKeyUp ||
             keyCode == mouseKeyDown ||
@@ -193,8 +216,8 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             keyCode == mouseKeyClick ||
             keyCode == mouseKeyScrollUp ||
             keyCode == mouseKeyScrollDown ||
-            keyCode == mouseKeyDpadLeft ||
-            keyCode == mouseKeyDpadRight
+            keyCode == mouseKeyScrollLeft ||
+            keyCode == mouseKeyScrollRight
 
         // Tap key handling (single tap / long tap)
         if (keyCode == mouseKeyClick) {
@@ -230,6 +253,58 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             }
         }
 
+        // Scroll/Select keys:
+        // - Short press: ACTION_SCROLL_(UP/DOWN/LEFT/RIGHT)
+        // - Long press: move cursor to focused control, then DPAD_(UP/DOWN/LEFT/RIGHT)
+        val isScrollSelectKey = keyCode == mouseKeyScrollUp ||
+            keyCode == mouseKeyScrollDown ||
+            keyCode == mouseKeyScrollLeft ||
+            keyCode == mouseKeyScrollRight
+
+        if (isScrollSelectKey) {
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> {
+                    if (event.repeatCount > 0) return true
+                    scrollSelectKeyIsDown = true
+                    scrollSelectKeyLongPressTriggered = false
+                    scrollSelectKeyDirection = when (keyCode) {
+                        mouseKeyScrollUp -> 0
+                        mouseKeyScrollDown -> 1
+                        mouseKeyScrollLeft -> 2
+                        else -> 3
+                    }
+                    mainHandler.removeCallbacks(scrollSelectKeyLongPressRunnable)
+                    mainHandler.postDelayed(
+                        scrollSelectKeyLongPressRunnable,
+                        ViewConfiguration.getLongPressTimeout().toLong(),
+                    )
+                    return true
+                }
+
+                KeyEvent.ACTION_UP -> {
+                    scrollSelectKeyIsDown = false
+                    mainHandler.removeCallbacks(scrollSelectKeyLongPressRunnable)
+
+                    if (scrollSelectKeyLongPressTriggered) {
+                        scrollSelectKeyLongPressTriggered = false
+                        return true
+                    }
+
+                    clearMoveRepeat()
+                    val c = cursor.center()
+                    when (keyCode) {
+                        mouseKeyScrollUp -> gestures.scrollUp(c.x, c.y)
+                        mouseKeyScrollDown -> gestures.scrollDown(c.x, c.y)
+                        mouseKeyScrollLeft -> gestures.scrollLeft(c.x, c.y)
+                        mouseKeyScrollRight -> gestures.scrollRight(c.x, c.y)
+                    }
+                    return true
+                }
+
+                else -> return true
+            }
+        }
+
         // Stop continuous movement on key up.
         if (event.action == KeyEvent.ACTION_UP) {
             val wasMovingKey = moveKeyCode == keyCode
@@ -238,33 +313,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         }
 
         if (event.action != KeyEvent.ACTION_DOWN) return isHandledMouseKey
-
-        // Ignore repeats for action keys.
-        val isFirstDown = event.repeatCount == 0
-
-        fun doScroll(up: Boolean): Boolean {
-            if (!isFirstDown) return true
-            clearMoveRepeat()
-            val c = cursor.center()
-            if (up) {
-                gestures.scrollUp(c.x, c.y)
-            } else {
-                gestures.scrollDown(c.x, c.y)
-            }
-            return true
-        }
-
-        fun doDpad(left: Boolean): Boolean {
-            if (!isFirstDown) return true
-            clearMoveRepeat()
-            val c = cursor.center()
-            if (left) {
-                gestures.dpadLeftAt(c.x, c.y)
-            } else {
-                gestures.dpadRightAt(c.x, c.y)
-            }
-            return true
-        }
 
         return when (keyCode) {
             mouseKeyUp -> {
@@ -284,11 +332,38 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 true
             }
             // mouseKeyClick is handled above.
-            mouseKeyScrollUp -> doScroll(up = true)
-            mouseKeyScrollDown -> doScroll(up = false)
-            mouseKeyDpadLeft -> doDpad(left = true)
-            mouseKeyDpadRight -> doDpad(left = false)
             else -> false
+        }
+    }
+
+    private fun moveCursorToFocusedControl(): Boolean {
+        val root = rootInActiveWindow ?: return false
+
+        var focus: AccessibilityNodeInfo? = null
+        try {
+            focus = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+                ?: root.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)
+            if (focus == null) return false
+
+            val bounds = Rect()
+            focus.getBoundsInScreen(bounds)
+            if (bounds.isEmpty) return false
+
+            val cx = bounds.centerX()
+            val cy = bounds.centerY()
+            // CursorOverlay is 48x48.
+            cursor.setPosition(cx - 24, cy - 24)
+            val p = cursor.position()
+            lastCursorX = p.x
+            lastCursorY = p.y
+            return true
+        } catch (_: Exception) {
+            return false
+        } finally {
+            try {
+                focus?.recycle()
+            } catch (_: Exception) {
+            }
         }
     }
 

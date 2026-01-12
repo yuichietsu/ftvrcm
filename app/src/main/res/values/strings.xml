@@ -22,10 +22,10 @@
     <string name="prefs_mouse_key_right">右移動キー</string>
     <string name="prefs_mouse_key_click">タップキー</string>
 
-    <string name="prefs_mouse_key_scroll_up">上スクロールキー</string>
-    <string name="prefs_mouse_key_scroll_down">下スクロールキー</string>
-    <string name="prefs_mouse_key_dpad_left">DPAD左キー</string>
-    <string name="prefs_mouse_key_dpad_right">DPAD右キー</string>
+    <string name="prefs_mouse_key_scroll_up_select">上スクロール/選択キー</string>
+    <string name="prefs_mouse_key_scroll_down_select">下スクロール/選択キー</string>
+    <string name="prefs_mouse_key_scroll_left_select">左スクロール/選択キー</string>
+    <string name="prefs_mouse_key_scroll_right_select">右スクロール/選択キー</string>
 
     <string name="prefs_category_actions">ボタンアクション</string>
     <string name="prefs_action_key">アクション割当キー</string>

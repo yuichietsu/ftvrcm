@@ -19,8 +19,8 @@ com.ftvrcm_preferences.xml
     ├── mouse_key_click
     ├── mouse_key_scroll_up
     ├── mouse_key_scroll_down
-    ├── mouse_key_dpad_left
-    ├── mouse_key_dpad_right
+    ├── mouse_key_scroll_left
+    ├── mouse_key_scroll_right
     ├── mouse_cursor_start_position
     ├── key_mapping
     ├── button_actions
@@ -107,8 +107,8 @@ com.ftvrcm_preferences.xml
   <string>23:mouse_click</string>
         <string>166:mouse_scroll_up</string>
         <string>167:mouse_scroll_down</string>
-        <string>89:mouse_dpad_left</string>
-        <string>90:mouse_dpad_right</string>
+                <string>89:mouse_scroll_left</string>
+                <string>90:mouse_scroll_right</string>
   <string>4:launch_app_com.android.chrome</string>
 </set>
 ```
@@ -137,10 +137,10 @@ com.ftvrcm_preferences.xml
 | `mouse_left` | ポインタ左移動 |
 | `mouse_right` | ポインタ右移動 |
 | `mouse_click` | タップ（短押し）/ロングタップ（長押し） |
-| `mouse_scroll_up` | 上スクロール（`ACTION_SCROLL_UP`/`ACTION_SCROLL_BACKWARD`） |
-| `mouse_scroll_down` | 下スクロール（`ACTION_SCROLL_DOWN`/`ACTION_SCROLL_FORWARD`） |
-| `mouse_dpad_left` | DPAD左相当（フォーカス移動） |
-| `mouse_dpad_right` | DPAD右相当（フォーカス移動） |
+| `mouse_scroll_up` | 上スクロール/選択（短押し: `ACTION_SCROLL_UP`、長押し: `DPAD_UP` 相当） |
+| `mouse_scroll_down` | 下スクロール/選択（短押し: `ACTION_SCROLL_DOWN`、長押し: `DPAD_DOWN` 相当） |
+| `mouse_scroll_left` | 左スクロール/選択（短押し: `ACTION_SCROLL_LEFT`、長押し: `DPAD_LEFT` 相当） |
+| `mouse_scroll_right` | 右スクロール/選択（短押し: `ACTION_SCROLL_RIGHT`、長押し: `DPAD_RIGHT` 相当） |
 
 ---
 
@@ -235,10 +235,10 @@ class SettingsStore(context: Context) {
                     "21:mouse_left",
                     "22:mouse_right",
                     "23:mouse_click",
-                    "167:mouse_scroll_up",
-                    "166:mouse_scroll_down",
-                    "89:mouse_dpad_left",
-                    "90:mouse_dpad_right",
+                    "166:mouse_scroll_up",
+                    "167:mouse_scroll_down",
+                    "89:mouse_scroll_left",
+                    "90:mouse_scroll_right",
                 ),
             )
             putStringSet("button_actions", emptySet())

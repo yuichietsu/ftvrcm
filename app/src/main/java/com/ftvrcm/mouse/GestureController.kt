@@ -94,86 +94,121 @@ class GestureController(
 
     fun scrollUp(x: Int, y: Int): Boolean {
         recordGesture(type = "scroll_up", status = "DISPATCHING", detail = "x=$x y=$y")
-        val okScroll = try {
+        val ok = try {
             performNodeScrollAt(
                 x = x,
                 y = y,
                 primaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP.id),
-                secondaryActions = intArrayOf(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD),
+                secondaryActions = intArrayOf(),
                 preferTarget = { !isHorizontalScrollContainer(it) },
             )
         } catch (_: Exception) {
             null
         }
-
-        if (okScroll == true) {
-            recordGesture(
-                type = "scroll_up",
-                status = "COMPLETED",
-                detail = "via=SCROLL_UP ok",
-            )
-            return true
-        }
-
-        // If scroll action is not supported, fallback to DPAD_UP (focus move).
-        val okDpad = try {
-            focusAt(x, y)
-            performFocusMove(View.FOCUS_UP)
-        } catch (_: Exception) {
-            null
-        }
-
         recordGesture(
             type = "scroll_up",
-            status = if (okDpad == true) "COMPLETED" else "REJECTED",
-            detail = if (okDpad == true) "via=DPAD_UP ok" else "via=SCROLL_UP failed; DPAD_UP failed",
+            status = if (ok == true) "COMPLETED" else "REJECTED",
+            detail = if (ok == true) "via=SCROLL_UP ok" else "via=SCROLL_UP failed",
         )
-        return okDpad == true
+        return ok == true
     }
 
     fun scrollDown(x: Int, y: Int): Boolean {
         recordGesture(type = "scroll_down", status = "DISPATCHING", detail = "x=$x y=$y")
-        val okScroll = try {
+        val ok = try {
             performNodeScrollAt(
                 x = x,
                 y = y,
                 primaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.id),
-                secondaryActions = intArrayOf(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD),
+                secondaryActions = intArrayOf(),
                 preferTarget = { !isHorizontalScrollContainer(it) },
             )
         } catch (_: Exception) {
             null
         }
+        recordGesture(
+            type = "scroll_down",
+            status = if (ok == true) "COMPLETED" else "REJECTED",
+            detail = if (ok == true) "via=SCROLL_DOWN ok" else "via=SCROLL_DOWN failed",
+        )
+        return ok == true
+    }
 
-        if (okScroll == true) {
-            recordGesture(
-                type = "scroll_down",
-                status = "COMPLETED",
-                detail = "via=SCROLL_DOWN ok",
+    fun scrollLeft(x: Int, y: Int): Boolean {
+        recordGesture(type = "scroll_left", status = "DISPATCHING", detail = "x=$x y=$y")
+        val ok = try {
+            performNodeScrollAt(
+                x = x,
+                y = y,
+                primaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.id),
+                secondaryActions = intArrayOf(),
+                preferTarget = { isHorizontalScrollContainer(it) },
             )
-            return true
+        } catch (_: Exception) {
+            null
         }
+        recordGesture(
+            type = "scroll_left",
+            status = if (ok == true) "COMPLETED" else "REJECTED",
+            detail = if (ok == true) "via=SCROLL_LEFT ok" else "via=SCROLL_LEFT failed",
+        )
+        return ok == true
+    }
 
-        // If scroll action is not supported, fallback to DPAD_DOWN (focus move).
-        val okDpad = try {
-            focusAt(x, y)
+    fun scrollRight(x: Int, y: Int): Boolean {
+        recordGesture(type = "scroll_right", status = "DISPATCHING", detail = "x=$x y=$y")
+        val ok = try {
+            performNodeScrollAt(
+                x = x,
+                y = y,
+                primaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.id),
+                secondaryActions = intArrayOf(),
+                preferTarget = { isHorizontalScrollContainer(it) },
+            )
+        } catch (_: Exception) {
+            null
+        }
+        recordGesture(
+            type = "scroll_right",
+            status = if (ok == true) "COMPLETED" else "REJECTED",
+            detail = if (ok == true) "via=SCROLL_RIGHT ok" else "via=SCROLL_RIGHT failed",
+        )
+        return ok == true
+    }
+
+    fun dpadUp(): Boolean {
+        recordGesture(type = "dpad_up", status = "DISPATCHING", detail = "")
+        val ok = try {
+            performFocusMove(View.FOCUS_UP)
+        } catch (_: Exception) {
+            null
+        }
+        recordGesture(
+            type = "dpad_up",
+            status = if (ok == true) "COMPLETED" else "REJECTED",
+            detail = if (ok == true) "via=FOCUS_UP ok" else "via=FOCUS_UP failed",
+        )
+        return ok == true
+    }
+
+    fun dpadDown(): Boolean {
+        recordGesture(type = "dpad_down", status = "DISPATCHING", detail = "")
+        val ok = try {
             performFocusMove(View.FOCUS_DOWN)
         } catch (_: Exception) {
             null
         }
-
         recordGesture(
-            type = "scroll_down",
-            status = if (okDpad == true) "COMPLETED" else "REJECTED",
-            detail = if (okDpad == true) "via=DPAD_DOWN ok" else "via=SCROLL_DOWN failed; DPAD_DOWN failed",
+            type = "dpad_down",
+            status = if (ok == true) "COMPLETED" else "REJECTED",
+            detail = if (ok == true) "via=FOCUS_DOWN ok" else "via=FOCUS_DOWN failed",
         )
-        return okDpad == true
+        return ok == true
     }
 
-    fun dpadLeftAt(x: Int, y: Int): Boolean {
-        recordGesture(type = "dpad_left", status = "DISPATCHING", detail = "x=$x y=$y")
+    fun dpadLeft(): Boolean {
+        recordGesture(type = "dpad_left", status = "DISPATCHING", detail = "")
         val ok = try {
-            focusAt(x, y)
             performFocusMove(View.FOCUS_LEFT)
         } catch (_: Exception) {
             null
@@ -186,10 +221,9 @@ class GestureController(
         return ok == true
     }
 
-    fun dpadRightAt(x: Int, y: Int): Boolean {
-        recordGesture(type = "dpad_right", status = "DISPATCHING", detail = "x=$x y=$y")
+    fun dpadRight(): Boolean {
+        recordGesture(type = "dpad_right", status = "DISPATCHING", detail = "")
         val ok = try {
-            focusAt(x, y)
             performFocusMove(View.FOCUS_RIGHT)
         } catch (_: Exception) {
             null
@@ -234,7 +268,7 @@ class GestureController(
         }
     }
 
-    private fun focusAt(x: Int, y: Int): Boolean? {
+    fun focusAt(x: Int, y: Int): Boolean? {
         val root = service.rootInActiveWindow ?: return null
         var best: AccessibilityNodeInfo? = null
         try {

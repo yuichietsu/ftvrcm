@@ -18,8 +18,8 @@ object SettingsKeys {
 
     const val MOUSE_KEY_SCROLL_UP = "mouse_key_scroll_up"
     const val MOUSE_KEY_SCROLL_DOWN = "mouse_key_scroll_down"
-    const val MOUSE_KEY_DPAD_LEFT = "mouse_key_dpad_left"
-    const val MOUSE_KEY_DPAD_RIGHT = "mouse_key_dpad_right"
+    const val MOUSE_KEY_SCROLL_LEFT = "mouse_key_scroll_left"
+    const val MOUSE_KEY_SCROLL_RIGHT = "mouse_key_scroll_right"
 
     const val MOUSE_CURSOR_START_POSITION = "mouse_cursor_start_position" // String
     const val MOUSE_CURSOR_LAST_X = "mouse_cursor_last_x" // int
