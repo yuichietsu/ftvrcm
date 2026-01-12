@@ -58,6 +58,27 @@ class GestureController(
         return accepted
     }
 
+    fun doubleTap(x: Int, y: Int, intervalMs: Long = DOUBLE_TAP_INTERVAL_MS): Boolean {
+        val p1 = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
+        val p2 = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
+
+        val gesture = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(p1, 0, TAP_DURATION_MS))
+            .addStroke(GestureDescription.StrokeDescription(p2, TAP_DURATION_MS + intervalMs, TAP_DURATION_MS))
+            .build()
+
+        val accepted = service.dispatchGesture(
+            gesture,
+            object : AccessibilityService.GestureResultCallback() {
+                override fun onCancelled(gestureDescription: GestureDescription?) {
+                    // Best-effort fallback: do nothing.
+                }
+            },
+            handler,
+        )
+        return accepted
+    }
+
     fun swipe(startX: Int, startY: Int, endX: Int, endY: Int, durationMs: Long = 260): Boolean {
         val path = Path().apply {
             moveTo(startX.toFloat(), startY.toFloat())
@@ -88,6 +109,7 @@ class GestureController(
 
     private companion object {
         private const val TAP_DURATION_MS = 60L
+        private const val DOUBLE_TAP_INTERVAL_MS = 80L
     }
 
     private fun performNodeClickAt(x: Int, y: Int): Boolean? {

@@ -25,6 +25,31 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private var lastCursorX: Int = 0
     private var lastCursorY: Int = 0
 
+    private var tapKeyIsDown: Boolean = false
+    private var tapKeyLongPressTriggered: Boolean = false
+    private var tapKeyWaitingSecondTap: Boolean = false
+
+    private val tapKeyLongPressRunnable = Runnable {
+        if (mode != OperationMode.MOUSE) return@Runnable
+        if (!tapKeyIsDown) return@Runnable
+        if (tapKeyLongPressTriggered) return@Runnable
+
+        tapKeyLongPressTriggered = true
+        tapKeyWaitingSecondTap = false
+        clearMoveRepeat()
+        val c = cursor.center()
+        gestures.longPress(c.x, c.y)
+    }
+
+    private val tapKeySingleTapRunnable = Runnable {
+        if (mode != OperationMode.MOUSE) return@Runnable
+        if (!tapKeyWaitingSecondTap) return@Runnable
+        tapKeyWaitingSecondTap = false
+        clearMoveRepeat()
+        val c = cursor.center()
+        gestures.tap(c.x, c.y)
+    }
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private var pendingToggleKeyCode: Int? = null
     private var pendingToggleTriggered: Boolean = false
@@ -168,7 +193,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         val mouseKeyLeft = settings.getMouseKeyLeft()
         val mouseKeyRight = settings.getMouseKeyRight()
         val mouseKeyClick = settings.getMouseKeyClick()
-        val mouseKeyLongClick = settings.getMouseKeyLongClick()
         val mouseKeySwipeUp = settings.getMouseKeySwipeUp()
         val mouseKeySwipeDown = settings.getMouseKeySwipeDown()
         val mouseKeySwipeLeft = settings.getMouseKeySwipeLeft()
@@ -179,11 +203,56 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             keyCode == mouseKeyLeft ||
             keyCode == mouseKeyRight ||
             keyCode == mouseKeyClick ||
-            keyCode == mouseKeyLongClick ||
             keyCode == mouseKeySwipeUp ||
             keyCode == mouseKeySwipeDown ||
             keyCode == mouseKeySwipeLeft ||
             keyCode == mouseKeySwipeRight
+
+        // Tap key handling (single tap / long tap / double tap)
+        if (keyCode == mouseKeyClick) {
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> {
+                    if (event.repeatCount > 0) return true
+                    tapKeyIsDown = true
+                    tapKeyLongPressTriggered = false
+                    mainHandler.removeCallbacks(tapKeyLongPressRunnable)
+                    mainHandler.postDelayed(
+                        tapKeyLongPressRunnable,
+                        ViewConfiguration.getLongPressTimeout().toLong(),
+                    )
+                    return true
+                }
+
+                KeyEvent.ACTION_UP -> {
+                    tapKeyIsDown = false
+                    mainHandler.removeCallbacks(tapKeyLongPressRunnable)
+
+                    if (tapKeyLongPressTriggered) {
+                        tapKeyLongPressTriggered = false
+                        tapKeyWaitingSecondTap = false
+                        mainHandler.removeCallbacks(tapKeySingleTapRunnable)
+                        return true
+                    }
+
+                    val doubleTapTimeout = ViewConfiguration.getDoubleTapTimeout().toLong()
+                    if (tapKeyWaitingSecondTap) {
+                        tapKeyWaitingSecondTap = false
+                        mainHandler.removeCallbacks(tapKeySingleTapRunnable)
+                        clearMoveRepeat()
+                        val c = cursor.center()
+                        gestures.doubleTap(c.x, c.y)
+                        return true
+                    }
+
+                    tapKeyWaitingSecondTap = true
+                    mainHandler.removeCallbacks(tapKeySingleTapRunnable)
+                    mainHandler.postDelayed(tapKeySingleTapRunnable, doubleTapTimeout)
+                    return true
+                }
+
+                else -> return true
+            }
+        }
 
         // Stop continuous movement on key up.
         if (event.action == KeyEvent.ACTION_UP) {
@@ -227,18 +296,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 startMoveRepeat(keyCode, dx = 1, dy = 0)
                 true
             }
-            mouseKeyClick -> {
-                clearMoveRepeat()
-                val c = cursor.center()
-                gestures.tap(c.x, c.y)
-                true
-            }
-            mouseKeyLongClick -> {
-                clearMoveRepeat()
-                val c = cursor.center()
-                gestures.longPress(c.x, c.y)
-                true
-            }
+            // mouseKeyClick is handled above.
             mouseKeySwipeUp -> doSwipe(dx = 0, dy = -1)
             mouseKeySwipeDown -> doSwipe(dx = 0, dy = 1)
             mouseKeySwipeLeft -> doSwipe(dx = -1, dy = 0)
@@ -249,6 +307,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         clearPendingToggle()
+        clearPendingTapKey()
         clearMoveRepeat()
         cursor.hide()
         super.onDestroy()
@@ -256,6 +315,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
     private fun toggleMode() {
         clearMoveRepeat()
+        clearPendingTapKey()
         mode = mode.toggle()
         settings.setOperationMode(mode)
         if (mode == OperationMode.MOUSE) {
@@ -269,6 +329,14 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             settings.setLastCursorPosition(lastCursorX, lastCursorY)
             cursor.hide()
         }
+    }
+
+    private fun clearPendingTapKey() {
+        mainHandler.removeCallbacks(tapKeyLongPressRunnable)
+        mainHandler.removeCallbacks(tapKeySingleTapRunnable)
+        tapKeyIsDown = false
+        tapKeyLongPressTriggered = false
+        tapKeyWaitingSecondTap = false
     }
 
     private fun applyCursorStartPositionIfNeeded() {

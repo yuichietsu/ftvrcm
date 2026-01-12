@@ -95,7 +95,6 @@ class SettingsStore(context: Context) {
         set += "${getMouseKeyLeft()}:mouse_left"
         set += "${getMouseKeyRight()}:mouse_right"
         set += "${getMouseKeyClick()}:mouse_click"
-        set += "${getMouseKeyLongClick()}:mouse_long_click"
         set += "${getMouseKeySwipeUp()}:mouse_swipe_up"
         set += "${getMouseKeySwipeDown()}:mouse_swipe_down"
         set += "${getMouseKeySwipeLeft()}:mouse_swipe_left"

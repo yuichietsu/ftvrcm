@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">ftvrcm</string>
 
-    <string name="accessibility_service_description">リモコン入力を監視して操作モード切替・マウス操作・アクション実行を行います</string>
+    <string name="accessibility_service_description">リモコン入力を監視して操作モード切替・タッチ操作・アクション実行を行います</string>
 
     <string name="prefs_category_mode">操作モード</string>
     <string name="prefs_mode_current">現在のモード</string>
@@ -10,18 +10,17 @@
     <string name="prefs_toggle_key">モード切り替えキー</string>
     <string name="prefs_toggle_longpress">長押しで切り替え</string>
 
-    <string name="prefs_category_mouse">マウス入力</string>
+    <string name="prefs_category_mouse">タッチ操作</string>
     <string name="prefs_mouse_speed">移動量</string>
     <string name="prefs_mouse_speed_summary">%1$d</string>
 
-    <string name="prefs_mouse_cursor_start_position">マウス開始時のカーソル位置</string>
+    <string name="prefs_mouse_cursor_start_position">タッチ操作開始時のカーソル位置</string>
 
     <string name="prefs_mouse_key_up">上移動キー</string>
     <string name="prefs_mouse_key_down">下移動キー</string>
     <string name="prefs_mouse_key_left">左移動キー</string>
     <string name="prefs_mouse_key_right">右移動キー</string>
-    <string name="prefs_mouse_key_click">クリックキー</string>
-    <string name="prefs_mouse_key_longclick">長押しクリックキー</string>
+    <string name="prefs_mouse_key_click">タップキー</string>
 
     <string name="prefs_mouse_key_swipe_up">上スワイプキー</string>
     <string name="prefs_mouse_key_swipe_down">下スワイプキー</string>
@@ -50,7 +49,7 @@
     <string name="prefs_reset_defaults_summary">すべての設定を初期値に戻します</string>
 
     <string name="mode_normal">通常操作</string>
-    <string name="mode_mouse">マウス操作</string>
+    <string name="mode_mouse">タッチ操作</string>
 
     <string name="action_none">未割当</string>
     <string name="action_launch_app">アプリ起動（packageName）</string>

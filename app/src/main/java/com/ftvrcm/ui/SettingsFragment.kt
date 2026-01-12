@@ -61,7 +61,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 SettingsKeys.MOUSE_KEY_LEFT,
                 SettingsKeys.MOUSE_KEY_RIGHT,
                 SettingsKeys.MOUSE_KEY_CLICK,
-                SettingsKeys.MOUSE_KEY_LONGCLICK,
                 SettingsKeys.MOUSE_KEY_SWIPE_UP,
                 SettingsKeys.MOUSE_KEY_SWIPE_DOWN,
                 SettingsKeys.MOUSE_KEY_SWIPE_LEFT,

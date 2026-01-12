@@ -17,11 +17,11 @@ com.ftvrcm_preferences.xml
     ├── mouse_key_left
     ├── mouse_key_right
     ├── mouse_key_click
-    ├── mouse_key_longclick
     ├── mouse_key_swipe_up
     ├── mouse_key_swipe_down
     ├── mouse_key_swipe_left
     ├── mouse_key_swipe_right
+    ├── mouse_cursor_start_position
     ├── key_mapping
     ├── button_actions
     ├── action_keycode
@@ -91,7 +91,7 @@ com.ftvrcm_preferences.xml
 | **型** | StringSet |
 | **形式** | `{keyCode}:{actionId}` (カンマ区切り) |
 | **デフォルト** | 空集合（初期化時に作成） |
-| **説明** | リモコンキーとマウス操作/アクションのマッピング |
+| **説明** | リモコンキーとタッチ操作/アクションのマッピング |
 
 **例**：
 ```xml
@@ -101,7 +101,6 @@ com.ftvrcm_preferences.xml
   <string>21:mouse_left</string>
   <string>22:mouse_right</string>
   <string>23:mouse_click</string>
-    <string>82:mouse_long_click</string>
         <string>167:mouse_swipe_up</string>
         <string>166:mouse_swipe_down</string>
     <string>89:mouse_swipe_left</string>
@@ -126,15 +125,14 @@ com.ftvrcm_preferences.xml
 | 89 | 巻き戻し（KEYCODE_MEDIA_REWIND） |
 | 90 | 早送り（KEYCODE_MEDIA_FAST_FORWARD） |
 
-**マウス操作 ID**：
+**タッチ操作 ID**：
 | ActionId | 操作 |
 |----------|------|
 | `mouse_up` | ポインタ上移動 |
 | `mouse_down` | ポインタ下移動 |
 | `mouse_left` | ポインタ左移動 |
 | `mouse_right` | ポインタ右移動 |
-| `mouse_click` | マウス左クリック |
-| `mouse_long_click` | 長押しクリック |
+| `mouse_click` | タップ（短押し）/ロングタップ（長押し）/ダブルタップ（短時間2回） |
 | `mouse_swipe_up` | 上スワイプ |
 | `mouse_swipe_down` | 下スワイプ |
 | `mouse_swipe_left` | 左スワイプ |

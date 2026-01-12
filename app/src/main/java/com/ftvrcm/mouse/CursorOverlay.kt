@@ -43,6 +43,10 @@ class CursorOverlay(private val context: Context) {
         view = dot
         params = layoutParams
         windowManager.addView(dot, layoutParams)
+
+        // Some devices temporarily place the overlay at (0,0) on first add.
+        // Re-apply position once params is attached.
+        setPosition(x, y)
     }
 
     fun hide() {
