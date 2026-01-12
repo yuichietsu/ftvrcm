@@ -141,21 +141,26 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         if (event.action != KeyEvent.ACTION_DOWN) return true
 
         val step = settings.getMousePointerSpeedPx()
+        // Acceleration: scale movement based on repeat count (key held down).
+        // Formula: base_step * (1 + sqrt(repeatCount)) for smooth acceleration.
+        val accel = 1.0 + kotlin.math.sqrt(event.repeatCount.toDouble())
+        val scaledStep = (step * accel).toInt()
+
         return when (keyCode) {
             settings.getMouseKeyUp() -> {
-                cursor.moveBy(0, -step)
+                cursor.moveBy(0, -scaledStep)
                 true
             }
             settings.getMouseKeyDown() -> {
-                cursor.moveBy(0, step)
+                cursor.moveBy(0, scaledStep)
                 true
             }
             settings.getMouseKeyLeft() -> {
-                cursor.moveBy(-step, 0)
+                cursor.moveBy(-scaledStep, 0)
                 true
             }
             settings.getMouseKeyRight() -> {
-                cursor.moveBy(step, 0)
+                cursor.moveBy(scaledStep, 0)
                 true
             }
             settings.getMouseKeyClick() -> {
