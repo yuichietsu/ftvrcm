@@ -3,6 +3,7 @@ package com.ftvrcm.adb
 import android.content.Context
 import android.util.Log
 import dadb.AdbKeyPair
+import dadb.AdbShellResponse
 import dadb.Dadb
 import java.io.File
 import java.net.Inet4Address
@@ -39,6 +40,16 @@ class AdbInputClient(
         submitShell("input swipe $x1 $y1 $x2 $y2 $durationMs")
     }
 
+    /**
+     * Runs a shell command synchronously.
+     *
+     * Call from a background thread.
+     */
+    fun runShellBlocking(command: String): AdbShellResponse {
+        val d = getOrCreateDadb()
+        return d.shell(command)
+    }
+
     override fun close() {
         try {
             dadb?.close()
@@ -53,8 +64,8 @@ class AdbInputClient(
             try {
                 val d = getOrCreateDadb()
                 // Use shell_v2 output; Dadb.shell returns AdbShellResponse.
-                d.shell(command)
-                Log.d(tag, "shell ok: $command")
+                val resp = d.shell(command)
+                Log.d(tag, "shell ok: $command (exitCode=${resp.exitCode})")
             } catch (t: Throwable) {
                 Log.w(tag, "shell failed: $command (${t.javaClass.simpleName}: ${t.message})")
                 // Reset connection so next command retries.

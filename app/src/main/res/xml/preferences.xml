@@ -143,6 +143,11 @@
             android:summary="@string/prefs_status_unknown"
             android:selectable="false" />
 
+        <Preference
+            android:key="enable_accessibility_via_adb"
+            android:title="@string/prefs_enable_accessibility_via_adb"
+            android:summary="@string/prefs_enable_accessibility_via_adb_summary" />
+
         <SwitchPreferenceCompat
             android:key="background_monitoring_enabled"
             android:title="バックグラウンド監視"

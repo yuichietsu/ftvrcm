@@ -19,6 +19,7 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceGroup
 import com.ftvrcm.R
+import com.ftvrcm.adb.AdbInputClient
 import com.ftvrcm.data.SettingsKeys
 import com.ftvrcm.data.SettingsStore
 import com.ftvrcm.domain.OperationMode
@@ -56,9 +57,16 @@ class SettingsFragment : PreferenceFragmentCompat() {
             true
         }
 
+        val enableViaAdb = findPreference<Preference>("enable_accessibility_via_adb")
+        enableViaAdb?.setOnPreferenceClickListener {
+            enableAccessibilityViaAdb()
+            true
+        }
+
         refreshModeSummary()
         refreshRequiredStateSummary()
         refreshToggleKeySummary()
+        refreshEnableViaAdbPreference()
 
         val prefs = preferenceManager.sharedPreferences ?: return
         val l = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -107,6 +115,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         refreshModeSummary()
         refreshRequiredStateSummary()
         refreshToggleKeySummary()
+        refreshEnableViaAdbPreference()
     }
 
     override fun onDestroy() {
@@ -164,6 +173,83 @@ class SettingsFragment : PreferenceFragmentCompat() {
         } else {
             getString(R.string.prefs_status_accessibility_service_off)
         }
+    }
+
+    private fun refreshEnableViaAdbPreference() {
+        val pref = findPreference<Preference>("enable_accessibility_via_adb") ?: return
+        val enabled = isAccessibilityServiceEnabled()
+        pref.isEnabled = !enabled
+    }
+
+    private fun enableAccessibilityViaAdb() {
+        if (isAccessibilityServiceEnabled()) {
+            Toast.makeText(requireContext(), getString(R.string.prefs_status_accessibility_service_on), Toast.LENGTH_SHORT).show()
+            refreshEnableViaAdbPreference()
+            return
+        }
+
+        val context = requireContext()
+        val pref = findPreference<Preference>("enable_accessibility_via_adb")
+        pref?.isEnabled = false
+        pref?.summary = getString(R.string.prefs_enable_accessibility_via_adb_running)
+
+        val store = SettingsStore(context)
+        val adbHost = store.getAdbHost()
+        val adbPort = store.getAdbPort()
+
+        val expected = ComponentName(context, RemoteControlAccessibilityService::class.java)
+        val component = "${expected.packageName}/${expected.className}"
+
+        Thread {
+            var ok = false
+            var detail: String? = null
+
+            try {
+                AdbInputClient(context.applicationContext, adbHost, adbPort).use { adb ->
+                    val getResp = adb.runShellBlocking("settings get secure enabled_accessibility_services")
+                    val current = getResp.output.trim().let { if (it == "null") "" else it }
+
+                    val next = when {
+                        current.isBlank() -> component
+                        current.split(':').any { it.trim() == component } -> current
+                        else -> "$current:$component"
+                    }
+
+                    val putServicesResp = adb.runShellBlocking(
+                        "settings put secure enabled_accessibility_services $next",
+                    )
+                    val putEnabledResp = adb.runShellBlocking(
+                        "settings put secure accessibility_enabled 1",
+                    )
+
+                    ok = putServicesResp.exitCode == 0 && putEnabledResp.exitCode == 0
+                    detail = "get(exit=${getResp.exitCode}) putServices(exit=${putServicesResp.exitCode}) putEnabled(exit=${putEnabledResp.exitCode})"
+                }
+            } catch (t: Throwable) {
+                ok = false
+                detail = "${t.javaClass.simpleName}: ${t.message}"
+            }
+
+            activity?.runOnUiThread {
+                if (!isAdded) return@runOnUiThread
+
+                if (ok) {
+                    Toast.makeText(context, getString(R.string.prefs_enable_accessibility_via_adb_done), Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(context, getString(R.string.prefs_enable_accessibility_via_adb_failed), Toast.LENGTH_LONG).show()
+                }
+
+                pref?.summary = getString(R.string.prefs_enable_accessibility_via_adb_summary)
+
+                refreshRequiredStateSummary()
+                refreshEnableViaAdbPreference()
+
+                if (!ok && detail != null) {
+                    // Show brief detail for troubleshooting.
+                    Toast.makeText(context, detail, Toast.LENGTH_LONG).show()
+                }
+            }
+        }.start()
     }
 
     private fun isAccessibilityServiceEnabled(): Boolean {
