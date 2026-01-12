@@ -51,6 +51,11 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
+        // Debug: record key codes even if background monitoring is OFF (so user can diagnose keys).
+        if (event.action == KeyEvent.ACTION_DOWN && settings.isDebugShowKeyCodeEnabled()) {
+            settings.setDebugLastKey(event.keyCode, KeyEvent.keyCodeToString(event.keyCode))
+        }
+
         if (!settings.isBackgroundMonitoringEnabled()) return false
 
         val keyCode = event.keyCode

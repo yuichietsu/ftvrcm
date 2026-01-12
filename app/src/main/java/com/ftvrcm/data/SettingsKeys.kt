@@ -29,4 +29,10 @@ object SettingsKeys {
     const val ACTION_PARAM = "action_param" // String
 
     const val BACKGROUND_MONITORING_ENABLED = "background_monitoring_enabled" // boolean
+
+    // Debug
+    const val DEBUG_SHOW_KEYCODE = "debug_show_keycode" // boolean
+    const val DEBUG_LAST_KEYCODE = "debug_last_keycode" // int
+    const val DEBUG_LAST_KEYNAME = "debug_last_keyname" // String
+    const val DEBUG_LAST_KEY_AT = "debug_last_key_at" // long (elapsedRealtime)
 }

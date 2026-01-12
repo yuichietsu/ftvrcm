@@ -2,6 +2,7 @@ package com.ftvrcm.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.SystemClock
 import org.json.JSONObject
 import androidx.core.content.edit
 import com.ftvrcm.domain.OperationMode
@@ -48,6 +49,8 @@ class SettingsStore(context: Context) {
             putString(SettingsKeys.ACTION_PARAM, "")
 
             putBoolean(SettingsKeys.BACKGROUND_MONITORING_ENABLED, true)
+
+            putBoolean(SettingsKeys.DEBUG_SHOW_KEYCODE, false)
         }
     }
 
@@ -145,4 +148,28 @@ class SettingsStore(context: Context) {
     fun getActionParam(): String = prefs.getString(SettingsKeys.ACTION_PARAM, "") ?: ""
 
     fun isBackgroundMonitoringEnabled(): Boolean = prefs.getBoolean(SettingsKeys.BACKGROUND_MONITORING_ENABLED, true)
+
+    fun isDebugShowKeyCodeEnabled(): Boolean = prefs.getBoolean(SettingsKeys.DEBUG_SHOW_KEYCODE, false)
+
+    fun setDebugLastKey(keyCode: Int, keyName: String) {
+        prefs.edit {
+            putInt(SettingsKeys.DEBUG_LAST_KEYCODE, keyCode)
+            putString(SettingsKeys.DEBUG_LAST_KEYNAME, keyName)
+            putLong(SettingsKeys.DEBUG_LAST_KEY_AT, SystemClock.elapsedRealtime())
+        }
+    }
+
+    data class DebugLastKey(
+        val keyCode: Int,
+        val keyName: String,
+        val atElapsedRealtimeMs: Long,
+    )
+
+    fun getDebugLastKey(): DebugLastKey? {
+        val keyCode = prefs.getInt(SettingsKeys.DEBUG_LAST_KEYCODE, -1)
+        if (keyCode <= 0) return null
+        val keyName = prefs.getString(SettingsKeys.DEBUG_LAST_KEYNAME, "") ?: ""
+        val at = prefs.getLong(SettingsKeys.DEBUG_LAST_KEY_AT, 0L)
+        return DebugLastKey(keyCode = keyCode, keyName = keyName, atElapsedRealtimeMs = at)
+    }
 }

@@ -26,6 +26,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         }
 
         refreshModeSummary()
+    refreshDebugSummary()
 
         val prefs = preferenceManager.sharedPreferences ?: return
         val l = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -36,6 +37,14 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 SettingsKeys.ACTION_TYPE,
                 SettingsKeys.ACTION_PARAM,
                 -> refreshModeSummary()
+            }
+
+            when (key) {
+                SettingsKeys.DEBUG_SHOW_KEYCODE,
+                SettingsKeys.DEBUG_LAST_KEYCODE,
+                SettingsKeys.DEBUG_LAST_KEYNAME,
+                SettingsKeys.DEBUG_LAST_KEY_AT,
+                -> refreshDebugSummary()
             }
 
             when (key) {
@@ -75,6 +84,18 @@ class SettingsFragment : PreferenceFragmentCompat() {
         modePref?.summary = when (mode) {
             OperationMode.NORMAL -> getString(R.string.mode_normal)
             OperationMode.MOUSE -> getString(R.string.mode_mouse)
+        }
+    }
+
+    private fun refreshDebugSummary() {
+        val store = SettingsStore(requireContext())
+        val pref = findPreference<Preference>(SettingsKeys.DEBUG_LAST_KEYCODE)
+        val last = store.getDebugLastKey()
+        pref?.summary = if (last == null) {
+            getString(R.string.prefs_debug_last_key_summary)
+        } else {
+            val name = last.keyName.ifBlank { "KEYCODE_${last.keyCode}" }
+            "$name (${last.keyCode})"
         }
     }
 }

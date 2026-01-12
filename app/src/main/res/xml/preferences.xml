@@ -113,4 +113,20 @@
 
     </PreferenceCategory>
 
+    <PreferenceCategory android:title="@string/prefs_category_debug">
+
+        <SwitchPreferenceCompat
+            android:key="debug_show_keycode"
+            android:title="@string/prefs_debug_show_keycode"
+            android:summary="@string/prefs_debug_show_keycode_summary"
+            android:defaultValue="false" />
+
+        <Preference
+            android:key="debug_last_keycode"
+            android:title="@string/prefs_debug_last_key"
+            android:summary="@string/prefs_debug_last_key_summary"
+            android:selectable="false" />
+
+    </PreferenceCategory>
+
 </PreferenceScreen>
