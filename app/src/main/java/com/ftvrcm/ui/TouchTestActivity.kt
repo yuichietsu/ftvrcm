@@ -122,10 +122,16 @@ class TouchTestActivity : AppCompatActivity() {
         )
 
         val rows = 40
-        val cols = 30
+        val cols = 40
+
+        // Ensure content width exceeds viewport so horizontal scroll is actually possible.
+        // (Some view hierarchies may otherwise measure to viewport width.)
+        val totalWidthPx = cols * (cellSizePx + cellMarginPx * 2)
+        patternContainer.minimumWidth = totalWidthPx
         for (r in 0 until rows) {
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
+                minimumWidth = totalWidthPx
             }
             for (c in 0 until cols) {
                 val idx = (r + c) % colors.size
