@@ -33,6 +33,18 @@
             android:defaultValue="ACCESSIBILITY_SERVICE"
             app:useSimpleSummaryProvider="true" />
 
+        <EditTextPreference
+            android:key="adb_host"
+            android:title="@string/prefs_adb_host"
+            android:defaultValue="auto"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            android:key="adb_port"
+            android:title="@string/prefs_adb_port"
+            android:defaultValue="5555"
+            app:useSimpleSummaryProvider="true" />
+
         <SeekBarPreference
             android:key="mouse_pointer_speed"
             android:title="@string/prefs_mouse_speed"

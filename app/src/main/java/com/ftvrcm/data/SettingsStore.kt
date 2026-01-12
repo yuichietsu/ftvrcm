@@ -47,6 +47,11 @@ class SettingsStore(context: Context) {
 
             putString(SettingsKeys.EMULATION_METHOD, EmulationMethod.ACCESSIBILITY_SERVICE.name)
 
+            // ADB target (when EMULATION_METHOD=ADB)
+            // "auto" will try localhost + device IPs.
+            putString(SettingsKeys.ADB_HOST, "auto")
+            putString(SettingsKeys.ADB_PORT, "5555")
+
             putString(SettingsKeys.MOUSE_KEY_UP, "19")
             putString(SettingsKeys.MOUSE_KEY_DOWN, "20")
             putString(SettingsKeys.MOUSE_KEY_LEFT, "21")
@@ -118,6 +123,11 @@ class SettingsStore(context: Context) {
         val value = prefs.getString(SettingsKeys.EMULATION_METHOD, EmulationMethod.ACCESSIBILITY_SERVICE.name)
         return if (value == EmulationMethod.ADB.name) EmulationMethod.ADB else EmulationMethod.ACCESSIBILITY_SERVICE
     }
+
+    fun getAdbHost(): String = prefs.getString(SettingsKeys.ADB_HOST, "auto") ?: "auto"
+
+    fun getAdbPort(): Int = (prefs.getString(SettingsKeys.ADB_PORT, "5555")?.toIntOrNull() ?: 5555)
+        .coerceIn(1, 65535)
 
     fun getMouseKeyUp(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_UP, "19")?.toIntOrNull() ?: 19
     fun getMouseKeyDown(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_DOWN, "20")?.toIntOrNull() ?: 20

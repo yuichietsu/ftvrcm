@@ -19,6 +19,8 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private lateinit var cursor: CursorOverlay
     private lateinit var gestures: GestureController
     private var adbInput: AdbInputClient? = null
+    private var adbHost: String? = null
+    private var adbPort: Int? = null
 
     private var mode: OperationMode = OperationMode.NORMAL
 
@@ -42,7 +44,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         val c = cursor.center()
         when (settings.getEmulationMethod()) {
             EmulationMethod.ACCESSIBILITY_SERVICE -> gestures.longPress(c.x, c.y)
-            EmulationMethod.ADB -> adbInput?.longPress(c.x, c.y)
+            EmulationMethod.ADB -> adb()?.longPress(c.x, c.y)
         }
     }
 
@@ -84,7 +86,10 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             settings = SettingsStore(this).also { it.initializeDefaultsIfNeeded() }
             cursor = CursorOverlay(this)
             gestures = GestureController(this)
-            adbInput = AdbInputClient(this)
+            // Create lazily to avoid unnecessary ADB connections on startup.
+            adbInput = null
+            adbHost = null
+            adbPort = null
 
             mode = settings.getOperationMode()
             if (mode == OperationMode.MOUSE) {
@@ -101,6 +106,32 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             } catch (_: Throwable) {
                 // ignore
             }
+        }
+    }
+
+    private fun adb(): AdbInputClient? {
+        val host = settings.getAdbHost()
+        val port = settings.getAdbPort()
+
+        val current = adbInput
+        if (current != null && adbHost == host && adbPort == port) return current
+
+        try {
+            current?.close()
+        } catch (_: Throwable) {
+        }
+
+        return try {
+            AdbInputClient(this, host = host, port = port).also {
+                adbInput = it
+                adbHost = host
+                adbPort = port
+            }
+        } catch (_: Throwable) {
+            adbInput = null
+            adbHost = null
+            adbPort = null
+            null
         }
     }
 
@@ -243,7 +274,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                     val c = cursor.center()
                     when (settings.getEmulationMethod()) {
                         EmulationMethod.ACCESSIBILITY_SERVICE -> gestures.tap(c.x, c.y)
-                        EmulationMethod.ADB -> adbInput?.tap(c.x, c.y)
+                        EmulationMethod.ADB -> adb()?.tap(c.x, c.y)
                     }
                     return true
                 }
@@ -292,25 +323,25 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                             // Swipe around cursor center.
                             val half = distance / 2
                             when (keyCode) {
-                                mouseKeyScrollUp -> adbInput?.swipe(
+                                mouseKeyScrollUp -> adb()?.swipe(
                                     clampX(c.x),
                                     clampY(c.y + half),
                                     clampX(c.x),
                                     clampY(c.y - half),
                                 )
-                                mouseKeyScrollDown -> adbInput?.swipe(
+                                mouseKeyScrollDown -> adb()?.swipe(
                                     clampX(c.x),
                                     clampY(c.y - half),
                                     clampX(c.x),
                                     clampY(c.y + half),
                                 )
-                                mouseKeyScrollLeft -> adbInput?.swipe(
+                                mouseKeyScrollLeft -> adb()?.swipe(
                                     clampX(c.x + half),
                                     clampY(c.y),
                                     clampX(c.x - half),
                                     clampY(c.y),
                                 )
-                                mouseKeyScrollRight -> adbInput?.swipe(
+                                mouseKeyScrollRight -> adb()?.swipe(
                                     clampX(c.x - half),
                                     clampY(c.y),
                                     clampX(c.x + half),
@@ -364,6 +395,8 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         cursor.hide()
         adbInput?.close()
         adbInput = null
+        adbHost = null
+        adbPort = null
         super.onDestroy()
     }
 

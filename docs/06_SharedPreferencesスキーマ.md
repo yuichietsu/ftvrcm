@@ -13,6 +13,8 @@ com.ftvrcm_preferences.xml
     ├── operation_mode
     ├── mouse_pointer_speed
     ├── emulation_method
+    ├── adb_host
+    ├── adb_port
     ├── mouse_key_up
     ├── mouse_key_down
     ├── mouse_key_left
@@ -98,6 +100,25 @@ com.ftvrcm_preferences.xml
 **例**：
 ```xml
 <string name="emulation_method">ADB</string>
+```
+
+---
+
+### 3.2 ADB接続先（adb_host / adb_port）
+
+`emulation_method=ADB` の場合に、アプリ内ADBクライアントが接続する `adbd` の接続先を指定します。
+
+| 項目 | 値 |
+|------|-----|
+| **キー** | `adb_host` / `adb_port` |
+| **型** | String / String |
+| **デフォルト** | `auto` / `5555` |
+| **説明** | `adb_host=auto` の場合、`127.0.0.1`・`localhost`・端末のIPv4アドレス群を順に試行します |
+
+**例**：
+```xml
+<string name="adb_host">192.168.11.12</string>
+<string name="adb_port">5555</string>
 ```
 
 ### 4. キーマッピング（key_mapping）

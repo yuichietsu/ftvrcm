@@ -12,6 +12,10 @@ object SettingsKeys {
 
     const val EMULATION_METHOD = "emulation_method" // String: ACCESSIBILITY_SERVICE|ADB
 
+    // ADB (used when EMULATION_METHOD=ADB)
+    const val ADB_HOST = "adb_host" // String: "auto" | hostname/IP
+    const val ADB_PORT = "adb_port" // String (EditTextPreference) / store as Int
+
     const val MOUSE_KEY_UP = "mouse_key_up" // String/int
     const val MOUSE_KEY_DOWN = "mouse_key_down"
     const val MOUSE_KEY_LEFT = "mouse_key_left"
