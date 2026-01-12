@@ -161,6 +161,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         if (isToggleKey) {
             if (!toggleLongPress) {
                 if (event.action == KeyEvent.ACTION_DOWN) {
+                    Log.i(tag, "toggle key DOWN (no-longpress mode)")
                     toggleMode()
                     return true
                 }
@@ -169,8 +170,10 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
             when (event.action) {
                 KeyEvent.ACTION_DOWN -> {
+                    Log.i(tag, "toggle key DOWN (longpress enabled)")
                     // If platform reports long-press/repeat, toggle immediately.
                     if (event.isLongPress || event.repeatCount > 0) {
+                        Log.i(tag, "toggle key reported longpress/repeat -> toggle now")
                         clearPendingToggle()
                         toggleMode()
                         return true
@@ -182,6 +185,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                         pendingToggleTriggered = false
                         val timeoutMs = ViewConfiguration.getLongPressTimeout().toLong()
                         mainHandler.postDelayed(pendingToggleRunnable, timeoutMs)
+                        Log.i(tag, "toggle key schedule longpress timeoutMs=$timeoutMs")
                     }
 
                     // Consume DOWN to avoid delivering only DOWN when long-press toggles.
@@ -189,6 +193,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 }
 
                 KeyEvent.ACTION_UP -> {
+                    Log.i(tag, "toggle key UP")
                     val wasTriggered = pendingToggleTriggered
                     clearPendingToggle()
 
