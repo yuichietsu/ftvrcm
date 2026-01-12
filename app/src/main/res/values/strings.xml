@@ -49,6 +49,7 @@
     <string name="prefs_enable_accessibility_via_adb_running">ADBで有効化中…</string>
     <string name="prefs_enable_accessibility_via_adb_done">ADBで有効化しました。設定画面に戻って状態を確認してください。</string>
     <string name="prefs_enable_accessibility_via_adb_failed">ADBでの有効化に失敗しました（ADB接続/認証/端末制限の可能性）。</string>
+    <string name="prefs_enable_accessibility_via_adb_failed_auth">ADB認証に失敗しました。端末側に「ADBデバッグを許可」ダイアログが出ていないか確認してください（このアプリは独自のADB鍵を使用します）。</string>
 
     <string name="prefs_open_accessibility_settings">アクセシビリティ設定を開く</string>
     <string name="prefs_open_accessibility_settings_summary">常時モード切替を有効にするには本サービスをONにしてください</string>

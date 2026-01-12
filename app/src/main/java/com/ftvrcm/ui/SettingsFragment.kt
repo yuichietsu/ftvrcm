@@ -205,6 +205,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         Thread {
             var ok = false
             var detail: String? = null
+            var authLikely = false
 
             try {
                 android.util.Log.i(TAG, "enableAccessibilityViaAdb start host=$adbHost port=$adbPort")
@@ -261,6 +262,9 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 ok = false
                 detail = "${t.javaClass.simpleName}: ${t.message}"
                 android.util.Log.w(TAG, "enableAccessibilityViaAdb failed ($detail)", t)
+
+                val msg = (t.message ?: "").lowercase()
+                authLikely = msg.contains("unauthorized") || msg.contains("auth") || msg.contains("denied")
             }
 
             activity?.runOnUiThread {
@@ -269,18 +273,24 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 if (ok) {
                     Toast.makeText(context, getString(R.string.prefs_enable_accessibility_via_adb_done), Toast.LENGTH_LONG).show()
                 } else {
-                    Toast.makeText(context, getString(R.string.prefs_enable_accessibility_via_adb_failed), Toast.LENGTH_LONG).show()
+                    val msg = if (authLikely) {
+                        getString(R.string.prefs_enable_accessibility_via_adb_failed_auth)
+                    } else {
+                        getString(R.string.prefs_enable_accessibility_via_adb_failed)
+                    }
+                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                 }
 
-                pref?.summary = getString(R.string.prefs_enable_accessibility_via_adb_summary)
+                pref?.summary = if (ok || detail.isNullOrBlank()) {
+                    getString(R.string.prefs_enable_accessibility_via_adb_summary)
+                } else {
+                    getString(R.string.prefs_enable_accessibility_via_adb_summary) + "\n" + detail
+                }
 
                 refreshRequiredStateSummary()
                 refreshEnableViaAdbPreference()
 
-                if (!ok && detail != null) {
-                    // Show brief detail for troubleshooting.
-                    Toast.makeText(context, detail, Toast.LENGTH_LONG).show()
-                }
+                // Note: detail is already attached to the preference summary.
             }
         }.start()
     }
