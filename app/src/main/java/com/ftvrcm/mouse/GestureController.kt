@@ -37,9 +37,14 @@ class GestureController(
                     // Fire OS may cancel gesture injection even when dispatchGesture() returned true.
                     // Fallback: try ACTION_CLICK on the node at the cursor position.
                     store.setDebugLastGestureEvent("tap#$id cancelled x=$x y=$y -> nodeClick")
-                    val ok = performNodeClickAt(x, y)
+                    val ret = performNodeClickAt(x, y)
+                    // NOTE: performAction may return false even if the UI reacts.
                     store.setDebugLastGestureEvent(
-                        if (ok) "tap#$id cancelled -> nodeClick OK" else "tap#$id cancelled -> nodeClick FAIL",
+                        when (ret) {
+                            null -> "tap#$id cancelled -> nodeClick: noTarget"
+                            true -> "tap#$id cancelled -> nodeClick: requested(ret=true)"
+                            false -> "tap#$id cancelled -> nodeClick: requested(ret=false)"
+                        },
                     )
                 }
             },
@@ -82,11 +87,11 @@ class GestureController(
         private const val TAP_DURATION_MS = 60L
     }
 
-    private fun performNodeClickAt(x: Int, y: Int): Boolean {
-        val root = service.rootInActiveWindow ?: return false
+    private fun performNodeClickAt(x: Int, y: Int): Boolean? {
+        val root = service.rootInActiveWindow ?: return null
+        var best: AccessibilityNodeInfo? = null
         try {
             val bounds = Rect()
-            var best: AccessibilityNodeInfo? = null
             var bestArea = Long.MAX_VALUE
 
             val stack = ArrayDeque<AccessibilityNodeInfo>()
@@ -94,39 +99,53 @@ class GestureController(
 
             while (stack.isNotEmpty()) {
                 val node = stack.removeLast()
-
-                node.getBoundsInScreen(bounds)
-                if (bounds.contains(x, y)) {
-                    val area = bounds.width().toLong() * bounds.height().toLong()
-                    if (area in 1 until bestArea) {
-                        best?.recycle()
-                        best = AccessibilityNodeInfo.obtain(node)
-                        bestArea = area
+                try {
+                    node.getBoundsInScreen(bounds)
+                    if (bounds.contains(x, y)) {
+                        val area = bounds.width().toLong() * bounds.height().toLong()
+                        if (area in 1 until bestArea) {
+                            best?.recycle()
+                            best = AccessibilityNodeInfo.obtain(node)
+                            bestArea = area
+                        }
                     }
-                }
 
-                for (i in 0 until node.childCount) {
-                    val child = node.getChild(i)
-                    if (child != null) stack.add(child)
+                    for (i in 0 until node.childCount) {
+                        val child = node.getChild(i)
+                        if (child != null) stack.add(child)
+                    }
+                } finally {
+                    // recycle traversal nodes; 'best' is a separate obtained copy.
+                    node.recycle()
                 }
             }
 
-            if (best == null) return false
+            val bestNode = best ?: return null
 
-            // Prefer clicking the deepest clickable ancestor.
-            var target: AccessibilityNodeInfo? = best
+            // Prefer clicking the closest clickable ancestor.
+            var target: AccessibilityNodeInfo? = bestNode
             while (target != null && !(target.isClickable && target.isEnabled)) {
                 val parent = target.parent
                 if (parent == null) break
+                if (target !== bestNode) {
+                    target.recycle()
+                }
                 target = parent
             }
 
-            val clicked = target?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true
-            best.recycle()
-            target?.recycle()
-            return clicked
+            val ret = target?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+
+            if (target != null && target !== bestNode) {
+                target.recycle()
+            }
+            bestNode.recycle()
+            return ret
         } catch (_: Exception) {
-            return false
+            try {
+                best?.recycle()
+            } catch (_: Exception) {
+            }
+            return null
         }
     }
 }
