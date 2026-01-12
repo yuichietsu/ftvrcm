@@ -21,6 +21,11 @@
     <string name="prefs_mouse_key_click">クリックキー</string>
     <string name="prefs_mouse_key_longclick">長押しクリックキー</string>
 
+    <string name="prefs_mouse_key_swipe_up">上スワイプキー</string>
+    <string name="prefs_mouse_key_swipe_down">下スワイプキー</string>
+    <string name="prefs_mouse_key_swipe_left">左スワイプキー</string>
+    <string name="prefs_mouse_key_swipe_right">右スワイプキー</string>
+
     <string name="prefs_category_actions">ボタンアクション</string>
     <string name="prefs_action_key">アクション割当キー</string>
     <string name="prefs_action_type">割り当てるアクション</string>
@@ -28,8 +33,6 @@
 
     <string name="prefs_category_system">システム</string>
 
-    <string name="prefs_media_toggle_enabled">再生ボタン2度押しでモード切替（実験）</string>
-    <string name="prefs_media_toggle_enabled_summary">一部端末ではメディア操作を奪う可能性があります。動作しない場合はOFFにしてください</string>
     <string name="prefs_open_accessibility_settings">アクセシビリティ設定を開く</string>
     <string name="prefs_open_accessibility_settings_summary">常時モード切替を有効にするには本サービスをONにしてください</string>
 
@@ -38,22 +41,6 @@
 
     <string name="prefs_open_system_settings">端末設定を開く</string>
     <string name="prefs_open_system_settings_summary">Fire OSの設定トップを開きます（機種により表示が異なります）</string>
-
-    <string name="prefs_category_debug">デバッグ</string>
-    <string name="prefs_debug_checks">権限/能力チェック</string>
-    <string name="prefs_debug_checks_summary">未確認</string>
-    <string name="prefs_debug_last_crash">クラッシュ診断（最後の例外）</string>
-    <string name="prefs_debug_last_crash_summary">未記録</string>
-    <string name="prefs_debug_service_status">サービス状態</string>
-    <string name="prefs_debug_service_status_summary">未接続</string>
-    <string name="prefs_debug_last_media">メディアトグル状態</string>
-    <string name="prefs_debug_last_media_summary">未取得</string>
-    <string name="prefs_debug_last_gesture">ジェスチャ注入状態</string>
-    <string name="prefs_debug_last_gesture_summary">未取得</string>
-    <string name="prefs_debug_show_keycode">押したキーコードを表示</string>
-    <string name="prefs_debug_show_keycode_summary">ONの間、最後に押したキーコードを設定画面に表示します</string>
-    <string name="prefs_debug_last_key">最後に押したキー</string>
-    <string name="prefs_debug_last_key_summary">未取得</string>
 
     <string name="mode_normal">通常操作</string>
     <string name="mode_mouse">マウス操作</string>

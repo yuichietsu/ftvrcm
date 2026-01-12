@@ -8,11 +8,25 @@ ftvrcm の設定データは SharedPreferences で保存されます。本ドキ
 ```
 com.ftvrcm_preferences.xml
 └── ftvrcm_settings
+    ├── toggle_keycode
+    ├── toggle_longpress
     ├── operation_mode
-    ├── mouse_sensitivity
     ├── mouse_pointer_speed
+    ├── mouse_key_up
+    ├── mouse_key_down
+    ├── mouse_key_left
+    ├── mouse_key_right
+    ├── mouse_key_click
+    ├── mouse_key_longclick
+    ├── mouse_key_swipe_up
+    ├── mouse_key_swipe_down
+    ├── mouse_key_swipe_left
+    ├── mouse_key_swipe_right
     ├── key_mapping
     ├── button_actions
+    ├── action_keycode
+    ├── action_type
+    ├── action_param
     ├── background_monitoring_enabled
     └── settings_version
 ```
@@ -88,6 +102,11 @@ com.ftvrcm_preferences.xml
   <string>21:mouse_left</string>
   <string>22:mouse_right</string>
   <string>23:mouse_click</string>
+    <string>82:mouse_long_click</string>
+    <string>166:mouse_swipe_up</string>
+    <string>167:mouse_swipe_down</string>
+    <string>89:mouse_swipe_left</string>
+    <string>90:mouse_swipe_right</string>
   <string>4:launch_app_com.android.chrome</string>
 </set>
 ```
@@ -102,6 +121,11 @@ com.ftvrcm_preferences.xml
 | 23 | 決定ボタン（KEYCODE_DPAD_CENTER） |
 | 4 | 戻るボタン（KEYCODE_BACK） |
 | 3 | ホームボタン（KEYCODE_HOME） |
+| 82 | メニューボタン（KEYCODE_MENU） |
+| 166 | チャンネル+（KEYCODE_CHANNEL_UP） |
+| 167 | チャンネル-（KEYCODE_CHANNEL_DOWN） |
+| 89 | 巻き戻し（KEYCODE_MEDIA_REWIND） |
+| 90 | 早送り（KEYCODE_MEDIA_FAST_FORWARD） |
 
 **マウス操作 ID**：
 | ActionId | 操作 |
@@ -111,7 +135,11 @@ com.ftvrcm_preferences.xml
 | `mouse_left` | ポインタ左移動 |
 | `mouse_right` | ポインタ右移動 |
 | `mouse_click` | マウス左クリック |
-| `mouse_right_click` | マウス右クリック |
+| `mouse_long_click` | 長押しクリック |
+| `mouse_swipe_up` | 上スワイプ |
+| `mouse_swipe_down` | 下スワイプ |
+| `mouse_swipe_left` | 左スワイプ |
+| `mouse_swipe_right` | 右スワイプ |
 
 ---
 

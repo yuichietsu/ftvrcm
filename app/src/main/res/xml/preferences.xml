@@ -13,7 +13,7 @@
             android:title="@string/prefs_toggle_key"
             android:entries="@array/key_entries"
             android:entryValues="@array/key_values"
-            android:defaultValue="82" />
+            android:defaultValue="4" />
 
         <SwitchPreferenceCompat
             android:key="toggle_longpress"
@@ -71,7 +71,35 @@
             android:title="@string/prefs_mouse_key_longclick"
             android:entries="@array/key_entries"
             android:entryValues="@array/key_values"
-            android:defaultValue="4" />
+            android:defaultValue="82" />
+
+        <ListPreference
+            android:key="mouse_key_swipe_up"
+            android:title="@string/prefs_mouse_key_swipe_up"
+            android:entries="@array/key_entries"
+            android:entryValues="@array/key_values"
+            android:defaultValue="166" />
+
+        <ListPreference
+            android:key="mouse_key_swipe_down"
+            android:title="@string/prefs_mouse_key_swipe_down"
+            android:entries="@array/key_entries"
+            android:entryValues="@array/key_values"
+            android:defaultValue="167" />
+
+        <ListPreference
+            android:key="mouse_key_swipe_left"
+            android:title="@string/prefs_mouse_key_swipe_left"
+            android:entries="@array/key_entries"
+            android:entryValues="@array/key_values"
+            android:defaultValue="89" />
+
+        <ListPreference
+            android:key="mouse_key_swipe_right"
+            android:title="@string/prefs_mouse_key_swipe_right"
+            android:entries="@array/key_entries"
+            android:entryValues="@array/key_values"
+            android:defaultValue="90" />
 
     </PreferenceCategory>
 
@@ -106,12 +134,6 @@
             android:summary="他のアプリ実行中でもキー監視を行います"
             android:defaultValue="true" />
 
-        <SwitchPreferenceCompat
-            android:key="media_toggle_enabled"
-            android:title="@string/prefs_media_toggle_enabled"
-            android:summary="@string/prefs_media_toggle_enabled_summary"
-            android:defaultValue="false" />
-
         <Preference
             android:key="open_accessibility_settings"
             android:title="@string/prefs_open_accessibility_settings"
@@ -126,52 +148,6 @@
             android:key="open_system_settings"
             android:title="@string/prefs_open_system_settings"
             android:summary="@string/prefs_open_system_settings_summary" />
-
-    </PreferenceCategory>
-
-    <PreferenceCategory android:title="@string/prefs_category_debug">
-
-        <Preference
-            android:key="debug_checks"
-            android:title="@string/prefs_debug_checks"
-            android:summary="@string/prefs_debug_checks_summary"
-            android:selectable="false" />
-
-        <Preference
-            android:key="debug_last_crash"
-            android:title="@string/prefs_debug_last_crash"
-            android:summary="@string/prefs_debug_last_crash_summary"
-            android:selectable="false" />
-
-        <Preference
-            android:key="debug_service_status"
-            android:title="@string/prefs_debug_service_status"
-            android:summary="@string/prefs_debug_service_status_summary"
-            android:selectable="false" />
-
-        <Preference
-            android:key="debug_last_media"
-            android:title="@string/prefs_debug_last_media"
-            android:summary="@string/prefs_debug_last_media_summary"
-            android:selectable="false" />
-
-        <Preference
-            android:key="debug_last_gesture"
-            android:title="@string/prefs_debug_last_gesture"
-            android:summary="@string/prefs_debug_last_gesture_summary"
-            android:selectable="false" />
-
-        <SwitchPreferenceCompat
-            android:key="debug_show_keycode"
-            android:title="@string/prefs_debug_show_keycode"
-            android:summary="@string/prefs_debug_show_keycode_summary"
-            android:defaultValue="false" />
-
-        <Preference
-            android:key="debug_last_keycode"
-            android:title="@string/prefs_debug_last_key"
-            android:summary="@string/prefs_debug_last_key_summary"
-            android:selectable="false" />
 
     </PreferenceCategory>
 

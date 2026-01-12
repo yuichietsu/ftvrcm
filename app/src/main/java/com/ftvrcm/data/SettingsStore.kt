@@ -2,12 +2,9 @@ package com.ftvrcm.data
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.os.SystemClock
 import org.json.JSONObject
 import androidx.core.content.edit
 import com.ftvrcm.domain.OperationMode
-import java.io.PrintWriter
-import java.io.StringWriter
 
 class SettingsStore(context: Context) {
     private val prefs: SharedPreferences =
@@ -21,7 +18,7 @@ class SettingsStore(context: Context) {
             putInt(SettingsKeys.SETTINGS_VERSION, SettingsKeys.SETTINGS_VERSION_CURRENT)
             putString(SettingsKeys.OPERATION_MODE, OperationMode.NORMAL.name)
 
-            putString(SettingsKeys.TOGGLE_KEYCODE, "82") // MENU
+            putString(SettingsKeys.TOGGLE_KEYCODE, "4") // BACK
             putBoolean(SettingsKeys.TOGGLE_LONGPRESS, true)
 
             putInt(SettingsKeys.MOUSE_POINTER_SPEED, 10)
@@ -31,7 +28,13 @@ class SettingsStore(context: Context) {
             putString(SettingsKeys.MOUSE_KEY_LEFT, "21")
             putString(SettingsKeys.MOUSE_KEY_RIGHT, "22")
             putString(SettingsKeys.MOUSE_KEY_CLICK, "23")
-            putString(SettingsKeys.MOUSE_KEY_LONGCLICK, "4")
+            putString(SettingsKeys.MOUSE_KEY_LONGCLICK, "82")
+
+            // Swipe keys (default: CH+/CH- and REW/FF)
+            putString(SettingsKeys.MOUSE_KEY_SWIPE_UP, "166")
+            putString(SettingsKeys.MOUSE_KEY_SWIPE_DOWN, "167")
+            putString(SettingsKeys.MOUSE_KEY_SWIPE_LEFT, "89")
+            putString(SettingsKeys.MOUSE_KEY_SWIPE_RIGHT, "90")
 
             putStringSet(
                 SettingsKeys.KEY_MAPPING,
@@ -41,6 +44,10 @@ class SettingsStore(context: Context) {
                     "21:mouse_left",
                     "22:mouse_right",
                     "23:mouse_click",
+                    "166:mouse_swipe_up",
+                    "167:mouse_swipe_down",
+                    "89:mouse_swipe_left",
+                    "90:mouse_swipe_right",
                 ),
             )
 
@@ -51,10 +58,6 @@ class SettingsStore(context: Context) {
             putString(SettingsKeys.ACTION_PARAM, "")
 
             putBoolean(SettingsKeys.BACKGROUND_MONITORING_ENABLED, true)
-
-            putBoolean(SettingsKeys.MEDIA_TOGGLE_ENABLED, false)
-
-            putBoolean(SettingsKeys.DEBUG_SHOW_KEYCODE, false)
         }
     }
 
@@ -68,6 +71,10 @@ class SettingsStore(context: Context) {
         set += "${getMouseKeyRight()}:mouse_right"
         set += "${getMouseKeyClick()}:mouse_click"
         set += "${getMouseKeyLongClick()}:mouse_long_click"
+        set += "${getMouseKeySwipeUp()}:mouse_swipe_up"
+        set += "${getMouseKeySwipeDown()}:mouse_swipe_down"
+        set += "${getMouseKeySwipeLeft()}:mouse_swipe_left"
+        set += "${getMouseKeySwipeRight()}:mouse_swipe_right"
         prefs.edit { putStringSet(SettingsKeys.KEY_MAPPING, set) }
     }
 
@@ -135,7 +142,7 @@ class SettingsStore(context: Context) {
         prefs.edit { putString(SettingsKeys.OPERATION_MODE, mode.name) }
     }
 
-    fun getToggleKeyCode(): Int = prefs.getString(SettingsKeys.TOGGLE_KEYCODE, "82")?.toIntOrNull() ?: 82
+    fun getToggleKeyCode(): Int = prefs.getString(SettingsKeys.TOGGLE_KEYCODE, "4")?.toIntOrNull() ?: 4
     fun isToggleLongPress(): Boolean = prefs.getBoolean(SettingsKeys.TOGGLE_LONGPRESS, true)
 
     fun getMousePointerSpeedPx(): Int = prefs.getInt(SettingsKeys.MOUSE_POINTER_SPEED, 10).coerceIn(1, 200)
@@ -145,125 +152,16 @@ class SettingsStore(context: Context) {
     fun getMouseKeyLeft(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_LEFT, "21")?.toIntOrNull() ?: 21
     fun getMouseKeyRight(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_RIGHT, "22")?.toIntOrNull() ?: 22
     fun getMouseKeyClick(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_CLICK, "23")?.toIntOrNull() ?: 23
-    fun getMouseKeyLongClick(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_LONGCLICK, "4")?.toIntOrNull() ?: 4
+    fun getMouseKeyLongClick(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_LONGCLICK, "82")?.toIntOrNull() ?: 82
+
+    fun getMouseKeySwipeUp(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SWIPE_UP, "166")?.toIntOrNull() ?: 166
+    fun getMouseKeySwipeDown(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SWIPE_DOWN, "167")?.toIntOrNull() ?: 167
+    fun getMouseKeySwipeLeft(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SWIPE_LEFT, "89")?.toIntOrNull() ?: 89
+    fun getMouseKeySwipeRight(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SWIPE_RIGHT, "90")?.toIntOrNull() ?: 90
 
     fun getActionKeyCode(): Int = prefs.getString(SettingsKeys.ACTION_KEYCODE, "4")?.toIntOrNull() ?: 4
     fun getActionType(): String = prefs.getString(SettingsKeys.ACTION_TYPE, "none") ?: "none"
     fun getActionParam(): String = prefs.getString(SettingsKeys.ACTION_PARAM, "") ?: ""
 
     fun isBackgroundMonitoringEnabled(): Boolean = prefs.getBoolean(SettingsKeys.BACKGROUND_MONITORING_ENABLED, true)
-
-    fun isMediaToggleEnabled(): Boolean = prefs.getBoolean(SettingsKeys.MEDIA_TOGGLE_ENABLED, false)
-
-    fun getMediaLastPlayPauseDownAtElapsed(): Long =
-        prefs.getLong(SettingsKeys.MEDIA_LAST_PLAYPAUSE_DOWN_AT, 0L)
-
-    fun setMediaLastPlayPauseDownAtElapsed(value: Long) {
-        prefs.edit { putLong(SettingsKeys.MEDIA_LAST_PLAYPAUSE_DOWN_AT, value) }
-    }
-
-    fun setDebugLastMediaEvent(summary: String) {
-        prefs.edit {
-            putString(SettingsKeys.DEBUG_LAST_MEDIA_EVENT, summary)
-            putLong(SettingsKeys.DEBUG_LAST_MEDIA_EVENT_AT, SystemClock.elapsedRealtime())
-        }
-    }
-
-    data class DebugLastMediaEvent(
-        val summary: String,
-        val atElapsedRealtimeMs: Long,
-    )
-
-    fun getDebugLastMediaEvent(): DebugLastMediaEvent? {
-        val at = prefs.getLong(SettingsKeys.DEBUG_LAST_MEDIA_EVENT_AT, 0L)
-        if (at <= 0L) return null
-        val summary = prefs.getString(SettingsKeys.DEBUG_LAST_MEDIA_EVENT, "") ?: ""
-        return DebugLastMediaEvent(summary = summary, atElapsedRealtimeMs = at)
-    }
-
-    fun setDebugLastGestureEvent(summary: String) {
-        prefs.edit {
-            putString(SettingsKeys.DEBUG_LAST_GESTURE_EVENT, summary)
-            putLong(SettingsKeys.DEBUG_LAST_GESTURE_EVENT_AT, SystemClock.elapsedRealtime())
-        }
-    }
-
-    data class DebugLastGestureEvent(
-        val summary: String,
-        val atElapsedRealtimeMs: Long,
-    )
-
-    fun getDebugLastGestureEvent(): DebugLastGestureEvent? {
-        val at = prefs.getLong(SettingsKeys.DEBUG_LAST_GESTURE_EVENT_AT, 0L)
-        if (at <= 0L) return null
-        val summary = prefs.getString(SettingsKeys.DEBUG_LAST_GESTURE_EVENT, "") ?: ""
-        return DebugLastGestureEvent(summary = summary, atElapsedRealtimeMs = at)
-    }
-
-    fun isDebugShowKeyCodeEnabled(): Boolean = prefs.getBoolean(SettingsKeys.DEBUG_SHOW_KEYCODE, false)
-
-    fun setDebugLastKey(keyCode: Int, keyName: String) {
-        prefs.edit {
-            putInt(SettingsKeys.DEBUG_LAST_KEYCODE, keyCode)
-            putString(SettingsKeys.DEBUG_LAST_KEYNAME, keyName)
-            putLong(SettingsKeys.DEBUG_LAST_KEY_AT, SystemClock.elapsedRealtime())
-        }
-    }
-
-    fun setDebugServiceConnected() {
-        prefs.edit {
-            putLong(SettingsKeys.DEBUG_SERVICE_CONNECTED_AT, SystemClock.elapsedRealtime())
-        }
-    }
-
-    fun setDebugLastCrash(stage: String, throwable: Throwable) {
-        val type = throwable::class.java.name
-        val message = throwable.message ?: ""
-        val sw = StringWriter()
-        throwable.printStackTrace(PrintWriter(sw))
-        val stack = sw.toString().take(16_000)
-
-        prefs.edit {
-            putLong(SettingsKeys.DEBUG_LAST_CRASH_AT, SystemClock.elapsedRealtime())
-            putString(SettingsKeys.DEBUG_LAST_CRASH_STAGE, stage)
-            putString(SettingsKeys.DEBUG_LAST_CRASH_TYPE, type)
-            putString(SettingsKeys.DEBUG_LAST_CRASH_MESSAGE, message)
-            putString(SettingsKeys.DEBUG_LAST_CRASH_STACK, stack)
-        }
-    }
-
-    data class DebugLastKey(
-        val keyCode: Int,
-        val keyName: String,
-        val atElapsedRealtimeMs: Long,
-    )
-
-    fun getDebugLastKey(): DebugLastKey? {
-        val keyCode = prefs.getInt(SettingsKeys.DEBUG_LAST_KEYCODE, -1)
-        if (keyCode <= 0) return null
-        val keyName = prefs.getString(SettingsKeys.DEBUG_LAST_KEYNAME, "") ?: ""
-        val at = prefs.getLong(SettingsKeys.DEBUG_LAST_KEY_AT, 0L)
-        return DebugLastKey(keyCode = keyCode, keyName = keyName, atElapsedRealtimeMs = at)
-    }
-
-    fun getDebugServiceConnectedAtElapsed(): Long =
-        prefs.getLong(SettingsKeys.DEBUG_SERVICE_CONNECTED_AT, 0L)
-
-    data class DebugLastCrash(
-        val stage: String,
-        val type: String,
-        val message: String,
-        val stack: String,
-        val atElapsedRealtimeMs: Long,
-    )
-
-    fun getDebugLastCrash(): DebugLastCrash? {
-        val at = prefs.getLong(SettingsKeys.DEBUG_LAST_CRASH_AT, 0L)
-        if (at <= 0L) return null
-        val stage = prefs.getString(SettingsKeys.DEBUG_LAST_CRASH_STAGE, "") ?: ""
-        val type = prefs.getString(SettingsKeys.DEBUG_LAST_CRASH_TYPE, "") ?: ""
-        val message = prefs.getString(SettingsKeys.DEBUG_LAST_CRASH_MESSAGE, "") ?: ""
-        val stack = prefs.getString(SettingsKeys.DEBUG_LAST_CRASH_STACK, "") ?: ""
-        return DebugLastCrash(stage = stage, type = type, message = message, stack = stack, atElapsedRealtimeMs = at)
-    }
 }

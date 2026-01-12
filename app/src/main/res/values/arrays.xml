@@ -8,6 +8,10 @@
         <item>BACK</item>
         <item>MENU</item>
         <item>MEDIA_PLAY_PAUSE</item>
+        <item>MEDIA_REWIND</item>
+        <item>MEDIA_FAST_FORWARD</item>
+        <item>CHANNEL_UP</item>
+        <item>CHANNEL_DOWN</item>
     </string-array>
 
     <string-array name="key_values">
@@ -19,6 +23,10 @@
         <item>4</item>
         <item>82</item>
         <item>85</item>
+        <item>89</item>
+        <item>90</item>
+        <item>166</item>
+        <item>167</item>
     </string-array>
 
     <string-array name="action_entries">

@@ -6,6 +6,7 @@ import android.os.Looper
 import android.view.ViewConfiguration
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
+import kotlin.math.min
 import com.ftvrcm.action.ActionFactory
 import com.ftvrcm.data.SettingsStore
 import com.ftvrcm.domain.OperationMode
@@ -54,19 +55,13 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         try {
             settings = SettingsStore(this).also { it.initializeDefaultsIfNeeded() }
-            settings.setDebugServiceConnected()
             cursor = CursorOverlay(this)
-            gestures = GestureController(this, settings)
+            gestures = GestureController(this)
             actions = ActionFactory(this)
 
             mode = settings.getOperationMode()
             if (mode == OperationMode.MOUSE) cursor.show()
         } catch (t: Throwable) {
-            try {
-                SettingsStore(this).setDebugLastCrash("onServiceConnected", t)
-            } catch (_: Throwable) {
-                // ignore
-            }
             try {
                 disableSelf()
             } catch (_: Throwable) {
@@ -84,12 +79,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
-        try {
-        // Debug: record key codes even if background monitoring is OFF (so user can diagnose keys).
-        if (event.action == KeyEvent.ACTION_DOWN && settings.isDebugShowKeyCodeEnabled()) {
-            settings.setDebugLastKey(event.keyCode, KeyEvent.keyCodeToString(event.keyCode))
-        }
-
         if (!settings.isBackgroundMonitoringEnabled()) return false
 
         val keyCode = event.keyCode
@@ -157,52 +146,87 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         // 3) Mouse mode key mapping
         if (mode != OperationMode.MOUSE) return false
 
+        val mouseKeyUp = settings.getMouseKeyUp()
+        val mouseKeyDown = settings.getMouseKeyDown()
+        val mouseKeyLeft = settings.getMouseKeyLeft()
+        val mouseKeyRight = settings.getMouseKeyRight()
+        val mouseKeyClick = settings.getMouseKeyClick()
+        val mouseKeyLongClick = settings.getMouseKeyLongClick()
+        val mouseKeySwipeUp = settings.getMouseKeySwipeUp()
+        val mouseKeySwipeDown = settings.getMouseKeySwipeDown()
+        val mouseKeySwipeLeft = settings.getMouseKeySwipeLeft()
+        val mouseKeySwipeRight = settings.getMouseKeySwipeRight()
+
+        val isHandledMouseKey = keyCode == mouseKeyUp ||
+            keyCode == mouseKeyDown ||
+            keyCode == mouseKeyLeft ||
+            keyCode == mouseKeyRight ||
+            keyCode == mouseKeyClick ||
+            keyCode == mouseKeyLongClick ||
+            keyCode == mouseKeySwipeUp ||
+            keyCode == mouseKeySwipeDown ||
+            keyCode == mouseKeySwipeLeft ||
+            keyCode == mouseKeySwipeRight
+
         // Stop continuous movement on key up.
         if (event.action == KeyEvent.ACTION_UP) {
+            val wasMovingKey = moveKeyCode == keyCode
             stopMoveRepeat(keyCode)
+            return isHandledMouseKey || wasMovingKey
+        }
+
+        if (event.action != KeyEvent.ACTION_DOWN) return isHandledMouseKey
+
+        // Ignore repeats for swipe/click keys.
+        val isFirstDown = event.repeatCount == 0
+
+        fun doSwipe(dx: Int, dy: Int): Boolean {
+            if (!isFirstDown) return true
+            clearMoveRepeat()
+            val c = cursor.center()
+            val dm = resources.displayMetrics
+            val minDim = min(dm.widthPixels, dm.heightPixels)
+            val distance = (minDim * 0.25f).toInt().coerceIn(200, 800)
+            val endX = (c.x + dx * distance).coerceIn(0, dm.widthPixels - 1)
+            val endY = (c.y + dy * distance).coerceIn(0, dm.heightPixels - 1)
+            gestures.swipe(c.x, c.y, endX, endY)
             return true
         }
 
-        if (event.action != KeyEvent.ACTION_DOWN) return true
-
         return when (keyCode) {
-            settings.getMouseKeyUp() -> {
+            mouseKeyUp -> {
                 startMoveRepeat(keyCode, dx = 0, dy = -1)
                 true
             }
-            settings.getMouseKeyDown() -> {
+            mouseKeyDown -> {
                 startMoveRepeat(keyCode, dx = 0, dy = 1)
                 true
             }
-            settings.getMouseKeyLeft() -> {
+            mouseKeyLeft -> {
                 startMoveRepeat(keyCode, dx = -1, dy = 0)
                 true
             }
-            settings.getMouseKeyRight() -> {
+            mouseKeyRight -> {
                 startMoveRepeat(keyCode, dx = 1, dy = 0)
                 true
             }
-            settings.getMouseKeyClick() -> {
+            mouseKeyClick -> {
                 clearMoveRepeat()
                 val c = cursor.center()
                 gestures.tap(c.x, c.y)
                 true
             }
-            settings.getMouseKeyLongClick() -> {
+            mouseKeyLongClick -> {
                 clearMoveRepeat()
                 val c = cursor.center()
                 gestures.longPress(c.x, c.y)
                 true
             }
+            mouseKeySwipeUp -> doSwipe(dx = 0, dy = -1)
+            mouseKeySwipeDown -> doSwipe(dx = 0, dy = 1)
+            mouseKeySwipeLeft -> doSwipe(dx = -1, dy = 0)
+            mouseKeySwipeRight -> doSwipe(dx = 1, dy = 0)
             else -> false
-        }
-        } catch (t: Throwable) {
-            try {
-                settings.setDebugLastCrash("onKeyEvent", t)
-            } catch (_: Throwable) {
-                // ignore
-            }
-            return false
         }
     }
 
