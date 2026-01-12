@@ -110,11 +110,20 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
         val serviceStatusPref = findPreference<Preference>("debug_service_status")
         val connectedAt = store.getDebugServiceConnectedAtElapsed()
-        val isEnabled = isAccessibilityServiceEnabled()
+        val enabledViaAm = isServiceEnabledViaAccessibilityManager()
+        val enabledViaSecure = isServiceEnabledViaSecureSettings()
+
+        val enabledLabel = when {
+            enabledViaAm == true -> "ON"
+            enabledViaAm == false -> "OFF"
+            enabledViaSecure == true -> "ON?"
+            enabledViaSecure == false -> "OFF?"
+            else -> "?"
+        }
+
         serviceStatusPref?.summary = when {
-            !isEnabled -> "有効化: OFF / 接続: 未接続"
-            connectedAt <= 0L -> "有効化: ON / 接続: 未接続"
-            else -> "有効化: ON / 接続: ${formatAge(connectedAt)}"
+            connectedAt <= 0L -> "有効化: $enabledLabel / 接続: 未接続"
+            else -> "有効化: $enabledLabel / 接続: ${formatAge(connectedAt)}"
         }
 
         val pref = findPreference<Preference>(SettingsKeys.DEBUG_LAST_KEYCODE)
@@ -137,7 +146,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         }
     }
 
-    private fun isAccessibilityServiceEnabled(): Boolean {
+    private fun isServiceEnabledViaSecureSettings(): Boolean? {
         return try {
             val context = requireContext()
             val enabledServices = Settings.Secure.getString(
@@ -147,24 +156,32 @@ class SettingsFragment : PreferenceFragmentCompat() {
             val me = ComponentName(context, com.ftvrcm.service.RemoteControlAccessibilityService::class.java)
             enabledServices.split(':').any { it.equals(me.flattenToString(), ignoreCase = true) }
         } catch (_: Exception) {
-            false
+            null
+        }
+    }
+
+    private fun isServiceEnabledViaAccessibilityManager(): Boolean? {
+        return try {
+            val context = requireContext()
+            val am = context.getSystemService(AccessibilityManager::class.java) ?: return null
+            val me = ComponentName(context, com.ftvrcm.service.RemoteControlAccessibilityService::class.java)
+            am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+                .any { it.id.equals(me.flattenToString(), ignoreCase = true) }
+        } catch (_: Exception) {
+            null
         }
     }
 
     private fun buildChecksSummary(store: SettingsStore): String {
         val context = requireContext()
 
-        val accessibilityEnabled = try {
-            Settings.Secure.getInt(context.contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED, 0) == 1
-        } catch (_: Exception) {
-            false
-        }
+        val am = context.getSystemService(AccessibilityManager::class.java)
+        val accessibilityEnabled = am?.isEnabled
+        val enabledViaSecure = isServiceEnabledViaSecureSettings()
+        val enabledViaAm = isServiceEnabledViaAccessibilityManager()
 
         val me = ComponentName(context, com.ftvrcm.service.RemoteControlAccessibilityService::class.java)
-        val enabledInSecure = isAccessibilityServiceEnabled()
-
         val info = try {
-            val am = context.getSystemService(AccessibilityManager::class.java)
             am?.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
                 ?.firstOrNull { it.id.equals(me.flattenToString(), ignoreCase = true) }
         } catch (_: Exception) {
@@ -180,9 +197,31 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
         return buildString {
             append("accessibility:")
-            append(if (accessibilityEnabled) "ON" else "OFF")
-            append(" / serviceEnabled:")
-            append(if (enabledInSecure) "ON" else "OFF")
+            append(
+                when (accessibilityEnabled) {
+                    true -> "ON"
+                    false -> "OFF"
+                    else -> "?"
+                },
+            )
+
+            append(" / serviceEnabled.am:")
+            append(
+                when (enabledViaAm) {
+                    true -> "ON"
+                    false -> "OFF"
+                    else -> "?"
+                },
+            )
+
+            append(" / serviceEnabled.secure:")
+            append(
+                when (enabledViaSecure) {
+                    true -> "ON"
+                    false -> "OFF"
+                    else -> "?"
+                },
+            )
             append(" / connected:")
             append(if (connectedAt > 0L) formatAge(connectedAt) else "NO")
             append(" / bgMonitor:")
