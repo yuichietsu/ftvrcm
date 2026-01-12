@@ -17,6 +17,7 @@ com.ftvrcm_preferences.xml
     ├── mouse_key_left
     ├── mouse_key_right
     ├── mouse_key_click
+    ├── mouse_key_double_tap
     ├── mouse_key_swipe_up
     ├── mouse_key_swipe_down
     ├── mouse_key_swipe_left
@@ -101,8 +102,9 @@ com.ftvrcm_preferences.xml
   <string>21:mouse_left</string>
   <string>22:mouse_right</string>
   <string>23:mouse_click</string>
-        <string>167:mouse_swipe_up</string>
-        <string>166:mouse_swipe_down</string>
+    <string>82:mouse_double_tap</string>
+    <string>167:mouse_swipe_up</string>
+    <string>166:mouse_swipe_down</string>
     <string>89:mouse_swipe_left</string>
     <string>90:mouse_swipe_right</string>
   <string>4:launch_app_com.android.chrome</string>
@@ -132,7 +134,8 @@ com.ftvrcm_preferences.xml
 | `mouse_down` | ポインタ下移動 |
 | `mouse_left` | ポインタ左移動 |
 | `mouse_right` | ポインタ右移動 |
-| `mouse_click` | タップ（短押し）/ロングタップ（長押し）/ダブルタップ（短時間2回） |
+| `mouse_click` | タップ（短押し）/ロングタップ（長押し） |
+| `mouse_double_tap` | ダブルタップ |
 | `mouse_swipe_up` | 上スワイプ |
 | `mouse_swipe_down` | 下スワイプ |
 | `mouse_swipe_left` | 左スワイプ |
@@ -193,12 +196,12 @@ com.ftvrcm_preferences.xml
 |------|-----|
 | **キー** | `settings_version` |
 | **型** | Integer |
-| **現在バージョン** | 1 |
+| **現在バージョン** | 2 |
 | **説明** | スキーマバージョン（マイグレーション用） |
 
 **例**：
 ```xml
-<int name="settings_version" value="1" />
+<int name="settings_version" value="2" />
 ```
 
 ---

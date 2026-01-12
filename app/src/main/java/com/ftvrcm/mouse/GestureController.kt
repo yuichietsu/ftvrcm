@@ -98,37 +98,45 @@ class GestureController(
                     val dx = endX - startX
                     val dy = endY - startY
                     if (abs(dy) > abs(dx)) {
-                        // Swipe up -> scroll down/forward, swipe down -> scroll up/backward.
-                        val actions = if (dy < 0) {
-                            intArrayOf(
-                                AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.id,
-                                AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,
-                            )
+                        // Swipe up -> scroll down, swipe down -> scroll up.
+                        // Prefer non-horizontal scroll containers so that vertical swipes don't become horizontal moves.
+                        val primary = if (dy < 0) {
+                            intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.id)
                         } else {
-                            intArrayOf(
-                                AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP.id,
-                                AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD,
-                            )
+                            intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP.id)
                         }
-                        performNodeScrollAt(startX, startY, actions)
+                        val secondary = if (dy < 0) {
+                            intArrayOf(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+                        } else {
+                            intArrayOf(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
+                        }
+                        performNodeScrollAt(
+                            x = startX,
+                            y = startY,
+                            primaryActions = primary,
+                            secondaryActions = secondary,
+                            preferTarget = { !isHorizontalScrollContainer(it) },
+                        )
                     } else {
                         // Swipe left -> scroll right, swipe right -> scroll left.
-                        val actions = if (dx < 0) {
-                            intArrayOf(
-                                AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.id,
-                                AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,
-                                AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.id,
-                                AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD,
-                            )
+                        // Prefer horizontal containers; fall back to forward/backward if needed.
+                        val primary = if (dx < 0) {
+                            intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.id)
                         } else {
-                            intArrayOf(
-                                AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.id,
-                                AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD,
-                                AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.id,
-                                AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,
-                            )
+                            intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.id)
                         }
-                        performNodeScrollAt(startX, startY, actions)
+                        val secondary = if (dx < 0) {
+                            intArrayOf(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD, AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.id)
+                        } else {
+                            intArrayOf(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD, AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.id)
+                        }
+                        performNodeScrollAt(
+                            x = startX,
+                            y = startY,
+                            primaryActions = primary,
+                            secondaryActions = secondary,
+                            preferTarget = { isHorizontalScrollContainer(it) },
+                        )
                     }
                 }
             },
@@ -265,7 +273,18 @@ class GestureController(
         }
     }
 
-    private fun performNodeScrollAt(x: Int, y: Int, actions: IntArray): Boolean? {
+    private fun isHorizontalScrollContainer(node: AccessibilityNodeInfo): Boolean {
+        val cn = node.className?.toString() ?: return false
+        return cn.contains("HorizontalScrollView")
+    }
+
+    private fun performNodeScrollAt(
+        x: Int,
+        y: Int,
+        primaryActions: IntArray,
+        secondaryActions: IntArray,
+        preferTarget: (AccessibilityNodeInfo) -> Boolean,
+    ): Boolean? {
         val root = service.rootInActiveWindow ?: return null
         var best: AccessibilityNodeInfo? = null
         try {
@@ -299,34 +318,51 @@ class GestureController(
 
             val bestNode = best ?: return null
 
-            // Prefer the closest ancestor that is scrollable AND accepts one of the requested actions.
-            var target: AccessibilityNodeInfo? = bestNode
-            while (target != null) {
-                if (target.isScrollable) {
-                    for (a in actions) {
+            val chain = mutableListOf<AccessibilityNodeInfo>()
+            var current: AccessibilityNodeInfo? = bestNode
+            while (current != null) {
+                chain.add(AccessibilityNodeInfo.obtain(current))
+                val parent = current.parent
+                if (current !== bestNode) current.recycle()
+                current = parent
+            }
+
+            fun tryOnChain(onlyPreferred: Boolean): Boolean {
+                for (n in chain) {
+                    if (!n.isScrollable) continue
+                    if (onlyPreferred && !preferTarget(n)) continue
+
+                    for (a in primaryActions) {
                         val ok = try {
-                            target.performAction(a)
+                            n.performAction(a)
                         } catch (_: Exception) {
                             null
                         }
-                        if (ok == true) {
-                            if (target !== bestNode) target.recycle()
-                            bestNode.recycle()
-                            return true
+                        if (ok == true) return true
+                    }
+
+                    for (a in secondaryActions) {
+                        val ok = try {
+                            n.performAction(a)
+                        } catch (_: Exception) {
+                            null
                         }
+                        if (ok == true) return true
                     }
                 }
-
-                val parent = target.parent
-                if (parent == null) break
-                if (target !== bestNode) {
-                    target.recycle()
-                }
-                target = parent
+                return false
             }
 
+            val ret = tryOnChain(onlyPreferred = true)
+
+            for (n in chain) {
+                try {
+                    n.recycle()
+                } catch (_: Exception) {
+                }
+            }
             bestNode.recycle()
-            return null
+            return if (ret) true else null
         } catch (_: Exception) {
             try {
                 best?.recycle()

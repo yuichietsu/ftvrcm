@@ -21,6 +21,7 @@
     <string name="prefs_mouse_key_left">左移動キー</string>
     <string name="prefs_mouse_key_right">右移動キー</string>
     <string name="prefs_mouse_key_click">タップキー</string>
+    <string name="prefs_mouse_key_double_tap">ダブルタップキー</string>
 
     <string name="prefs_mouse_key_swipe_up">上スワイプキー</string>
     <string name="prefs_mouse_key_swipe_down">下スワイプキー</string>

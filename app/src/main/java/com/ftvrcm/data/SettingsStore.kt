@@ -34,10 +34,9 @@ class SettingsStore(context: Context) {
 
     fun initializeDefaultsIfNeeded() {
         val version = prefs.getInt(SettingsKeys.SETTINGS_VERSION, 0)
-        if (version != 0) return
-
-        prefs.edit {
-            putInt(SettingsKeys.SETTINGS_VERSION, SettingsKeys.SETTINGS_VERSION_CURRENT)
+        if (version == 0) {
+            prefs.edit {
+                putInt(SettingsKeys.SETTINGS_VERSION, SettingsKeys.SETTINGS_VERSION_CURRENT)
             putString(SettingsKeys.OPERATION_MODE, OperationMode.NORMAL.name)
 
             putString(SettingsKeys.TOGGLE_KEYCODE, "4") // BACK
@@ -50,6 +49,10 @@ class SettingsStore(context: Context) {
             putString(SettingsKeys.MOUSE_KEY_LEFT, "21")
             putString(SettingsKeys.MOUSE_KEY_RIGHT, "22")
             putString(SettingsKeys.MOUSE_KEY_CLICK, "23")
+            // Dedicated double-tap key (default: MENU)
+            putString(SettingsKeys.MOUSE_KEY_DOUBLE_TAP, "82")
+
+            // Legacy key (kept for backward compatibility)
             putString(SettingsKeys.MOUSE_KEY_LONGCLICK, "82")
 
             // Swipe keys (default: CH+/CH- and REW/FF)
@@ -69,6 +72,7 @@ class SettingsStore(context: Context) {
                     "21:mouse_left",
                     "22:mouse_right",
                     "23:mouse_click",
+                    "82:mouse_double_tap",
                     "167:mouse_swipe_up",
                     "166:mouse_swipe_down",
                     "89:mouse_swipe_left",
@@ -83,6 +87,20 @@ class SettingsStore(context: Context) {
             putString(SettingsKeys.ACTION_PARAM, "")
 
             putBoolean(SettingsKeys.BACKGROUND_MONITORING_ENABLED, true)
+            }
+            return
+        }
+
+        // Migrations for existing installs.
+        if (version < SettingsKeys.SETTINGS_VERSION_CURRENT) {
+            prefs.edit {
+                if (!prefs.contains(SettingsKeys.MOUSE_KEY_DOUBLE_TAP)) {
+                    // If legacy key exists, reuse it; otherwise default to MENU.
+                    val legacy = prefs.getString(SettingsKeys.MOUSE_KEY_LONGCLICK, null)
+                    putString(SettingsKeys.MOUSE_KEY_DOUBLE_TAP, legacy ?: "82")
+                }
+                putInt(SettingsKeys.SETTINGS_VERSION, SettingsKeys.SETTINGS_VERSION_CURRENT)
+            }
         }
     }
 
@@ -95,6 +113,7 @@ class SettingsStore(context: Context) {
         set += "${getMouseKeyLeft()}:mouse_left"
         set += "${getMouseKeyRight()}:mouse_right"
         set += "${getMouseKeyClick()}:mouse_click"
+        set += "${getMouseKeyDoubleTap()}:mouse_double_tap"
         set += "${getMouseKeySwipeUp()}:mouse_swipe_up"
         set += "${getMouseKeySwipeDown()}:mouse_swipe_down"
         set += "${getMouseKeySwipeLeft()}:mouse_swipe_left"
@@ -177,6 +196,13 @@ class SettingsStore(context: Context) {
     fun getMouseKeyRight(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_RIGHT, "22")?.toIntOrNull() ?: 22
     fun getMouseKeyClick(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_CLICK, "23")?.toIntOrNull() ?: 23
     fun getMouseKeyLongClick(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_LONGCLICK, "82")?.toIntOrNull() ?: 82
+    fun getMouseKeyDoubleTap(): Int {
+        val v = prefs.getString(SettingsKeys.MOUSE_KEY_DOUBLE_TAP, null)
+        if (v != null) return v.toIntOrNull() ?: 82
+
+        // Backward compatibility: reuse the legacy key if present.
+        return prefs.getString(SettingsKeys.MOUSE_KEY_LONGCLICK, "82")?.toIntOrNull() ?: 82
+    }
 
     fun getMouseKeySwipeUp(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SWIPE_UP, "167")?.toIntOrNull() ?: 167
     fun getMouseKeySwipeDown(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SWIPE_DOWN, "166")?.toIntOrNull() ?: 166

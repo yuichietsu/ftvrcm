@@ -74,6 +74,13 @@
             android:defaultValue="23" />
 
         <ListPreference
+            android:key="mouse_key_double_tap"
+            android:title="@string/prefs_mouse_key_double_tap"
+            android:entries="@array/key_entries"
+            android:entryValues="@array/key_values"
+            android:defaultValue="82" />
+
+        <ListPreference
             android:key="mouse_key_swipe_up"
             android:title="@string/prefs_mouse_key_swipe_up"
             android:entries="@array/key_entries"

@@ -4,7 +4,7 @@ object SettingsKeys {
     const val PREFS_NAME = "ftvrcm_settings"
 
     const val SETTINGS_VERSION = "settings_version"
-    const val SETTINGS_VERSION_CURRENT = 1
+    const val SETTINGS_VERSION_CURRENT = 2
 
     const val OPERATION_MODE = "operation_mode" // String: NORMAL|MOUSE
 
@@ -19,6 +19,7 @@ object SettingsKeys {
     const val MOUSE_KEY_RIGHT = "mouse_key_right"
     const val MOUSE_KEY_CLICK = "mouse_key_click"
     const val MOUSE_KEY_LONGCLICK = "mouse_key_longclick"
+    const val MOUSE_KEY_DOUBLE_TAP = "mouse_key_double_tap"
 
     const val MOUSE_KEY_SWIPE_UP = "mouse_key_swipe_up"
     const val MOUSE_KEY_SWIPE_DOWN = "mouse_key_swipe_down"
