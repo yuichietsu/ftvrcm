@@ -51,6 +51,8 @@ class GestureController(
                 }
 
                 override fun onCancelled(gestureDescription: GestureDescription?) {
+                    // Fire OS may cancel gesture injection. Fallback to ACTION_LONG_CLICK.
+                    performNodeLongClickAt(x, y)
                 }
             },
             handler,
@@ -159,6 +161,67 @@ class GestureController(
             }
 
             val ret = target?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+
+            if (target != null && target !== bestNode) {
+                target.recycle()
+            }
+            bestNode.recycle()
+            return ret
+        } catch (_: Exception) {
+            try {
+                best?.recycle()
+            } catch (_: Exception) {
+            }
+            return null
+        }
+    }
+
+    private fun performNodeLongClickAt(x: Int, y: Int): Boolean? {
+        val root = service.rootInActiveWindow ?: return null
+        var best: AccessibilityNodeInfo? = null
+        try {
+            val bounds = Rect()
+            var bestArea = Long.MAX_VALUE
+
+            val stack = ArrayDeque<AccessibilityNodeInfo>()
+            stack.add(root)
+
+            while (stack.isNotEmpty()) {
+                val node = stack.removeLast()
+                try {
+                    node.getBoundsInScreen(bounds)
+                    if (bounds.contains(x, y)) {
+                        val area = bounds.width().toLong() * bounds.height().toLong()
+                        if (area in 1 until bestArea) {
+                            best?.recycle()
+                            best = AccessibilityNodeInfo.obtain(node)
+                            bestArea = area
+                        }
+                    }
+
+                    for (i in 0 until node.childCount) {
+                        val child = node.getChild(i)
+                        if (child != null) stack.add(child)
+                    }
+                } finally {
+                    node.recycle()
+                }
+            }
+
+            val bestNode = best ?: return null
+
+            // Prefer long-clickable ancestor.
+            var target: AccessibilityNodeInfo? = bestNode
+            while (target != null && !(target.isLongClickable && target.isEnabled)) {
+                val parent = target.parent
+                if (parent == null) break
+                if (target !== bestNode) {
+                    target.recycle()
+                }
+                target = parent
+            }
+
+            val ret = target?.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)
 
             if (target != null && target !== bestNode) {
                 target.recycle()

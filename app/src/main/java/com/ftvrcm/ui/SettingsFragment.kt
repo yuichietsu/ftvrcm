@@ -41,6 +41,12 @@ class SettingsFragment : PreferenceFragmentCompat() {
             true
         }
 
+        val openTouchTest = findPreference<Preference>("open_touch_test")
+        openTouchTest?.setOnPreferenceClickListener {
+            startActivity(Intent(requireContext(), TouchTestActivity::class.java))
+            true
+        }
+
         refreshModeSummary()
         refreshRequiredStateSummary()
 

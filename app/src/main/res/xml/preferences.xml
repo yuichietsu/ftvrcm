@@ -157,4 +157,13 @@
 
     </PreferenceCategory>
 
+    <PreferenceCategory android:title="動作確認">
+
+        <Preference
+            android:key="open_touch_test"
+            android:title="タッチ操作テストを開く"
+            android:summary="タップ/ダブルタップ/ロングタップ/スワイプを検知して表示します" />
+
+    </PreferenceCategory>
+
 </PreferenceScreen>
