@@ -15,6 +15,23 @@ class SettingsStore(context: Context) {
         initializeDefaultsIfNeeded()
     }
 
+    fun getCursorStartPosition(): String =
+        prefs.getString(SettingsKeys.MOUSE_CURSOR_START_POSITION, "center") ?: "center"
+
+    fun setLastCursorPosition(x: Int, y: Int) {
+        prefs.edit {
+            putInt(SettingsKeys.MOUSE_CURSOR_LAST_X, x)
+            putInt(SettingsKeys.MOUSE_CURSOR_LAST_Y, y)
+        }
+    }
+
+    fun getLastCursorPositionOrNull(): Pair<Int, Int>? {
+        if (!prefs.contains(SettingsKeys.MOUSE_CURSOR_LAST_X) || !prefs.contains(SettingsKeys.MOUSE_CURSOR_LAST_Y)) {
+            return null
+        }
+        return prefs.getInt(SettingsKeys.MOUSE_CURSOR_LAST_X, 0) to prefs.getInt(SettingsKeys.MOUSE_CURSOR_LAST_Y, 0)
+    }
+
     fun initializeDefaultsIfNeeded() {
         val version = prefs.getInt(SettingsKeys.SETTINGS_VERSION, 0)
         if (version != 0) return
@@ -36,10 +53,13 @@ class SettingsStore(context: Context) {
             putString(SettingsKeys.MOUSE_KEY_LONGCLICK, "82")
 
             // Swipe keys (default: CH+/CH- and REW/FF)
-            putString(SettingsKeys.MOUSE_KEY_SWIPE_UP, "166")
-            putString(SettingsKeys.MOUSE_KEY_SWIPE_DOWN, "167")
+            putString(SettingsKeys.MOUSE_KEY_SWIPE_UP, "167")
+            putString(SettingsKeys.MOUSE_KEY_SWIPE_DOWN, "166")
             putString(SettingsKeys.MOUSE_KEY_SWIPE_LEFT, "89")
             putString(SettingsKeys.MOUSE_KEY_SWIPE_RIGHT, "90")
+
+            // Cursor start position in mouse mode
+            putString(SettingsKeys.MOUSE_CURSOR_START_POSITION, "center")
 
             putStringSet(
                 SettingsKeys.KEY_MAPPING,
@@ -49,8 +69,8 @@ class SettingsStore(context: Context) {
                     "21:mouse_left",
                     "22:mouse_right",
                     "23:mouse_click",
-                    "166:mouse_swipe_up",
-                    "167:mouse_swipe_down",
+                    "167:mouse_swipe_up",
+                    "166:mouse_swipe_down",
                     "89:mouse_swipe_left",
                     "90:mouse_swipe_right",
                 ),
@@ -159,8 +179,8 @@ class SettingsStore(context: Context) {
     fun getMouseKeyClick(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_CLICK, "23")?.toIntOrNull() ?: 23
     fun getMouseKeyLongClick(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_LONGCLICK, "82")?.toIntOrNull() ?: 82
 
-    fun getMouseKeySwipeUp(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SWIPE_UP, "166")?.toIntOrNull() ?: 166
-    fun getMouseKeySwipeDown(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SWIPE_DOWN, "167")?.toIntOrNull() ?: 167
+    fun getMouseKeySwipeUp(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SWIPE_UP, "167")?.toIntOrNull() ?: 167
+    fun getMouseKeySwipeDown(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SWIPE_DOWN, "166")?.toIntOrNull() ?: 166
     fun getMouseKeySwipeLeft(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SWIPE_LEFT, "89")?.toIntOrNull() ?: 89
     fun getMouseKeySwipeRight(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SWIPE_RIGHT, "90")?.toIntOrNull() ?: 90
 

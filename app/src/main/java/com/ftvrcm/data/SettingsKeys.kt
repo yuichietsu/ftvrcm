@@ -25,6 +25,10 @@ object SettingsKeys {
     const val MOUSE_KEY_SWIPE_LEFT = "mouse_key_swipe_left"
     const val MOUSE_KEY_SWIPE_RIGHT = "mouse_key_swipe_right"
 
+    const val MOUSE_CURSOR_START_POSITION = "mouse_cursor_start_position" // String
+    const val MOUSE_CURSOR_LAST_X = "mouse_cursor_last_x" // int
+    const val MOUSE_CURSOR_LAST_Y = "mouse_cursor_last_y" // int
+
     // docs/06
     const val KEY_MAPPING = "key_mapping" // StringSet: {keyCode}:{actionId}
     const val BUTTON_ACTIONS = "button_actions" // StringSet: JSON {keyCode, actionId}

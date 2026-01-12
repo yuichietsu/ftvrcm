@@ -22,6 +22,9 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
     private var mode: OperationMode = OperationMode.NORMAL
 
+    private var lastCursorX: Int = 0
+    private var lastCursorY: Int = 0
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private var pendingToggleKeyCode: Int? = null
     private var pendingToggleTriggered: Boolean = false
@@ -47,6 +50,9 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             val step = (baseStep * accel).toInt().coerceAtLeast(1)
 
             cursor.moveBy(moveDx * step, moveDy * step)
+            val p = cursor.position()
+            lastCursorX = p.x
+            lastCursorY = p.y
             mainHandler.postDelayed(this, MOVE_REPEAT_INTERVAL_MS)
         }
     }
@@ -60,7 +66,13 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             actions = ActionFactory(this)
 
             mode = settings.getOperationMode()
-            if (mode == OperationMode.MOUSE) cursor.show()
+            if (mode == OperationMode.MOUSE) {
+                applyCursorStartPositionIfNeeded()
+                cursor.show()
+                val p = cursor.position()
+                lastCursorX = p.x
+                lastCursorY = p.y
+            }
         } catch (t: Throwable) {
             try {
                 disableSelf()
@@ -113,15 +125,20 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                         mainHandler.postDelayed(pendingToggleRunnable, timeoutMs)
                     }
 
-                    // Allow short press to pass through to the system/app.
-                    return false
+                    // Consume DOWN to avoid delivering only DOWN when long-press toggles.
+                    return true
                 }
 
                 KeyEvent.ACTION_UP -> {
                     val wasTriggered = pendingToggleTriggered
                     clearPendingToggle()
-                    // If we toggled by long-press, consume the UP to reduce side effects.
-                    return wasTriggered
+
+                    // Short press: preserve BACK behavior via accessibility global action.
+                    if (!wasTriggered && keyCode == KeyEvent.KEYCODE_BACK) {
+                        performGlobalAction(GLOBAL_ACTION_BACK)
+                    }
+
+                    return true
                 }
             }
         }
@@ -241,7 +258,43 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         clearMoveRepeat()
         mode = mode.toggle()
         settings.setOperationMode(mode)
-        if (mode == OperationMode.MOUSE) cursor.show() else cursor.hide()
+        if (mode == OperationMode.MOUSE) {
+            applyCursorStartPositionIfNeeded()
+            cursor.show()
+            val p = cursor.position()
+            lastCursorX = p.x
+            lastCursorY = p.y
+        } else {
+            // Remember last cursor position for "previous" start.
+            settings.setLastCursorPosition(lastCursorX, lastCursorY)
+            cursor.hide()
+        }
+    }
+
+    private fun applyCursorStartPositionIfNeeded() {
+        val dm = resources.displayMetrics
+        val displayW = dm.widthPixels
+        val displayH = dm.heightPixels
+        val cursorW = 48
+        val cursorH = 48
+
+        val target = when (settings.getCursorStartPosition()) {
+            "previous" -> {
+                val last = settings.getLastCursorPositionOrNull()
+                if (last != null) last.first to last.second else ((displayW - cursorW) / 2) to ((displayH - cursorH) / 2)
+            }
+            "top_left" -> 0 to 0
+            "top" -> ((displayW - cursorW) / 2) to 0
+            "top_right" -> (displayW - cursorW) to 0
+            "left" -> 0 to ((displayH - cursorH) / 2)
+            "right" -> (displayW - cursorW) to ((displayH - cursorH) / 2)
+            "bottom_left" -> 0 to (displayH - cursorH)
+            "bottom" -> ((displayW - cursorW) / 2) to (displayH - cursorH)
+            "bottom_right" -> (displayW - cursorW) to (displayH - cursorH)
+            else -> ((displayW - cursorW) / 2) to ((displayH - cursorH) / 2)
+        }
+
+        cursor.setPosition(target.first, target.second)
     }
 
     private fun clearPendingToggle() {
@@ -262,6 +315,9 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         // Move immediately once for responsiveness.
         val baseStep = settings.getMousePointerSpeedPx()
         cursor.moveBy(dx * baseStep, dy * baseStep)
+        val p = cursor.position()
+        lastCursorX = p.x
+        lastCursorY = p.y
 
         mainHandler.postDelayed(moveRepeatRunnable, MOVE_REPEAT_INITIAL_DELAY_MS)
     }

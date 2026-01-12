@@ -44,4 +44,30 @@
         <item>volume_up</item>
         <item>volume_down</item>
     </string-array>
+
+    <string-array name="cursor_start_position_entries">
+        <item>中央</item>
+        <item>左上</item>
+        <item>上</item>
+        <item>右上</item>
+        <item>左</item>
+        <item>右</item>
+        <item>左下</item>
+        <item>下</item>
+        <item>右下</item>
+        <item>前回の位置</item>
+    </string-array>
+
+    <string-array name="cursor_start_position_values">
+        <item>center</item>
+        <item>top_left</item>
+        <item>top</item>
+        <item>top_right</item>
+        <item>left</item>
+        <item>right</item>
+        <item>bottom_left</item>
+        <item>bottom</item>
+        <item>bottom_right</item>
+        <item>previous</item>
+    </string-array>
 </resources>

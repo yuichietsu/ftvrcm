@@ -14,6 +14,8 @@
     <string name="prefs_mouse_speed">移動量</string>
     <string name="prefs_mouse_speed_summary">%1$d</string>
 
+    <string name="prefs_mouse_cursor_start_position">マウス開始時のカーソル位置</string>
+
     <string name="prefs_mouse_key_up">上移動キー</string>
     <string name="prefs_mouse_key_down">下移動キー</string>
     <string name="prefs_mouse_key_left">左移動キー</string>

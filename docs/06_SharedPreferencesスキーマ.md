@@ -102,8 +102,8 @@ com.ftvrcm_preferences.xml
   <string>22:mouse_right</string>
   <string>23:mouse_click</string>
     <string>82:mouse_long_click</string>
-    <string>166:mouse_swipe_up</string>
-    <string>167:mouse_swipe_down</string>
+        <string>167:mouse_swipe_up</string>
+        <string>166:mouse_swipe_down</string>
     <string>89:mouse_swipe_left</string>
     <string>90:mouse_swipe_right</string>
   <string>4:launch_app_com.android.chrome</string>

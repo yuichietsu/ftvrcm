@@ -1,9 +1,12 @@
 package com.ftvrcm.mouse
 
 import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.graphics.PixelFormat
 import android.graphics.Point
 import android.os.Build
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
@@ -21,9 +24,7 @@ class CursorOverlay(private val context: Context) {
     fun show() {
         if (view != null) return
 
-        val dot = View(context).apply {
-            setBackgroundResource(android.R.drawable.presence_online)
-        }
+        val dot = CursorRingView(context)
 
         val layoutParams = WindowManager.LayoutParams(
             48,
@@ -62,6 +63,22 @@ class CursorOverlay(private val context: Context) {
         windowManager.updateViewLayout(view, p)
     }
 
+    fun setPosition(newX: Int, newY: Int) {
+        val displaySize = getDisplaySize()
+        val p = params
+        val w = p?.width ?: 48
+        val h = p?.height ?: 48
+
+        x = newX.coerceIn(0, displaySize.x - w)
+        y = newY.coerceIn(0, displaySize.y - h)
+
+        if (p != null) {
+            p.x = x
+            p.y = y
+            windowManager.updateViewLayout(view, p)
+        }
+    }
+
     fun position(): Point = Point(x, y)
 
     fun center(): Point {
@@ -81,5 +98,31 @@ class CursorOverlay(private val context: Context) {
             windowManager.defaultDisplay.getSize(point)
         }
         return point
+    }
+
+    private class CursorRingView(context: Context) : View(context) {
+        private val outerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            color = 0xCC000000.toInt() // translucent black
+            strokeWidth = dp(5f)
+        }
+
+        private val innerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            color = 0xFFFFFFFF.toInt()
+            strokeWidth = dp(2.5f)
+        }
+
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            val cx = width / 2f
+            val cy = height / 2f
+            val r = (minOf(width, height) / 2f) - dp(2.5f)
+            canvas.drawCircle(cx, cy, r, outerPaint)
+            canvas.drawCircle(cx, cy, r, innerPaint)
+        }
+
+        private fun dp(value: Float): Float =
+            TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, resources.displayMetrics)
     }
 }
