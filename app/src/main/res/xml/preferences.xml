@@ -116,6 +116,18 @@
     <PreferenceCategory android:title="@string/prefs_category_debug">
 
         <Preference
+            android:key="debug_checks"
+            android:title="@string/prefs_debug_checks"
+            android:summary="@string/prefs_debug_checks_summary"
+            android:selectable="false" />
+
+        <Preference
+            android:key="debug_last_crash"
+            android:title="@string/prefs_debug_last_crash"
+            android:summary="@string/prefs_debug_last_crash_summary"
+            android:selectable="false" />
+
+        <Preference
             android:key="debug_service_status"
             android:title="@string/prefs_debug_service_status"
             android:summary="@string/prefs_debug_service_status_summary"

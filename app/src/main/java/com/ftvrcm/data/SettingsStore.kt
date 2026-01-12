@@ -6,6 +6,8 @@ import android.os.SystemClock
 import org.json.JSONObject
 import androidx.core.content.edit
 import com.ftvrcm.domain.OperationMode
+import java.io.PrintWriter
+import java.io.StringWriter
 
 class SettingsStore(context: Context) {
     private val prefs: SharedPreferences =
@@ -165,6 +167,22 @@ class SettingsStore(context: Context) {
         }
     }
 
+    fun setDebugLastCrash(stage: String, throwable: Throwable) {
+        val type = throwable::class.java.name
+        val message = throwable.message ?: ""
+        val sw = StringWriter()
+        throwable.printStackTrace(PrintWriter(sw))
+        val stack = sw.toString().take(16_000)
+
+        prefs.edit {
+            putLong(SettingsKeys.DEBUG_LAST_CRASH_AT, SystemClock.elapsedRealtime())
+            putString(SettingsKeys.DEBUG_LAST_CRASH_STAGE, stage)
+            putString(SettingsKeys.DEBUG_LAST_CRASH_TYPE, type)
+            putString(SettingsKeys.DEBUG_LAST_CRASH_MESSAGE, message)
+            putString(SettingsKeys.DEBUG_LAST_CRASH_STACK, stack)
+        }
+    }
+
     data class DebugLastKey(
         val keyCode: Int,
         val keyName: String,
@@ -181,4 +199,22 @@ class SettingsStore(context: Context) {
 
     fun getDebugServiceConnectedAtElapsed(): Long =
         prefs.getLong(SettingsKeys.DEBUG_SERVICE_CONNECTED_AT, 0L)
+
+    data class DebugLastCrash(
+        val stage: String,
+        val type: String,
+        val message: String,
+        val stack: String,
+        val atElapsedRealtimeMs: Long,
+    )
+
+    fun getDebugLastCrash(): DebugLastCrash? {
+        val at = prefs.getLong(SettingsKeys.DEBUG_LAST_CRASH_AT, 0L)
+        if (at <= 0L) return null
+        val stage = prefs.getString(SettingsKeys.DEBUG_LAST_CRASH_STAGE, "") ?: ""
+        val type = prefs.getString(SettingsKeys.DEBUG_LAST_CRASH_TYPE, "") ?: ""
+        val message = prefs.getString(SettingsKeys.DEBUG_LAST_CRASH_MESSAGE, "") ?: ""
+        val stack = prefs.getString(SettingsKeys.DEBUG_LAST_CRASH_STACK, "") ?: ""
+        return DebugLastCrash(stage = stage, type = type, message = message, stack = stack, atElapsedRealtimeMs = at)
+    }
 }

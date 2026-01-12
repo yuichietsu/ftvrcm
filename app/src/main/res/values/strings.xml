@@ -31,6 +31,10 @@
     <string name="prefs_open_accessibility_settings_summary">常時モード切替を有効にするには本サービスをONにしてください</string>
 
     <string name="prefs_category_debug">デバッグ</string>
+    <string name="prefs_debug_checks">権限/能力チェック</string>
+    <string name="prefs_debug_checks_summary">未確認</string>
+    <string name="prefs_debug_last_crash">クラッシュ診断（最後の例外）</string>
+    <string name="prefs_debug_last_crash_summary">未記録</string>
     <string name="prefs_debug_service_status">サービス状態</string>
     <string name="prefs_debug_service_status_summary">未接続</string>
     <string name="prefs_debug_show_keycode">押したキーコードを表示</string>

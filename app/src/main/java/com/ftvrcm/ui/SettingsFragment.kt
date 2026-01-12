@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.provider.Settings
 import android.content.SharedPreferences
 import android.os.SystemClock
+import android.view.accessibility.AccessibilityManager
+import android.accessibilityservice.AccessibilityServiceInfo
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import com.ftvrcm.R
@@ -92,6 +94,20 @@ class SettingsFragment : PreferenceFragmentCompat() {
     private fun refreshDebugSummary() {
         val store = SettingsStore(requireContext())
 
+        val checksPref = findPreference<Preference>("debug_checks")
+        checksPref?.summary = buildChecksSummary(store)
+
+        val crashPref = findPreference<Preference>("debug_last_crash")
+        val crash = store.getDebugLastCrash()
+        crashPref?.summary = if (crash == null) {
+            getString(R.string.prefs_debug_last_crash_summary)
+        } else {
+            val shortType = crash.type.substringAfterLast('.')
+            val msg = crash.message.take(80)
+            val hint = if (crash.type.endsWith("SecurityException")) "（権限不足の可能性）" else ""
+            "${formatAge(crash.atElapsedRealtimeMs)} / ${crash.stage} / $shortType: $msg$hint"
+        }
+
         val serviceStatusPref = findPreference<Preference>("debug_service_status")
         val connectedAt = store.getDebugServiceConnectedAtElapsed()
         val isEnabled = isAccessibilityServiceEnabled()
@@ -132,6 +148,49 @@ class SettingsFragment : PreferenceFragmentCompat() {
             enabledServices.split(':').any { it.equals(me.flattenToString(), ignoreCase = true) }
         } catch (_: Exception) {
             false
+        }
+    }
+
+    private fun buildChecksSummary(store: SettingsStore): String {
+        val context = requireContext()
+
+        val accessibilityEnabled = try {
+            Settings.Secure.getInt(context.contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED, 0) == 1
+        } catch (_: Exception) {
+            false
+        }
+
+        val me = ComponentName(context, com.ftvrcm.service.RemoteControlAccessibilityService::class.java)
+        val enabledInSecure = isAccessibilityServiceEnabled()
+
+        val info = try {
+            val am = context.getSystemService(AccessibilityManager::class.java)
+            am?.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+                ?.firstOrNull { it.id.equals(me.flattenToString(), ignoreCase = true) }
+        } catch (_: Exception) {
+            null
+        }
+
+        val caps = info?.capabilities ?: 0
+        val canFilterKeys = (caps and AccessibilityServiceInfo.CAPABILITY_CAN_REQUEST_FILTER_KEY_EVENTS) != 0
+        val canGestures = (caps and AccessibilityServiceInfo.CAPABILITY_CAN_PERFORM_GESTURES) != 0
+
+        val bg = store.isBackgroundMonitoringEnabled()
+        val connectedAt = store.getDebugServiceConnectedAtElapsed()
+
+        return buildString {
+            append("accessibility:")
+            append(if (accessibilityEnabled) "ON" else "OFF")
+            append(" / serviceEnabled:")
+            append(if (enabledInSecure) "ON" else "OFF")
+            append(" / connected:")
+            append(if (connectedAt > 0L) formatAge(connectedAt) else "NO")
+            append(" / bgMonitor:")
+            append(if (bg) "ON" else "OFF")
+            append(" / cap.filterKeys:")
+            append(if (info == null) "?" else if (canFilterKeys) "YES" else "NO")
+            append(" / cap.gestures:")
+            append(if (info == null) "?" else if (canGestures) "YES" else "NO")
         }
     }
 }

@@ -33,14 +33,27 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        settings = SettingsStore(this).also { it.initializeDefaultsIfNeeded() }
-        settings.setDebugServiceConnected()
-        cursor = CursorOverlay(this)
-        gestures = GestureController(this)
-        actions = ActionFactory(this)
+        try {
+            settings = SettingsStore(this).also { it.initializeDefaultsIfNeeded() }
+            settings.setDebugServiceConnected()
+            cursor = CursorOverlay(this)
+            gestures = GestureController(this)
+            actions = ActionFactory(this)
 
-        mode = settings.getOperationMode()
-        if (mode == OperationMode.MOUSE) cursor.show()
+            mode = settings.getOperationMode()
+            if (mode == OperationMode.MOUSE) cursor.show()
+        } catch (t: Throwable) {
+            try {
+                SettingsStore(this).setDebugLastCrash("onServiceConnected", t)
+            } catch (_: Throwable) {
+                // ignore
+            }
+            try {
+                disableSelf()
+            } catch (_: Throwable) {
+                // ignore
+            }
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -52,6 +65,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
+        try {
         // Debug: record key codes even if background monitoring is OFF (so user can diagnose keys).
         if (event.action == KeyEvent.ACTION_DOWN && settings.isDebugShowKeyCodeEnabled()) {
             settings.setDebugLastKey(event.keyCode, KeyEvent.keyCodeToString(event.keyCode))
@@ -155,6 +169,14 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 true
             }
             else -> false
+        }
+        } catch (t: Throwable) {
+            try {
+                settings.setDebugLastCrash("onKeyEvent", t)
+            } catch (_: Throwable) {
+                // ignore
+            }
+            return false
         }
     }
 

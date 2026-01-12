@@ -36,4 +36,10 @@ object SettingsKeys {
     const val DEBUG_LAST_KEYNAME = "debug_last_keyname" // String
     const val DEBUG_LAST_KEY_AT = "debug_last_key_at" // long (elapsedRealtime)
     const val DEBUG_SERVICE_CONNECTED_AT = "debug_service_connected_at" // long (elapsedRealtime)
+
+    const val DEBUG_LAST_CRASH_AT = "debug_last_crash_at" // long (elapsedRealtime)
+    const val DEBUG_LAST_CRASH_STAGE = "debug_last_crash_stage" // String
+    const val DEBUG_LAST_CRASH_TYPE = "debug_last_crash_type" // String
+    const val DEBUG_LAST_CRASH_MESSAGE = "debug_last_crash_message" // String
+    const val DEBUG_LAST_CRASH_STACK = "debug_last_crash_stack" // String
 }
