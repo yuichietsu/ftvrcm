@@ -60,12 +60,12 @@ com.ftvrcm_preferences.xml
 |------|-----|
 | **キー** | `toggle_keycode` / `toggle_longpress` |
 | **型** | String / Boolean |
-| **デフォルト** | `82`（`KEYCODE_MENU`） / `true` |
+| **デフォルト** | `85`（`KEYCODE_MEDIA_PLAY_PAUSE`） / `true` |
 | **説明** | 操作モード（通常/タッチ操作）を切り替えるキーと、切り替えを長押しにするかどうか |
 
 **例**：
 ```xml
-<string name="toggle_keycode">82</string>
+<string name="toggle_keycode">85</string>
 <boolean name="toggle_longpress" value="true" />
 ```
 
