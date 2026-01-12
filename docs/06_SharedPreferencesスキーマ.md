@@ -1,0 +1,360 @@
+# SharedPreferences スキーマ
+
+## 概要
+ftvrcm の設定データは SharedPreferences で保存されます。本ドキュメントは、スキーマ定義、データ形式、マイグレーション戦略を記載します。
+
+## SharedPreferences ファイル
+
+```
+com.ftvrcm_preferences.xml
+└── ftvrcm_settings
+    ├── operation_mode
+    ├── mouse_sensitivity
+    ├── mouse_pointer_speed
+    ├── key_mapping
+    ├── button_actions
+    ├── background_monitoring_enabled
+    └── settings_version
+```
+
+## データスキーマ
+
+### 1. 操作モード（operation_mode）
+
+| 項目 | 値 |
+|------|-----|
+| **キー** | `operation_mode` |
+| **型** | String |
+| **値** | `NORMAL` \| `MOUSE` |
+| **デフォルト** | `NORMAL` |
+| **説明** | 現在の操作モード |
+
+**例**：
+```xml
+<string name="operation_mode">MOUSE</string>
+```
+
+---
+
+### 2. マウス感度（mouse_sensitivity）
+
+| 項目 | 値 |
+|------|-----|
+| **キー** | `mouse_sensitivity` |
+| **型** | Integer |
+| **範囲** | 1-20 |
+| **デフォルト** | 10 |
+| **説明** | マウス移動時のピクセル数（1ステップあたり） |
+
+**例**：
+```xml
+<int name="mouse_sensitivity" value="10" />
+```
+
+---
+
+### 3. ポインタ移動速度（mouse_pointer_speed）
+
+| 項目 | 値 |
+|------|-----|
+| **キー** | `mouse_pointer_speed` |
+| **型** | Integer |
+| **単位** | px/step |
+| **デフォルト** | 10 |
+| **説明** | リモコン十字キー1回押下あたりのポインタ移動量 |
+
+**例**：
+```xml
+<int name="mouse_pointer_speed" value="10" />
+```
+
+---
+
+### 4. キーマッピング（key_mapping）
+
+| 項目 | 値 |
+|------|-----|
+| **キー** | `key_mapping` |
+| **型** | StringSet |
+| **形式** | `{keyCode}:{actionId}` (カンマ区切り) |
+| **デフォルト** | 空集合（初期化時に作成） |
+| **説明** | リモコンキーとマウス操作/アクションのマッピング |
+
+**例**：
+```xml
+<set name="key_mapping">
+  <string>19:mouse_up</string>
+  <string>20:mouse_down</string>
+  <string>21:mouse_left</string>
+  <string>22:mouse_right</string>
+  <string>23:mouse_click</string>
+  <string>4:launch_app_com.android.chrome</string>
+</set>
+```
+
+**キーコード一覧**（Fire TV Stick対応）：
+| KeyCode | リモコンボタン |
+|---------|---------------|
+| 19 | 十字キー 上 |
+| 20 | 十字キー 下 |
+| 21 | 十字キー 左 |
+| 22 | 十字キー 右 |
+| 23 | 決定ボタン（KEYCODE_DPAD_CENTER） |
+| 4 | 戻るボタン（KEYCODE_BACK） |
+| 3 | ホームボタン（KEYCODE_HOME） |
+
+**マウス操作 ID**：
+| ActionId | 操作 |
+|----------|------|
+| `mouse_up` | ポインタ上移動 |
+| `mouse_down` | ポインタ下移動 |
+| `mouse_left` | ポインタ左移動 |
+| `mouse_right` | ポインタ右移動 |
+| `mouse_click` | マウス左クリック |
+| `mouse_right_click` | マウス右クリック |
+
+---
+
+### 5. ボタンアクション（button_actions）
+
+| 項目 | 値 |
+|------|-----|
+| **キー** | `button_actions` |
+| **型** | StringSet |
+| **形式** | JSON: `{"keyCode": <int>, "actionId": "<string>"}` |
+| **デフォルト** | 空集合 |
+| **説明** | リモコンボタンに割り当てたカスタムアクション |
+
+**例**：
+```xml
+<set name="button_actions">
+  <string>{"keyCode": 3, "actionId": "launch_app_com.netflix"}</string>
+  <string>{"keyCode": 4, "actionId": "open_url_https://example.com"}</string>
+  <string>{"keyCode": 8, "actionId": "adjust_volume_1"}</string>
+</set>
+```
+
+**JSON スキーマ**：
+```json
+{
+  "keyCode": 3,
+  "actionId": "launch_app_com.netflix",
+  "timestamp": 1705000000000
+}
+```
+
+---
+
+### 6. バックグラウンド監視有効フラグ（background_monitoring_enabled）
+
+| 項目 | 値 |
+|------|-----|
+| **キー** | `background_monitoring_enabled` |
+| **型** | Boolean |
+| **値** | `true` \| `false` |
+| **デフォルト** | `true` |
+| **説明** | バックグラウンドサービスでリモコンイベント監視するか |
+
+**例**：
+```xml
+<boolean name="background_monitoring_enabled" value="true" />
+```
+
+---
+
+### 7. 設定スキーマバージョン（settings_version）
+
+| 項目 | 値 |
+|------|-----|
+| **キー** | `settings_version` |
+| **型** | Integer |
+| **現在バージョン** | 1 |
+| **説明** | スキーマバージョン（マイグレーション用） |
+
+**例**：
+```xml
+<int name="settings_version" value="1" />
+```
+
+---
+
+## デフォルト値初期化
+
+アプリ初回起動時、以下のデフォルト値で初期化：
+
+```kotlin
+class SharedPreferencesDataSource(private val context: Context) {
+    private val sharedPrefs = context.getSharedPreferences(
+        "ftvrcm_settings", Context.MODE_PRIVATE
+    )
+    
+    fun initializeDefaults() {
+        if (!isInitialized()) {
+            sharedPrefs.edit().apply {
+                putString("operation_mode", "NORMAL")
+                putInt("mouse_sensitivity", 10)
+                putInt("mouse_pointer_speed", 10)
+                putStringSet("key_mapping", defaultKeyMappingSet())
+                putStringSet("button_actions", emptySet())
+                putBoolean("background_monitoring_enabled", true)
+                putInt("settings_version", 1)
+                apply()
+            }
+        }
+    }
+    
+    private fun defaultKeyMappingSet(): Set<String> = setOf(
+        "19:mouse_up",
+        "20:mouse_down",
+        "21:mouse_left",
+        "22:mouse_right",
+        "23:mouse_click"
+    )
+    
+    private fun isInitialized(): Boolean =
+        sharedPrefs.contains("settings_version")
+}
+```
+
+---
+
+## マイグレーション戦略
+
+### バージョン管理フロー
+
+```
+[アプリ起動]
+    ↓
+[SharedPreferencesDataSource.initialize()]
+    ↓
+[settings_version 確認]
+    ├─ 存在しない（初回起動）
+    │  → デフォルト値初期化、version=1 設定
+    ├─ version=1
+    │  → マイグレーション不要
+    └─ version < 現在バージョン
+       → マイグレーション実行 → version更新
+```
+
+### マイグレーション実装例
+
+```kotlin
+class SharedPreferencesDataSource(private val context: Context) {
+    
+    fun initialize() {
+        val currentVersion = sharedPrefs.getInt("settings_version", 0)
+        
+        when {
+            currentVersion == 0 -> initializeDefaults()
+            currentVersion < 2 -> migrateV1ToV2()
+            currentVersion < 3 -> migrateV2ToV3()
+        }
+    }
+    
+    private fun migrateV1ToV2() {
+        // v1 → v2 マイグレーション処理
+        // 例：新しいキーを追加
+        sharedPrefs.edit().apply {
+            putString("new_feature_enabled", "false")
+            putInt("settings_version", 2)
+            apply()
+        }
+    }
+    
+    private fun migrateV2ToV3() {
+        // v2 → v3 マイグレーション処理
+        sharedPrefs.edit().apply {
+            putInt("settings_version", 3)
+            apply()
+        }
+    }
+}
+```
+
+---
+
+## バックアップとリセット機能
+
+### 設定エクスポート
+ユーザーが設定をバックアップ可能：
+
+```kotlin
+fun exportSettings(): String {
+    val allSettings = sharedPrefs.all
+    return JSONObject(allSettings as Map<*, *>).toString()
+}
+```
+
+### 設定インポート
+バックアップから復元可能：
+
+```kotlin
+fun importSettings(jsonString: String) {
+    val jsonObject = JSONObject(jsonString)
+    sharedPrefs.edit().apply {
+        jsonObject.keys().forEach { key ->
+            when (val value = jsonObject.get(key)) {
+                is String -> putString(key, value)
+                is Int -> putInt(key, value)
+                is Boolean -> putBoolean(key, value)
+            }
+        }
+        apply()
+    }
+}
+```
+
+### 設定リセット
+ユーザーが設定をリセット可能：
+
+```kotlin
+fun resetToDefaults() {
+    sharedPrefs.edit().clear().apply()
+    initializeDefaults()
+}
+```
+
+---
+
+## セキュリティ考慮事項
+
+### 1. 暗号化
+
+現在、SharedPreferences は暗号化なしで保存：
+- **理由**：低いセキュリティリスク（ローカル設定のみ）
+- **将来**：EncryptedSharedPreferences 導入を検討
+
+### 2. パーミッション
+
+SharedPreferences ファイルアクセス権限：
+```xml
+<!-- AndroidManifest.xml -->
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+```
+
+---
+
+## トラブルシューティング
+
+### SharedPreferences データ破損時
+
+```kotlin
+fun repairData() {
+    try {
+        val data = sharedPrefs.all
+        // データ検証
+    } catch (e: Exception) {
+        Log.e("ftvrcm", "SharedPreferences 破損", e)
+        resetToDefaults()
+    }
+}
+```
+
+---
+
+## まとめ
+
+- **シンプルなスキーマ**：StringSet と基本型のみ使用
+- **拡張性**：settings_version によるマイグレーション対応
+- **保守性**：デフォルト値明記、初期化ロジック統一
+- **互換性**：バージョン管理により将来のスキーマ変更に対応
