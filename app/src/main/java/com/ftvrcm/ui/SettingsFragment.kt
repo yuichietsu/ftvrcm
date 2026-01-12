@@ -1,6 +1,7 @@
 package com.ftvrcm.ui
 
 import android.content.Intent
+import android.content.ComponentName
 import android.os.Bundle
 import android.provider.Settings
 import android.content.SharedPreferences
@@ -93,10 +94,11 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
         val serviceStatusPref = findPreference<Preference>("debug_service_status")
         val connectedAt = store.getDebugServiceConnectedAtElapsed()
-        serviceStatusPref?.summary = if (connectedAt <= 0L) {
-            getString(R.string.prefs_debug_service_status_summary)
-        } else {
-            "接続済み（${formatAge(connectedAt)}）"
+        val isEnabled = isAccessibilityServiceEnabled()
+        serviceStatusPref?.summary = when {
+            !isEnabled -> "有効化: OFF / 接続: 未接続"
+            connectedAt <= 0L -> "有効化: ON / 接続: 未接続"
+            else -> "有効化: ON / 接続: ${formatAge(connectedAt)}"
         }
 
         val pref = findPreference<Preference>(SettingsKeys.DEBUG_LAST_KEYCODE)
@@ -116,6 +118,20 @@ class SettingsFragment : PreferenceFragmentCompat() {
             sec < 60 -> "${sec}秒前"
             sec < 60 * 60 -> "${sec / 60}分前"
             else -> "${sec / 3600}時間前"
+        }
+    }
+
+    private fun isAccessibilityServiceEnabled(): Boolean {
+        return try {
+            val context = requireContext()
+            val enabledServices = Settings.Secure.getString(
+                context.contentResolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+            ) ?: return false
+            val me = ComponentName(context, com.ftvrcm.service.RemoteControlAccessibilityService::class.java)
+            enabledServices.split(':').any { it.equals(me.flattenToString(), ignoreCase = true) }
+        } catch (_: Exception) {
+            false
         }
     }
 }
