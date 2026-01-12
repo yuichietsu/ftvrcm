@@ -31,6 +31,12 @@ class GestureController(
 
     fun tap(x: Int, y: Int): Boolean {
         recordGesture(type = "tap", status = "DISPATCHING", detail = "x=$x y=$y")
+        val focusOk = try {
+            focusAt(x, y)
+        } catch (_: Exception) {
+            null
+        }
+
         val ok = try {
             performNodeClickAt(x, y)
         } catch (_: Exception) {
@@ -39,7 +45,11 @@ class GestureController(
         recordGesture(
             type = "tap",
             status = if (ok == true) "COMPLETED" else "REJECTED",
-            detail = if (ok == true) "via=CLICK x=$x y=$y" else "via=CLICK failed x=$x y=$y",
+            detail = if (ok == true) {
+                "via=FOCUS(${focusOk == true})+CLICK x=$x y=$y"
+            } else {
+                "via=FOCUS(${focusOk == true})+CLICK failed x=$x y=$y"
+            },
         )
         return ok == true
     }
