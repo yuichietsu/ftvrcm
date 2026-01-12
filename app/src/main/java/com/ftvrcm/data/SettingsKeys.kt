@@ -36,4 +36,10 @@ object SettingsKeys {
     const val ACTION_PARAM = "action_param" // String
 
     const val BACKGROUND_MONITORING_ENABLED = "background_monitoring_enabled" // boolean
+
+    // Gesture debug (for TouchTestActivity)
+    const val LAST_GESTURE_TYPE = "last_gesture_type" // String
+    const val LAST_GESTURE_STATUS = "last_gesture_status" // String
+    const val LAST_GESTURE_DETAIL = "last_gesture_detail" // String
+    const val LAST_GESTURE_AT_MS = "last_gesture_at_ms" // Long
 }

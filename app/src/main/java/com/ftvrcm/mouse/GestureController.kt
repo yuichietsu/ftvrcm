@@ -8,6 +8,8 @@ import android.os.Looper
 import android.graphics.Rect
 import android.view.accessibility.AccessibilityNodeInfo
 import kotlin.math.abs
+import androidx.core.content.edit
+import com.ftvrcm.data.SettingsKeys
 
 class GestureController(
     private val service: AccessibilityService,
@@ -15,26 +17,56 @@ class GestureController(
 
     private val handler = Handler(Looper.getMainLooper())
 
+    private fun recordGesture(type: String, status: String, detail: String) {
+        try {
+            service.getSharedPreferences(SettingsKeys.PREFS_NAME, AccessibilityService.MODE_PRIVATE)
+                .edit {
+                    putString(SettingsKeys.LAST_GESTURE_TYPE, type)
+                    putString(SettingsKeys.LAST_GESTURE_STATUS, status)
+                    putString(SettingsKeys.LAST_GESTURE_DETAIL, detail)
+                    putLong(SettingsKeys.LAST_GESTURE_AT_MS, android.os.SystemClock.uptimeMillis())
+                }
+        } catch (_: Exception) {
+            // ignore
+        }
+    }
+
     fun tap(x: Int, y: Int): Boolean {
         val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
         val gesture = GestureDescription.Builder()
             .addStroke(GestureDescription.StrokeDescription(path, 0, TAP_DURATION_MS))
             .build()
 
+        recordGesture(type = "tap", status = "DISPATCHING", detail = "x=$x y=$y")
+
         val accepted = service.dispatchGesture(
             gesture,
             object : AccessibilityService.GestureResultCallback() {
                 override fun onCompleted(gestureDescription: GestureDescription?) {
+                    recordGesture(type = "tap", status = "COMPLETED", detail = "x=$x y=$y")
                 }
 
                 override fun onCancelled(gestureDescription: GestureDescription?) {
                     // Fire OS may cancel gesture injection even when dispatchGesture() returned true.
                     // Fallback: try ACTION_CLICK on the node at the cursor position.
-                    performNodeClickAt(x, y)
+                    val ok = try {
+                        performNodeClickAt(x, y)
+                    } catch (_: Exception) {
+                        null
+                    }
+                    recordGesture(
+                        type = "tap",
+                        status = "CANCELLED",
+                        detail = if (ok == true) "fallback=CLICK ok" else "fallback=CLICK failed",
+                    )
                 }
             },
             handler,
         )
+
+        if (!accepted) {
+            recordGesture(type = "tap", status = "REJECTED", detail = "dispatchGesture returned false")
+        }
         return accepted
     }
 
@@ -44,19 +76,35 @@ class GestureController(
             .addStroke(GestureDescription.StrokeDescription(path, 0, durationMs))
             .build()
 
+        recordGesture(type = "long_press", status = "DISPATCHING", detail = "x=$x y=$y durationMs=$durationMs")
+
         val accepted = service.dispatchGesture(
             gesture,
             object : AccessibilityService.GestureResultCallback() {
                 override fun onCompleted(gestureDescription: GestureDescription?) {
+                    recordGesture(type = "long_press", status = "COMPLETED", detail = "x=$x y=$y")
                 }
 
                 override fun onCancelled(gestureDescription: GestureDescription?) {
                     // Fire OS may cancel gesture injection. Fallback to ACTION_LONG_CLICK.
-                    performNodeLongClickAt(x, y)
+                    val ok = try {
+                        performNodeLongClickAt(x, y)
+                    } catch (_: Exception) {
+                        null
+                    }
+                    recordGesture(
+                        type = "long_press",
+                        status = "CANCELLED",
+                        detail = if (ok == true) "fallback=LONG_CLICK ok" else "fallback=LONG_CLICK failed",
+                    )
                 }
             },
             handler,
         )
+
+        if (!accepted) {
+            recordGesture(type = "long_press", status = "REJECTED", detail = "dispatchGesture returned false")
+        }
         return accepted
     }
 
@@ -69,15 +117,26 @@ class GestureController(
             .addStroke(GestureDescription.StrokeDescription(p2, TAP_DURATION_MS + intervalMs, TAP_DURATION_MS))
             .build()
 
+        recordGesture(type = "double_tap", status = "DISPATCHING", detail = "x=$x y=$y")
+
         val accepted = service.dispatchGesture(
             gesture,
             object : AccessibilityService.GestureResultCallback() {
+                override fun onCompleted(gestureDescription: GestureDescription?) {
+                    recordGesture(type = "double_tap", status = "COMPLETED", detail = "x=$x y=$y")
+                }
+
                 override fun onCancelled(gestureDescription: GestureDescription?) {
                     // Best-effort fallback: do nothing.
+                    recordGesture(type = "double_tap", status = "CANCELLED", detail = "fallback=NONE")
                 }
             },
             handler,
         )
+
+        if (!accepted) {
+            recordGesture(type = "double_tap", status = "REJECTED", detail = "dispatchGesture returned false")
+        }
         return accepted
     }
 
@@ -97,14 +156,28 @@ class GestureController(
             .addStroke(GestureDescription.StrokeDescription(path, 0, durationMs))
             .build()
 
-        return service.dispatchGesture(
+        recordGesture(
+            type = "swipe",
+            status = "DISPATCHING",
+            detail = "start=($startX,$startY) end=($endX,$endY) durationMs=$durationMs",
+        )
+
+        val accepted = service.dispatchGesture(
             gesture,
             object : AccessibilityService.GestureResultCallback() {
                 override fun onCompleted(gestureDescription: GestureDescription?) {
+                    recordGesture(
+                        type = "swipe",
+                        status = "COMPLETED",
+                        detail = "start=($startX,$startY) end=($endX,$endY)",
+                    )
                 }
 
                 override fun onCancelled(gestureDescription: GestureDescription?) {
-                    if (!enableFallback) return
+                    if (!enableFallback) {
+                        recordGesture(type = "swipe", status = "CANCELLED", detail = "fallback=DISABLED")
+                        return
+                    }
 
                     val dx = endX - startX
                     val dy = endY - startY
@@ -121,12 +194,17 @@ class GestureController(
                         } else {
                             intArrayOf(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
                         }
-                        performNodeScrollAt(
+                        val ok = performNodeScrollAt(
                             x = startX,
                             y = startY,
                             primaryActions = primary,
                             secondaryActions = secondary,
                             preferTarget = { !isHorizontalScrollContainer(it) },
+                        )
+                        recordGesture(
+                            type = "swipe",
+                            status = "CANCELLED",
+                            detail = if (ok == true) "fallback=SCROLL_VERTICAL ok" else "fallback=SCROLL_VERTICAL failed",
                         )
                     } else {
                         // Swipe left -> scroll right, swipe right -> scroll left.
@@ -147,18 +225,29 @@ class GestureController(
                                 AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.id,
                             )
                         }
-                        performNodeScrollAt(
+                        val ok = performNodeScrollAt(
                             x = startX,
                             y = startY,
                             primaryActions = primary,
                             secondaryActions = secondary,
                             preferTarget = { isHorizontalScrollContainer(it) },
                         )
+                        recordGesture(
+                            type = "swipe",
+                            status = "CANCELLED",
+                            detail = if (ok == true) "fallback=SCROLL_HORIZONTAL ok" else "fallback=SCROLL_HORIZONTAL failed",
+                        )
                     }
                 }
             },
             handler,
         )
+
+        if (!accepted) {
+            recordGesture(type = "swipe", status = "REJECTED", detail = "dispatchGesture returned false")
+        }
+
+        return accepted
     }
 
     private companion object {

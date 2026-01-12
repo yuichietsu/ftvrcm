@@ -16,17 +16,23 @@ import androidx.appcompat.app.AppCompatActivity
 import com.ftvrcm.R
 import android.os.SystemClock
 import android.view.ViewConfiguration
+import android.content.SharedPreferences
 import kotlin.math.abs
+import com.ftvrcm.data.SettingsKeys
 
 class TouchTestActivity : AppCompatActivity() {
 
     private lateinit var lastEvent: TextView
+    private lateinit var lastGesture: TextView
+
+    private var gestureListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_touch_test)
 
         lastEvent = findViewById(R.id.lastEvent)
+        lastGesture = findViewById(R.id.lastGesture)
         val btnA = findViewById<Button>(R.id.btnA)
         val btnB = findViewById<Button>(R.id.btnB)
         val btnC = findViewById<Button>(R.id.btnC)
@@ -38,6 +44,34 @@ class TouchTestActivity : AppCompatActivity() {
         fun setEvent(text: String) {
             lastEvent.text = "最終イベント: $text"
         }
+
+        fun refreshLastGesture() {
+            val prefs = getSharedPreferences(SettingsKeys.PREFS_NAME, MODE_PRIVATE)
+            val type = prefs.getString(SettingsKeys.LAST_GESTURE_TYPE, "-") ?: "-"
+            val status = prefs.getString(SettingsKeys.LAST_GESTURE_STATUS, "-") ?: "-"
+            val detail = prefs.getString(SettingsKeys.LAST_GESTURE_DETAIL, "") ?: ""
+            lastGesture.text = if (detail.isBlank()) {
+                "最終ジェスチャ: $type / $status"
+            } else {
+                "最終ジェスチャ: $type / $status ($detail)"
+            }
+        }
+
+        refreshLastGesture()
+
+        val prefs = getSharedPreferences(SettingsKeys.PREFS_NAME, MODE_PRIVATE)
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (
+                key == SettingsKeys.LAST_GESTURE_TYPE ||
+                key == SettingsKeys.LAST_GESTURE_STATUS ||
+                key == SettingsKeys.LAST_GESTURE_DETAIL ||
+                key == SettingsKeys.LAST_GESTURE_AT_MS
+            ) {
+                refreshLastGesture()
+            }
+        }
+        gestureListener = listener
+        prefs.registerOnSharedPreferenceChangeListener(listener)
 
         fun attachButtonHandlers(button: Button, name: String) {
             button.isAllCaps = false
@@ -224,5 +258,18 @@ class TouchTestActivity : AppCompatActivity() {
         scrollAreaH.setOnTouchListener(feedSwipeDetector)
         scrollAreaV.setOnTouchListener(feedSwipeDetector)
         patternContainer.setOnTouchListener(feedSwipeDetector)
+    }
+
+    override fun onDestroy() {
+        val listener = gestureListener
+        if (listener != null) {
+            try {
+                getSharedPreferences(SettingsKeys.PREFS_NAME, MODE_PRIVATE)
+                    .unregisterOnSharedPreferenceChangeListener(listener)
+            } catch (_: Exception) {
+            }
+        }
+        gestureListener = null
+        super.onDestroy()
     }
 }

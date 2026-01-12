@@ -29,6 +29,10 @@ com.ftvrcm_preferences.xml
     ├── action_type
     ├── action_param
     ├── background_monitoring_enabled
+    ├── last_gesture_type
+    ├── last_gesture_status
+    ├── last_gesture_detail
+    ├── last_gesture_at_ms
     
 ```
 
@@ -200,6 +204,27 @@ com.ftvrcm_preferences.xml
 **例**：
 ```xml
 <boolean name="swipe_fallback_enabled" value="true" />
+```
+
+---
+
+### 8. 最終ジェスチャ記録（last_gesture_*）
+
+TouchTestActivity（動作確認画面）で「最後に注入したジェスチャがどう処理されたか（成功/キャンセル/フォールバック等）」を確認するためのデバッグ用途の記録です。
+
+| 項目 | 値 |
+|------|-----|
+| **キー** | `last_gesture_type` / `last_gesture_status` / `last_gesture_detail` / `last_gesture_at_ms` |
+| **型** | String / String / String / Long |
+| **デフォルト** | 未設定（表示上は `-` 扱い） |
+| **説明** | 直近のジェスチャ種別・状態・詳細（フォールバック有無など）・記録時刻（`uptimeMillis`） |
+
+**例**：
+```xml
+<string name="last_gesture_type">swipe</string>
+<string name="last_gesture_status">CANCELLED</string>
+<string name="last_gesture_detail">fallback=SCROLL_VERTICAL ok</string>
+<long name="last_gesture_at_ms" value="123456789" />
 ```
 
 ---
