@@ -16,12 +16,10 @@ object SettingsKeys {
     const val MOUSE_KEY_RIGHT = "mouse_key_right"
     const val MOUSE_KEY_CLICK = "mouse_key_click"
 
-    const val MOUSE_KEY_SWIPE_UP = "mouse_key_swipe_up"
-    const val MOUSE_KEY_SWIPE_DOWN = "mouse_key_swipe_down"
-    const val MOUSE_KEY_SWIPE_LEFT = "mouse_key_swipe_left"
-    const val MOUSE_KEY_SWIPE_RIGHT = "mouse_key_swipe_right"
-
-    const val SWIPE_FALLBACK_ENABLED = "swipe_fallback_enabled" // boolean
+    const val MOUSE_KEY_SCROLL_UP = "mouse_key_scroll_up"
+    const val MOUSE_KEY_SCROLL_DOWN = "mouse_key_scroll_down"
+    const val MOUSE_KEY_DPAD_LEFT = "mouse_key_dpad_left"
+    const val MOUSE_KEY_DPAD_RIGHT = "mouse_key_dpad_right"
 
     const val MOUSE_CURSOR_START_POSITION = "mouse_cursor_start_position" // String
     const val MOUSE_CURSOR_LAST_X = "mouse_cursor_last_x" // int

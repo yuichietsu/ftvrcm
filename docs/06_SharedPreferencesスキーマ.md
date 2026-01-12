@@ -17,11 +17,10 @@ com.ftvrcm_preferences.xml
     ├── mouse_key_left
     ├── mouse_key_right
     ├── mouse_key_click
-    ├── mouse_key_swipe_up
-    ├── mouse_key_swipe_down
-    ├── mouse_key_swipe_left
-    ├── mouse_key_swipe_right
-    ├── swipe_fallback_enabled
+    ├── mouse_key_scroll_up
+    ├── mouse_key_scroll_down
+    ├── mouse_key_dpad_left
+    ├── mouse_key_dpad_right
     ├── mouse_cursor_start_position
     ├── key_mapping
     ├── button_actions
@@ -106,10 +105,10 @@ com.ftvrcm_preferences.xml
   <string>21:mouse_left</string>
   <string>22:mouse_right</string>
   <string>23:mouse_click</string>
-    <string>167:mouse_swipe_up</string>
-    <string>166:mouse_swipe_down</string>
-    <string>89:mouse_swipe_left</string>
-    <string>90:mouse_swipe_right</string>
+        <string>167:mouse_scroll_up</string>
+        <string>166:mouse_scroll_down</string>
+        <string>89:mouse_dpad_left</string>
+        <string>90:mouse_dpad_right</string>
   <string>4:launch_app_com.android.chrome</string>
 </set>
 ```
@@ -138,10 +137,10 @@ com.ftvrcm_preferences.xml
 | `mouse_left` | ポインタ左移動 |
 | `mouse_right` | ポインタ右移動 |
 | `mouse_click` | タップ（短押し）/ロングタップ（長押し） |
-| `mouse_swipe_up` | 上スワイプ |
-| `mouse_swipe_down` | 下スワイプ |
-| `mouse_swipe_left` | 左スワイプ |
-| `mouse_swipe_right` | 右スワイプ |
+| `mouse_scroll_up` | 上スクロール（`ACTION_SCROLL_UP`/`ACTION_SCROLL_BACKWARD`） |
+| `mouse_scroll_down` | 下スクロール（`ACTION_SCROLL_DOWN`/`ACTION_SCROLL_FORWARD`） |
+| `mouse_dpad_left` | DPAD左相当（フォーカス移動） |
+| `mouse_dpad_right` | DPAD右相当（フォーカス移動） |
 
 ---
 
@@ -192,23 +191,7 @@ com.ftvrcm_preferences.xml
 
 ---
 
-### 7. スワイプ失敗時フォールバック（swipe_fallback_enabled）
-
-| 項目 | 値 |
-|------|-----|
-| **キー** | `swipe_fallback_enabled` |
-| **型** | Boolean |
-| **デフォルト** | `true` |
-| **説明** | `dispatchGesture` がキャンセルされた場合に、アクセシビリティの `ACTION_SCROLL_*` にフォールバックするか |
-
-**例**：
-```xml
-<boolean name="swipe_fallback_enabled" value="true" />
-```
-
----
-
-### 8. 最終ジェスチャ記録（last_gesture_*）
+### 7. 最終ジェスチャ記録（last_gesture_*）
 
 TouchTestActivity（動作確認画面）で「最後に注入したジェスチャがどう処理されたか（成功/キャンセル/フォールバック等）」を確認するためのデバッグ用途の記録です。
 
@@ -252,10 +235,10 @@ class SettingsStore(context: Context) {
                     "21:mouse_left",
                     "22:mouse_right",
                     "23:mouse_click",
-                    "167:mouse_swipe_up",
-                    "166:mouse_swipe_down",
-                    "89:mouse_swipe_left",
-                    "90:mouse_swipe_right",
+                    "167:mouse_scroll_up",
+                    "166:mouse_scroll_down",
+                    "89:mouse_dpad_left",
+                    "90:mouse_dpad_right",
                 ),
             )
             putStringSet("button_actions", emptySet())

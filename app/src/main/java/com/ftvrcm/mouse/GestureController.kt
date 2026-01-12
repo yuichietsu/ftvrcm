@@ -1,13 +1,11 @@
 package com.ftvrcm.mouse
 
 import android.accessibilityservice.AccessibilityService
-import android.accessibilityservice.GestureDescription
-import android.graphics.Path
 import android.os.Handler
 import android.os.Looper
 import android.graphics.Rect
+import android.view.View
 import android.view.accessibility.AccessibilityNodeInfo
-import kotlin.math.abs
 import androidx.core.content.edit
 import com.ftvrcm.data.SettingsKeys
 
@@ -32,227 +30,170 @@ class GestureController(
     }
 
     fun tap(x: Int, y: Int): Boolean {
-        val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
-        val gesture = GestureDescription.Builder()
-            .addStroke(GestureDescription.StrokeDescription(path, 0, TAP_DURATION_MS))
-            .build()
-
         recordGesture(type = "tap", status = "DISPATCHING", detail = "x=$x y=$y")
-
-        val accepted = service.dispatchGesture(
-            gesture,
-            object : AccessibilityService.GestureResultCallback() {
-                override fun onCompleted(gestureDescription: GestureDescription?) {
-                    recordGesture(type = "tap", status = "COMPLETED", detail = "x=$x y=$y")
-                }
-
-                override fun onCancelled(gestureDescription: GestureDescription?) {
-                    // Fire OS may cancel gesture injection even when dispatchGesture() returned true.
-                    // Fallback: try ACTION_CLICK on the node at the cursor position.
-                    val ok = try {
-                        performNodeClickAt(x, y)
-                    } catch (_: Exception) {
-                        null
-                    }
-                    recordGesture(
-                        type = "tap",
-                        status = "CANCELLED",
-                        detail = if (ok == true) "fallback=CLICK ok" else "fallback=CLICK failed",
-                    )
-                }
-            },
-            handler,
-        )
-
-        if (!accepted) {
-            recordGesture(type = "tap", status = "REJECTED", detail = "dispatchGesture returned false")
+        val ok = try {
+            performNodeClickAt(x, y)
+        } catch (_: Exception) {
+            null
         }
-        return accepted
+        recordGesture(
+            type = "tap",
+            status = if (ok == true) "COMPLETED" else "REJECTED",
+            detail = if (ok == true) "via=CLICK x=$x y=$y" else "via=CLICK failed x=$x y=$y",
+        )
+        return ok == true
     }
 
     fun longPress(x: Int, y: Int, durationMs: Long = 600): Boolean {
-        val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
-        val gesture = GestureDescription.Builder()
-            .addStroke(GestureDescription.StrokeDescription(path, 0, durationMs))
-            .build()
-
         recordGesture(type = "long_press", status = "DISPATCHING", detail = "x=$x y=$y durationMs=$durationMs")
-
-        val accepted = service.dispatchGesture(
-            gesture,
-            object : AccessibilityService.GestureResultCallback() {
-                override fun onCompleted(gestureDescription: GestureDescription?) {
-                    recordGesture(type = "long_press", status = "COMPLETED", detail = "x=$x y=$y")
-                }
-
-                override fun onCancelled(gestureDescription: GestureDescription?) {
-                    // Fire OS may cancel gesture injection. Fallback to ACTION_LONG_CLICK.
-                    val ok = try {
-                        performNodeLongClickAt(x, y)
-                    } catch (_: Exception) {
-                        null
-                    }
-                    recordGesture(
-                        type = "long_press",
-                        status = "CANCELLED",
-                        detail = if (ok == true) "fallback=LONG_CLICK ok" else "fallback=LONG_CLICK failed",
-                    )
-                }
-            },
-            handler,
-        )
-
-        if (!accepted) {
-            recordGesture(type = "long_press", status = "REJECTED", detail = "dispatchGesture returned false")
+        val ok = try {
+            performNodeLongClickAt(x, y)
+        } catch (_: Exception) {
+            null
         }
-        return accepted
+        recordGesture(
+            type = "long_press",
+            status = if (ok == true) "COMPLETED" else "REJECTED",
+            detail = if (ok == true) "via=LONG_CLICK x=$x y=$y" else "via=LONG_CLICK failed x=$x y=$y",
+        )
+        return ok == true
     }
 
     fun doubleTap(x: Int, y: Int, intervalMs: Long = DOUBLE_TAP_INTERVAL_MS): Boolean {
-        val p1 = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
-        val p2 = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
-
-        val gesture = GestureDescription.Builder()
-            .addStroke(GestureDescription.StrokeDescription(p1, 0, TAP_DURATION_MS))
-            .addStroke(GestureDescription.StrokeDescription(p2, TAP_DURATION_MS + intervalMs, TAP_DURATION_MS))
-            .build()
-
         recordGesture(type = "double_tap", status = "DISPATCHING", detail = "x=$x y=$y")
 
-        val accepted = service.dispatchGesture(
-            gesture,
-            object : AccessibilityService.GestureResultCallback() {
-                override fun onCompleted(gestureDescription: GestureDescription?) {
-                    recordGesture(type = "double_tap", status = "COMPLETED", detail = "x=$x y=$y")
+        val firstOk = try {
+            performNodeClickAt(x, y)
+        } catch (_: Exception) {
+            null
+        }
+
+        handler.postDelayed(
+            {
+                val secondOk = try {
+                    performNodeClickAt(x, y)
+                } catch (_: Exception) {
+                    null
                 }
 
-                override fun onCancelled(gestureDescription: GestureDescription?) {
-                    // Best-effort fallback: do nothing.
-                    recordGesture(type = "double_tap", status = "CANCELLED", detail = "fallback=NONE")
-                }
+                recordGesture(
+                    type = "double_tap",
+                    status = if (firstOk == true && secondOk == true) "COMPLETED" else "REJECTED",
+                    detail = "via=CLICKx2 x=$x y=$y",
+                )
             },
-            handler,
+            intervalMs.coerceAtLeast(40L),
         )
 
-        if (!accepted) {
-            recordGesture(type = "double_tap", status = "REJECTED", detail = "dispatchGesture returned false")
+        if (firstOk != true) {
+            recordGesture(type = "double_tap", status = "REJECTED", detail = "via=CLICKx2 failed (first click)")
         }
-        return accepted
+
+        return firstOk == true
     }
 
-    fun swipe(
-        startX: Int,
-        startY: Int,
-        endX: Int,
-        endY: Int,
-        durationMs: Long = 260,
-        enableFallback: Boolean = true,
-    ): Boolean {
-        val path = Path().apply {
-            moveTo(startX.toFloat(), startY.toFloat())
-            lineTo(endX.toFloat(), endY.toFloat())
+    fun scrollUp(x: Int, y: Int): Boolean {
+        recordGesture(type = "scroll_up", status = "DISPATCHING", detail = "x=$x y=$y")
+        val ok = try {
+            performNodeScrollAt(
+                x = x,
+                y = y,
+                primaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP.id),
+                secondaryActions = intArrayOf(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD),
+                preferTarget = { !isHorizontalScrollContainer(it) },
+            )
+        } catch (_: Exception) {
+            null
         }
-        val gesture = GestureDescription.Builder()
-            .addStroke(GestureDescription.StrokeDescription(path, 0, durationMs))
-            .build()
-
         recordGesture(
-            type = "swipe",
-            status = "DISPATCHING",
-            detail = "start=($startX,$startY) end=($endX,$endY) durationMs=$durationMs",
+            type = "scroll_up",
+            status = if (ok == true) "COMPLETED" else "REJECTED",
+            detail = if (ok == true) "via=SCROLL_UP ok" else "via=SCROLL_UP failed",
         )
+        return ok == true
+    }
 
-        val accepted = service.dispatchGesture(
-            gesture,
-            object : AccessibilityService.GestureResultCallback() {
-                override fun onCompleted(gestureDescription: GestureDescription?) {
-                    recordGesture(
-                        type = "swipe",
-                        status = "COMPLETED",
-                        detail = "start=($startX,$startY) end=($endX,$endY)",
-                    )
-                }
-
-                override fun onCancelled(gestureDescription: GestureDescription?) {
-                    if (!enableFallback) {
-                        recordGesture(type = "swipe", status = "CANCELLED", detail = "fallback=DISABLED")
-                        return
-                    }
-
-                    val dx = endX - startX
-                    val dy = endY - startY
-                    if (abs(dy) > abs(dx)) {
-                        // Swipe up -> scroll down, swipe down -> scroll up.
-                        // Prefer non-horizontal scroll containers so that vertical swipes don't become horizontal moves.
-                        val primary = if (dy < 0) {
-                            intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.id)
-                        } else {
-                            intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP.id)
-                        }
-                        val secondary = if (dy < 0) {
-                            intArrayOf(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
-                        } else {
-                            intArrayOf(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
-                        }
-                        val ok = performNodeScrollAt(
-                            x = startX,
-                            y = startY,
-                            primaryActions = primary,
-                            secondaryActions = secondary,
-                            preferTarget = { !isHorizontalScrollContainer(it) },
-                        )
-                        recordGesture(
-                            type = "swipe",
-                            status = "CANCELLED",
-                            detail = if (ok == true) "fallback=SCROLL_VERTICAL ok" else "fallback=SCROLL_VERTICAL failed",
-                        )
-                    } else {
-                        // Swipe left -> scroll right, swipe right -> scroll left.
-                        // Prefer horizontal containers; fall back to forward/backward if needed.
-                        val primary = if (dx < 0) {
-                            intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.id)
-                        } else {
-                            intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.id)
-                        }
-                        val secondary = if (dx < 0) {
-                            intArrayOf(
-                                AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,
-                                AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.id,
-                            )
-                        } else {
-                            intArrayOf(
-                                AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD,
-                                AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.id,
-                            )
-                        }
-                        val ok = performNodeScrollAt(
-                            x = startX,
-                            y = startY,
-                            primaryActions = primary,
-                            secondaryActions = secondary,
-                            preferTarget = { isHorizontalScrollContainer(it) },
-                        )
-                        recordGesture(
-                            type = "swipe",
-                            status = "CANCELLED",
-                            detail = if (ok == true) "fallback=SCROLL_HORIZONTAL ok" else "fallback=SCROLL_HORIZONTAL failed",
-                        )
-                    }
-                }
-            },
-            handler,
-        )
-
-        if (!accepted) {
-            recordGesture(type = "swipe", status = "REJECTED", detail = "dispatchGesture returned false")
+    fun scrollDown(x: Int, y: Int): Boolean {
+        recordGesture(type = "scroll_down", status = "DISPATCHING", detail = "x=$x y=$y")
+        val ok = try {
+            performNodeScrollAt(
+                x = x,
+                y = y,
+                primaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.id),
+                secondaryActions = intArrayOf(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD),
+                preferTarget = { !isHorizontalScrollContainer(it) },
+            )
+        } catch (_: Exception) {
+            null
         }
+        recordGesture(
+            type = "scroll_down",
+            status = if (ok == true) "COMPLETED" else "REJECTED",
+            detail = if (ok == true) "via=SCROLL_DOWN ok" else "via=SCROLL_DOWN failed",
+        )
+        return ok == true
+    }
 
-        return accepted
+    fun dpadLeft(): Boolean {
+        recordGesture(type = "dpad_left", status = "DISPATCHING", detail = "")
+        val ok = try {
+            performFocusMove(View.FOCUS_LEFT)
+        } catch (_: Exception) {
+            null
+        }
+        recordGesture(
+            type = "dpad_left",
+            status = if (ok == true) "COMPLETED" else "REJECTED",
+            detail = if (ok == true) "via=FOCUS_LEFT ok" else "via=FOCUS_LEFT failed",
+        )
+        return ok == true
+    }
+
+    fun dpadRight(): Boolean {
+        recordGesture(type = "dpad_right", status = "DISPATCHING", detail = "")
+        val ok = try {
+            performFocusMove(View.FOCUS_RIGHT)
+        } catch (_: Exception) {
+            null
+        }
+        recordGesture(
+            type = "dpad_right",
+            status = if (ok == true) "COMPLETED" else "REJECTED",
+            detail = if (ok == true) "via=FOCUS_RIGHT ok" else "via=FOCUS_RIGHT failed",
+        )
+        return ok == true
     }
 
     private companion object {
-        private const val TAP_DURATION_MS = 60L
         private const val DOUBLE_TAP_INTERVAL_MS = 80L
+    }
+
+    private fun performFocusMove(direction: Int): Boolean? {
+        val root = service.rootInActiveWindow ?: return null
+
+        var current: AccessibilityNodeInfo? = null
+        var next: AccessibilityNodeInfo? = null
+        try {
+            current = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+                ?: root.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)
+                ?: root
+
+            next = current.focusSearch(direction) ?: return false
+
+            val okInput = next.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+            if (okInput) return true
+
+            return next.performAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS)
+        } finally {
+            try {
+                next?.recycle()
+            } catch (_: Exception) {
+            }
+            try {
+                current?.recycle()
+            } catch (_: Exception) {
+            }
+        }
     }
 
     private fun performNodeClickAt(x: Int, y: Int): Boolean? {

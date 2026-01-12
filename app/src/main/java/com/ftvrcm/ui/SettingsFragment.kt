@@ -70,10 +70,10 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 SettingsKeys.MOUSE_KEY_LEFT,
                 SettingsKeys.MOUSE_KEY_RIGHT,
                 SettingsKeys.MOUSE_KEY_CLICK,
-                SettingsKeys.MOUSE_KEY_SWIPE_UP,
-                SettingsKeys.MOUSE_KEY_SWIPE_DOWN,
-                SettingsKeys.MOUSE_KEY_SWIPE_LEFT,
-                SettingsKeys.MOUSE_KEY_SWIPE_RIGHT,
+                SettingsKeys.MOUSE_KEY_SCROLL_UP,
+                SettingsKeys.MOUSE_KEY_SCROLL_DOWN,
+                SettingsKeys.MOUSE_KEY_DPAD_LEFT,
+                SettingsKeys.MOUSE_KEY_DPAD_RIGHT,
                 -> SettingsStore(requireContext()).upsertMouseKeyMapping()
 
                 SettingsKeys.ACTION_KEYCODE,

@@ -51,13 +51,11 @@ class SettingsStore(context: Context) {
             putString(SettingsKeys.MOUSE_KEY_RIGHT, "22")
             putString(SettingsKeys.MOUSE_KEY_CLICK, "23")
 
-            // Swipe keys (default: CH+/CH- and REW/FF)
-            putString(SettingsKeys.MOUSE_KEY_SWIPE_UP, "167")
-            putString(SettingsKeys.MOUSE_KEY_SWIPE_DOWN, "166")
-            putString(SettingsKeys.MOUSE_KEY_SWIPE_LEFT, "89")
-            putString(SettingsKeys.MOUSE_KEY_SWIPE_RIGHT, "90")
-
-            putBoolean(SettingsKeys.SWIPE_FALLBACK_ENABLED, true)
+            // Scroll/Dpad keys (default: CH+/CH- and REW/FF)
+            putString(SettingsKeys.MOUSE_KEY_SCROLL_UP, "167")
+            putString(SettingsKeys.MOUSE_KEY_SCROLL_DOWN, "166")
+            putString(SettingsKeys.MOUSE_KEY_DPAD_LEFT, "89")
+            putString(SettingsKeys.MOUSE_KEY_DPAD_RIGHT, "90")
 
             // Cursor start position in mouse mode
             putString(SettingsKeys.MOUSE_CURSOR_START_POSITION, "center")
@@ -70,10 +68,10 @@ class SettingsStore(context: Context) {
                     "21:mouse_left",
                     "22:mouse_right",
                     "23:mouse_click",
-                    "167:mouse_swipe_up",
-                    "166:mouse_swipe_down",
-                    "89:mouse_swipe_left",
-                    "90:mouse_swipe_right",
+                    "167:mouse_scroll_up",
+                    "166:mouse_scroll_down",
+                    "89:mouse_dpad_left",
+                    "90:mouse_dpad_right",
                 ),
             )
 
@@ -96,10 +94,10 @@ class SettingsStore(context: Context) {
         set += "${getMouseKeyLeft()}:mouse_left"
         set += "${getMouseKeyRight()}:mouse_right"
         set += "${getMouseKeyClick()}:mouse_click"
-        set += "${getMouseKeySwipeUp()}:mouse_swipe_up"
-        set += "${getMouseKeySwipeDown()}:mouse_swipe_down"
-        set += "${getMouseKeySwipeLeft()}:mouse_swipe_left"
-        set += "${getMouseKeySwipeRight()}:mouse_swipe_right"
+        set += "${getMouseKeyScrollUp()}:mouse_scroll_up"
+        set += "${getMouseKeyScrollDown()}:mouse_scroll_down"
+        set += "${getMouseKeyDpadLeft()}:mouse_dpad_left"
+        set += "${getMouseKeyDpadRight()}:mouse_dpad_right"
         prefs.edit { putStringSet(SettingsKeys.KEY_MAPPING, set) }
     }
 
@@ -178,12 +176,10 @@ class SettingsStore(context: Context) {
     fun getMouseKeyRight(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_RIGHT, "22")?.toIntOrNull() ?: 22
     fun getMouseKeyClick(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_CLICK, "23")?.toIntOrNull() ?: 23
 
-    fun getMouseKeySwipeUp(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SWIPE_UP, "167")?.toIntOrNull() ?: 167
-    fun getMouseKeySwipeDown(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SWIPE_DOWN, "166")?.toIntOrNull() ?: 166
-    fun getMouseKeySwipeLeft(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SWIPE_LEFT, "89")?.toIntOrNull() ?: 89
-    fun getMouseKeySwipeRight(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SWIPE_RIGHT, "90")?.toIntOrNull() ?: 90
-
-    fun isSwipeFallbackEnabled(): Boolean = prefs.getBoolean(SettingsKeys.SWIPE_FALLBACK_ENABLED, true)
+    fun getMouseKeyScrollUp(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_UP, "167")?.toIntOrNull() ?: 167
+    fun getMouseKeyScrollDown(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_DOWN, "166")?.toIntOrNull() ?: 166
+    fun getMouseKeyDpadLeft(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_DPAD_LEFT, "89")?.toIntOrNull() ?: 89
+    fun getMouseKeyDpadRight(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_DPAD_RIGHT, "90")?.toIntOrNull() ?: 90
 
     fun getActionKeyCode(): Int = prefs.getString(SettingsKeys.ACTION_KEYCODE, "4")?.toIntOrNull() ?: 4
     fun getActionType(): String = prefs.getString(SettingsKeys.ACTION_TYPE, "none") ?: "none"

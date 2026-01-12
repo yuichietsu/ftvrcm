@@ -6,7 +6,6 @@ import android.os.Looper
 import android.view.ViewConfiguration
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
-import kotlin.math.min
 import com.ftvrcm.action.ActionFactory
 import com.ftvrcm.data.SettingsStore
 import com.ftvrcm.domain.OperationMode
@@ -182,20 +181,20 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         val mouseKeyLeft = settings.getMouseKeyLeft()
         val mouseKeyRight = settings.getMouseKeyRight()
         val mouseKeyClick = settings.getMouseKeyClick()
-        val mouseKeySwipeUp = settings.getMouseKeySwipeUp()
-        val mouseKeySwipeDown = settings.getMouseKeySwipeDown()
-        val mouseKeySwipeLeft = settings.getMouseKeySwipeLeft()
-        val mouseKeySwipeRight = settings.getMouseKeySwipeRight()
+        val mouseKeyScrollUp = settings.getMouseKeyScrollUp()
+        val mouseKeyScrollDown = settings.getMouseKeyScrollDown()
+        val mouseKeyDpadLeft = settings.getMouseKeyDpadLeft()
+        val mouseKeyDpadRight = settings.getMouseKeyDpadRight()
 
         val isHandledMouseKey = keyCode == mouseKeyUp ||
             keyCode == mouseKeyDown ||
             keyCode == mouseKeyLeft ||
             keyCode == mouseKeyRight ||
             keyCode == mouseKeyClick ||
-            keyCode == mouseKeySwipeUp ||
-            keyCode == mouseKeySwipeDown ||
-            keyCode == mouseKeySwipeLeft ||
-            keyCode == mouseKeySwipeRight
+            keyCode == mouseKeyScrollUp ||
+            keyCode == mouseKeyScrollDown ||
+            keyCode == mouseKeyDpadLeft ||
+            keyCode == mouseKeyDpadRight
 
         // Tap key handling (single tap / long tap)
         if (keyCode == mouseKeyClick) {
@@ -240,25 +239,29 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
         if (event.action != KeyEvent.ACTION_DOWN) return isHandledMouseKey
 
-        // Ignore repeats for swipe/click keys.
+        // Ignore repeats for action keys.
         val isFirstDown = event.repeatCount == 0
 
-        fun doSwipe(dx: Int, dy: Int): Boolean {
+        fun doScroll(up: Boolean): Boolean {
             if (!isFirstDown) return true
             clearMoveRepeat()
             val c = cursor.center()
-            val dm = resources.displayMetrics
-            val minDim = min(dm.widthPixels, dm.heightPixels)
-            val distance = (minDim * 0.25f).toInt().coerceIn(200, 800)
-            val endX = (c.x + dx * distance).coerceIn(0, dm.widthPixels - 1)
-            val endY = (c.y + dy * distance).coerceIn(0, dm.heightPixels - 1)
-            gestures.swipe(
-                startX = c.x,
-                startY = c.y,
-                endX = endX,
-                endY = endY,
-                enableFallback = settings.isSwipeFallbackEnabled(),
-            )
+            if (up) {
+                gestures.scrollUp(c.x, c.y)
+            } else {
+                gestures.scrollDown(c.x, c.y)
+            }
+            return true
+        }
+
+        fun doDpad(left: Boolean): Boolean {
+            if (!isFirstDown) return true
+            clearMoveRepeat()
+            if (left) {
+                gestures.dpadLeft()
+            } else {
+                gestures.dpadRight()
+            }
             return true
         }
 
@@ -280,10 +283,10 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 true
             }
             // mouseKeyClick is handled above.
-            mouseKeySwipeUp -> doSwipe(dx = 0, dy = -1)
-            mouseKeySwipeDown -> doSwipe(dx = 0, dy = 1)
-            mouseKeySwipeLeft -> doSwipe(dx = -1, dy = 0)
-            mouseKeySwipeRight -> doSwipe(dx = 1, dy = 0)
+            mouseKeyScrollUp -> doScroll(up = true)
+            mouseKeyScrollDown -> doScroll(up = false)
+            mouseKeyDpadLeft -> doDpad(left = true)
+            mouseKeyDpadRight -> doDpad(left = false)
             else -> false
         }
     }

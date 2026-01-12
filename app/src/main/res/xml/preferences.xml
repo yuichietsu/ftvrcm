@@ -74,38 +74,32 @@
             android:defaultValue="23" />
 
         <ListPreference
-            android:key="mouse_key_swipe_up"
-            android:title="@string/prefs_mouse_key_swipe_up"
+            android:key="mouse_key_scroll_up"
+            android:title="@string/prefs_mouse_key_scroll_up"
             android:entries="@array/key_entries"
             android:entryValues="@array/key_values"
             android:defaultValue="167" />
 
         <ListPreference
-            android:key="mouse_key_swipe_down"
-            android:title="@string/prefs_mouse_key_swipe_down"
+            android:key="mouse_key_scroll_down"
+            android:title="@string/prefs_mouse_key_scroll_down"
             android:entries="@array/key_entries"
             android:entryValues="@array/key_values"
             android:defaultValue="166" />
 
         <ListPreference
-            android:key="mouse_key_swipe_left"
-            android:title="@string/prefs_mouse_key_swipe_left"
+            android:key="mouse_key_dpad_left"
+            android:title="@string/prefs_mouse_key_dpad_left"
             android:entries="@array/key_entries"
             android:entryValues="@array/key_values"
             android:defaultValue="89" />
 
         <ListPreference
-            android:key="mouse_key_swipe_right"
-            android:title="@string/prefs_mouse_key_swipe_right"
+            android:key="mouse_key_dpad_right"
+            android:title="@string/prefs_mouse_key_dpad_right"
             android:entries="@array/key_entries"
             android:entryValues="@array/key_values"
             android:defaultValue="90" />
-
-        <SwitchPreferenceCompat
-            android:key="swipe_fallback_enabled"
-            android:title="@string/prefs_swipe_fallback_enabled"
-            android:summary="@string/prefs_swipe_fallback_enabled_summary"
-            android:defaultValue="true" />
 
     </PreferenceCategory>
 
