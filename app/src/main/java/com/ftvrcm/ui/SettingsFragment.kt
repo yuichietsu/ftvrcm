@@ -15,7 +15,6 @@ import androidx.preference.PreferenceGroup
 import com.ftvrcm.R
 import com.ftvrcm.data.SettingsKeys
 import com.ftvrcm.data.SettingsStore
-import com.ftvrcm.domain.EmulationMethod
 import com.ftvrcm.domain.OperationMode
 import com.ftvrcm.service.RemoteControlAccessibilityService
 
@@ -53,7 +52,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
         refreshModeSummary()
         refreshRequiredStateSummary()
-        refreshEmulationMethodSummary()
 
         val prefs = preferenceManager.sharedPreferences ?: return
         val l = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -63,11 +61,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 SettingsKeys.MOUSE_POINTER_SPEED,
                 SettingsKeys.EMULATION_METHOD,
                 -> refreshModeSummary()
-            }
-
-            when (key) {
-                SettingsKeys.EMULATION_METHOD,
-                -> refreshEmulationMethodSummary()
             }
 
             when (key) {
@@ -102,7 +95,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
         super.onResume()
         refreshModeSummary()
         refreshRequiredStateSummary()
-        refreshEmulationMethodSummary()
     }
 
     override fun onDestroy() {
@@ -131,18 +123,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
             getString(R.string.prefs_status_accessibility_service_on)
         } else {
             getString(R.string.prefs_status_accessibility_service_off)
-        }
-    }
-
-    private fun refreshEmulationMethodSummary() {
-        val store = SettingsStore(requireContext())
-        val pref = findPreference<Preference>(SettingsKeys.EMULATION_METHOD)
-        val method = store.getEmulationMethod()
-
-        // ListPreference uses simple summary provider, but keep a fallback.
-        pref?.summary = when (method) {
-            EmulationMethod.ACCESSIBILITY_SERVICE -> "Accessibility Service"
-            EmulationMethod.ADB -> "ADB"
         }
     }
 
