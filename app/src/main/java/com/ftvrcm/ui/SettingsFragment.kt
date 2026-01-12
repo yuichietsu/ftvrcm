@@ -7,7 +7,10 @@ import android.net.Uri
 import android.os.Bundle
 import android.content.SharedPreferences
 import android.provider.Settings
+import android.accessibilityservice.AccessibilityServiceInfo
+import android.view.accessibility.AccessibilityManager
 import android.widget.Toast
+import androidx.core.content.getSystemService
 import androidx.appcompat.app.AlertDialog
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
@@ -129,6 +132,22 @@ class SettingsFragment : PreferenceFragmentCompat() {
     private fun isAccessibilityServiceEnabled(): Boolean {
         val context = requireContext()
 
+        // Prefer AccessibilityManager because some Fire OS builds may not reliably expose
+        // Settings.Secure.ACCESSIBILITY_ENABLED / ENABLED_ACCESSIBILITY_SERVICES.
+        val expected = ComponentName(context, RemoteControlAccessibilityService::class.java)
+        val expectedId = "${expected.packageName}/${expected.className}"
+
+        try {
+            val am = context.getSystemService<AccessibilityManager>()
+            if (am != null) {
+                val enabled = am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+                for (info in enabled) {
+                    if (info.id == expectedId) return true
+                }
+            }
+        } catch (_: Throwable) {
+        }
+
         val enabled = try {
             Settings.Secure.getInt(context.contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED)
         } catch (_: Exception) {
@@ -136,7 +155,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
         }
         if (enabled != 1) return false
 
-        val expected = ComponentName(context, RemoteControlAccessibilityService::class.java)
         val raw = Settings.Secure.getString(
             context.contentResolver,
             Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,

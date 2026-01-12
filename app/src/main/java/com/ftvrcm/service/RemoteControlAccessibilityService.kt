@@ -3,6 +3,7 @@ package com.ftvrcm.service
 import android.accessibilityservice.AccessibilityService
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.ViewConfiguration
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
@@ -14,6 +15,8 @@ import com.ftvrcm.mouse.CursorOverlay
 import com.ftvrcm.mouse.GestureController
 
 class RemoteControlAccessibilityService : AccessibilityService() {
+
+    private val tag = "RCAccessibilityService"
 
     private lateinit var settings: SettingsStore
     private lateinit var cursor: CursorOverlay
@@ -91,6 +94,8 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             adbHost = null
             adbPort = null
 
+            Log.i(tag, "service connected")
+
             mode = settings.getOperationMode()
             if (mode == OperationMode.MOUSE) {
                 applyCursorStartPositionIfNeeded()
@@ -101,6 +106,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 lastCursorY = p.y
             }
         } catch (t: Throwable) {
+            Log.e(tag, "service init failed (${t.javaClass.simpleName}: ${t.message})")
             try {
                 disableSelf()
             } catch (_: Throwable) {
@@ -405,6 +411,9 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         clearPendingTapKey()
         mode = mode.toggle()
         settings.setOperationMode(mode)
+
+        Log.i(tag, "toggle mode -> $mode")
+
         if (mode == OperationMode.MOUSE) {
             applyCursorStartPositionIfNeeded()
             cursor.show()
