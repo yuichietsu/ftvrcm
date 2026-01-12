@@ -31,6 +31,25 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         }
     }
 
+    private var moveKeyCode: Int? = null
+    private var moveDx: Int = 0
+    private var moveDy: Int = 0
+    private var moveTicks: Int = 0
+    private val moveRepeatRunnable = object : Runnable {
+        override fun run() {
+            if (moveKeyCode == null) return
+
+            // Accelerate smoothly while held.
+            moveTicks += 1
+            val baseStep = settings.getMousePointerSpeedPx()
+            val accel = (1.0 + kotlin.math.sqrt(moveTicks.toDouble()) / 2.0).coerceAtMost(6.0)
+            val step = (baseStep * accel).toInt().coerceAtLeast(1)
+
+            cursor.moveBy(moveDx * step, moveDy * step)
+            mainHandler.postDelayed(this, MOVE_REPEAT_INTERVAL_MS)
+        }
+    }
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         try {
@@ -138,37 +157,39 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         // 3) Mouse mode key mapping
         if (mode != OperationMode.MOUSE) return false
 
-        if (event.action != KeyEvent.ACTION_DOWN) return true
+        // Stop continuous movement on key up.
+        if (event.action == KeyEvent.ACTION_UP) {
+            stopMoveRepeat(keyCode)
+            return true
+        }
 
-        val step = settings.getMousePointerSpeedPx()
-        // Acceleration: scale movement based on repeat count (key held down).
-        // Formula: base_step * (1 + sqrt(repeatCount)) for smooth acceleration.
-        val accel = 1.0 + kotlin.math.sqrt(event.repeatCount.toDouble())
-        val scaledStep = (step * accel).toInt()
+        if (event.action != KeyEvent.ACTION_DOWN) return true
 
         return when (keyCode) {
             settings.getMouseKeyUp() -> {
-                cursor.moveBy(0, -scaledStep)
+                startMoveRepeat(keyCode, dx = 0, dy = -1)
                 true
             }
             settings.getMouseKeyDown() -> {
-                cursor.moveBy(0, scaledStep)
+                startMoveRepeat(keyCode, dx = 0, dy = 1)
                 true
             }
             settings.getMouseKeyLeft() -> {
-                cursor.moveBy(-scaledStep, 0)
+                startMoveRepeat(keyCode, dx = -1, dy = 0)
                 true
             }
             settings.getMouseKeyRight() -> {
-                cursor.moveBy(scaledStep, 0)
+                startMoveRepeat(keyCode, dx = 1, dy = 0)
                 true
             }
             settings.getMouseKeyClick() -> {
+                clearMoveRepeat()
                 val c = cursor.center()
                 gestures.tap(c.x, c.y)
                 true
             }
             settings.getMouseKeyLongClick() -> {
+                clearMoveRepeat()
                 val c = cursor.center()
                 gestures.longPress(c.x, c.y)
                 true
@@ -187,11 +208,13 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         clearPendingToggle()
+        clearMoveRepeat()
         cursor.hide()
         super.onDestroy()
     }
 
     private fun toggleMode() {
+        clearMoveRepeat()
         mode = mode.toggle()
         settings.setOperationMode(mode)
         if (mode == OperationMode.MOUSE) cursor.show() else cursor.hide()
@@ -201,5 +224,40 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         mainHandler.removeCallbacks(pendingToggleRunnable)
         pendingToggleKeyCode = null
         pendingToggleTriggered = false
+    }
+
+    private fun startMoveRepeat(keyCode: Int, dx: Int, dy: Int) {
+        if (moveKeyCode == keyCode) return
+        clearMoveRepeat()
+
+        moveKeyCode = keyCode
+        moveDx = dx
+        moveDy = dy
+        moveTicks = 0
+
+        // Move immediately once for responsiveness.
+        val baseStep = settings.getMousePointerSpeedPx()
+        cursor.moveBy(dx * baseStep, dy * baseStep)
+
+        mainHandler.postDelayed(moveRepeatRunnable, MOVE_REPEAT_INITIAL_DELAY_MS)
+    }
+
+    private fun stopMoveRepeat(keyCode: Int) {
+        if (moveKeyCode == keyCode) {
+            clearMoveRepeat()
+        }
+    }
+
+    private fun clearMoveRepeat() {
+        mainHandler.removeCallbacks(moveRepeatRunnable)
+        moveKeyCode = null
+        moveDx = 0
+        moveDy = 0
+        moveTicks = 0
+    }
+
+    private companion object {
+        private const val MOVE_REPEAT_INITIAL_DELAY_MS = 120L
+        private const val MOVE_REPEAT_INTERVAL_MS = 33L
     }
 }
