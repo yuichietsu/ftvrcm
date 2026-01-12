@@ -30,6 +30,12 @@ object SettingsKeys {
 
     const val BACKGROUND_MONITORING_ENABLED = "background_monitoring_enabled" // boolean
 
+    // Experimental: toggle via media key double-press
+    const val MEDIA_TOGGLE_ENABLED = "media_toggle_enabled" // boolean
+
+    // Media toggle internal state (elapsedRealtime)
+    const val MEDIA_LAST_PLAYPAUSE_DOWN_AT = "media_last_playpause_down_at" // long
+
     // Debug
     const val DEBUG_SHOW_KEYCODE = "debug_show_keycode" // boolean
     const val DEBUG_LAST_KEYCODE = "debug_last_keycode" // int
@@ -42,4 +48,10 @@ object SettingsKeys {
     const val DEBUG_LAST_CRASH_TYPE = "debug_last_crash_type" // String
     const val DEBUG_LAST_CRASH_MESSAGE = "debug_last_crash_message" // String
     const val DEBUG_LAST_CRASH_STACK = "debug_last_crash_stack" // String
+
+    const val DEBUG_LAST_MEDIA_EVENT = "debug_last_media_event" // String
+    const val DEBUG_LAST_MEDIA_EVENT_AT = "debug_last_media_event_at" // long
+
+    const val DEBUG_LAST_GESTURE_EVENT = "debug_last_gesture_event" // String
+    const val DEBUG_LAST_GESTURE_EVENT_AT = "debug_last_gesture_event_at" // long
 }

@@ -37,7 +37,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             settings = SettingsStore(this).also { it.initializeDefaultsIfNeeded() }
             settings.setDebugServiceConnected()
             cursor = CursorOverlay(this)
-            gestures = GestureController(this)
+            gestures = GestureController(this, settings)
             actions = ActionFactory(this)
 
             mode = settings.getOperationMode()

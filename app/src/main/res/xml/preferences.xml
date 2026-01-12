@@ -106,10 +106,26 @@
             android:summary="他のアプリ実行中でもキー監視を行います"
             android:defaultValue="true" />
 
+        <SwitchPreferenceCompat
+            android:key="media_toggle_enabled"
+            android:title="@string/prefs_media_toggle_enabled"
+            android:summary="@string/prefs_media_toggle_enabled_summary"
+            android:defaultValue="false" />
+
         <Preference
             android:key="open_accessibility_settings"
             android:title="@string/prefs_open_accessibility_settings"
             android:summary="@string/prefs_open_accessibility_settings_summary" />
+
+        <Preference
+            android:key="open_app_details_settings"
+            android:title="@string/prefs_open_app_details_settings"
+            android:summary="@string/prefs_open_app_details_settings_summary" />
+
+        <Preference
+            android:key="open_system_settings"
+            android:title="@string/prefs_open_system_settings"
+            android:summary="@string/prefs_open_system_settings_summary" />
 
     </PreferenceCategory>
 
@@ -131,6 +147,18 @@
             android:key="debug_service_status"
             android:title="@string/prefs_debug_service_status"
             android:summary="@string/prefs_debug_service_status_summary"
+            android:selectable="false" />
+
+        <Preference
+            android:key="debug_last_media"
+            android:title="@string/prefs_debug_last_media"
+            android:summary="@string/prefs_debug_last_media_summary"
+            android:selectable="false" />
+
+        <Preference
+            android:key="debug_last_gesture"
+            android:title="@string/prefs_debug_last_gesture"
+            android:summary="@string/prefs_debug_last_gesture_summary"
             android:selectable="false" />
 
         <SwitchPreferenceCompat

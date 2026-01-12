@@ -52,6 +52,8 @@ class SettingsStore(context: Context) {
 
             putBoolean(SettingsKeys.BACKGROUND_MONITORING_ENABLED, true)
 
+            putBoolean(SettingsKeys.MEDIA_TOGGLE_ENABLED, false)
+
             putBoolean(SettingsKeys.DEBUG_SHOW_KEYCODE, false)
         }
     }
@@ -150,6 +152,53 @@ class SettingsStore(context: Context) {
     fun getActionParam(): String = prefs.getString(SettingsKeys.ACTION_PARAM, "") ?: ""
 
     fun isBackgroundMonitoringEnabled(): Boolean = prefs.getBoolean(SettingsKeys.BACKGROUND_MONITORING_ENABLED, true)
+
+    fun isMediaToggleEnabled(): Boolean = prefs.getBoolean(SettingsKeys.MEDIA_TOGGLE_ENABLED, false)
+
+    fun getMediaLastPlayPauseDownAtElapsed(): Long =
+        prefs.getLong(SettingsKeys.MEDIA_LAST_PLAYPAUSE_DOWN_AT, 0L)
+
+    fun setMediaLastPlayPauseDownAtElapsed(value: Long) {
+        prefs.edit { putLong(SettingsKeys.MEDIA_LAST_PLAYPAUSE_DOWN_AT, value) }
+    }
+
+    fun setDebugLastMediaEvent(summary: String) {
+        prefs.edit {
+            putString(SettingsKeys.DEBUG_LAST_MEDIA_EVENT, summary)
+            putLong(SettingsKeys.DEBUG_LAST_MEDIA_EVENT_AT, SystemClock.elapsedRealtime())
+        }
+    }
+
+    data class DebugLastMediaEvent(
+        val summary: String,
+        val atElapsedRealtimeMs: Long,
+    )
+
+    fun getDebugLastMediaEvent(): DebugLastMediaEvent? {
+        val at = prefs.getLong(SettingsKeys.DEBUG_LAST_MEDIA_EVENT_AT, 0L)
+        if (at <= 0L) return null
+        val summary = prefs.getString(SettingsKeys.DEBUG_LAST_MEDIA_EVENT, "") ?: ""
+        return DebugLastMediaEvent(summary = summary, atElapsedRealtimeMs = at)
+    }
+
+    fun setDebugLastGestureEvent(summary: String) {
+        prefs.edit {
+            putString(SettingsKeys.DEBUG_LAST_GESTURE_EVENT, summary)
+            putLong(SettingsKeys.DEBUG_LAST_GESTURE_EVENT_AT, SystemClock.elapsedRealtime())
+        }
+    }
+
+    data class DebugLastGestureEvent(
+        val summary: String,
+        val atElapsedRealtimeMs: Long,
+    )
+
+    fun getDebugLastGestureEvent(): DebugLastGestureEvent? {
+        val at = prefs.getLong(SettingsKeys.DEBUG_LAST_GESTURE_EVENT_AT, 0L)
+        if (at <= 0L) return null
+        val summary = prefs.getString(SettingsKeys.DEBUG_LAST_GESTURE_EVENT, "") ?: ""
+        return DebugLastGestureEvent(summary = summary, atElapsedRealtimeMs = at)
+    }
 
     fun isDebugShowKeyCodeEnabled(): Boolean = prefs.getBoolean(SettingsKeys.DEBUG_SHOW_KEYCODE, false)
 
