@@ -284,8 +284,14 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                     clearMoveRepeat()
                     val c = cursor.center()
                     when (settings.getEmulationMethod()) {
-                        EmulationMethod.ACCESSIBILITY_SERVICE -> gestures.tap(c.x, c.y)
-                        EmulationMethod.ADB -> adb()?.tap(c.x, c.y)
+                        EmulationMethod.ACCESSIBILITY_SERVICE -> {
+                            Log.i(tag, "tap via accessibility at (${c.x},${c.y})")
+                            gestures.tap(c.x, c.y)
+                        }
+                        EmulationMethod.ADB -> {
+                            Log.i(tag, "tap via adb at (${c.x},${c.y})")
+                            adb()?.tap(c.x, c.y)
+                        }
                     }
                     return true
                 }
@@ -359,6 +365,8 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                                     clampY(c.y),
                                 )
                             }
+
+                            Log.i(tag, "swipe via adb keyCode=$keyCode center=(${c.x},${c.y}) distance=$distance")
                         }
                     }
                     return true
