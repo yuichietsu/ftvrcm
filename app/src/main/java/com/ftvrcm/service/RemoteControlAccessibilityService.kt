@@ -257,10 +257,11 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         fun doDpad(left: Boolean): Boolean {
             if (!isFirstDown) return true
             clearMoveRepeat()
+            val c = cursor.center()
             if (left) {
-                gestures.dpadLeft()
+                gestures.dpadLeftAt(c.x, c.y)
             } else {
-                gestures.dpadRight()
+                gestures.dpadRightAt(c.x, c.y)
             }
             return true
         }

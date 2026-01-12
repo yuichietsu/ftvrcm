@@ -52,8 +52,8 @@ class SettingsStore(context: Context) {
             putString(SettingsKeys.MOUSE_KEY_CLICK, "23")
 
             // Scroll/Dpad keys (default: CH+/CH- and REW/FF)
-            putString(SettingsKeys.MOUSE_KEY_SCROLL_UP, "167")
-            putString(SettingsKeys.MOUSE_KEY_SCROLL_DOWN, "166")
+            putString(SettingsKeys.MOUSE_KEY_SCROLL_UP, "166")
+            putString(SettingsKeys.MOUSE_KEY_SCROLL_DOWN, "167")
             putString(SettingsKeys.MOUSE_KEY_DPAD_LEFT, "89")
             putString(SettingsKeys.MOUSE_KEY_DPAD_RIGHT, "90")
 
@@ -68,8 +68,8 @@ class SettingsStore(context: Context) {
                     "21:mouse_left",
                     "22:mouse_right",
                     "23:mouse_click",
-                    "167:mouse_scroll_up",
-                    "166:mouse_scroll_down",
+                    "166:mouse_scroll_up",
+                    "167:mouse_scroll_down",
                     "89:mouse_dpad_left",
                     "90:mouse_dpad_right",
                 ),
@@ -176,8 +176,8 @@ class SettingsStore(context: Context) {
     fun getMouseKeyRight(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_RIGHT, "22")?.toIntOrNull() ?: 22
     fun getMouseKeyClick(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_CLICK, "23")?.toIntOrNull() ?: 23
 
-    fun getMouseKeyScrollUp(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_UP, "167")?.toIntOrNull() ?: 167
-    fun getMouseKeyScrollDown(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_DOWN, "166")?.toIntOrNull() ?: 166
+    fun getMouseKeyScrollUp(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_UP, "166")?.toIntOrNull() ?: 166
+    fun getMouseKeyScrollDown(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_DOWN, "167")?.toIntOrNull() ?: 167
     fun getMouseKeyDpadLeft(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_DPAD_LEFT, "89")?.toIntOrNull() ?: 89
     fun getMouseKeyDpadRight(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_DPAD_RIGHT, "90")?.toIntOrNull() ?: 90
 

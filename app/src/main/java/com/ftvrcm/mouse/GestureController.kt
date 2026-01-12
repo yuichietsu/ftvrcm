@@ -94,7 +94,7 @@ class GestureController(
 
     fun scrollUp(x: Int, y: Int): Boolean {
         recordGesture(type = "scroll_up", status = "DISPATCHING", detail = "x=$x y=$y")
-        val ok = try {
+        val okScroll = try {
             performNodeScrollAt(
                 x = x,
                 y = y,
@@ -105,17 +105,35 @@ class GestureController(
         } catch (_: Exception) {
             null
         }
+
+        if (okScroll == true) {
+            recordGesture(
+                type = "scroll_up",
+                status = "COMPLETED",
+                detail = "via=SCROLL_UP ok",
+            )
+            return true
+        }
+
+        // If scroll action is not supported, fallback to DPAD_UP (focus move).
+        val okDpad = try {
+            focusAt(x, y)
+            performFocusMove(View.FOCUS_UP)
+        } catch (_: Exception) {
+            null
+        }
+
         recordGesture(
             type = "scroll_up",
-            status = if (ok == true) "COMPLETED" else "REJECTED",
-            detail = if (ok == true) "via=SCROLL_UP ok" else "via=SCROLL_UP failed",
+            status = if (okDpad == true) "COMPLETED" else "REJECTED",
+            detail = if (okDpad == true) "via=DPAD_UP ok" else "via=SCROLL_UP failed; DPAD_UP failed",
         )
-        return ok == true
+        return okDpad == true
     }
 
     fun scrollDown(x: Int, y: Int): Boolean {
         recordGesture(type = "scroll_down", status = "DISPATCHING", detail = "x=$x y=$y")
-        val ok = try {
+        val okScroll = try {
             performNodeScrollAt(
                 x = x,
                 y = y,
@@ -126,17 +144,36 @@ class GestureController(
         } catch (_: Exception) {
             null
         }
+
+        if (okScroll == true) {
+            recordGesture(
+                type = "scroll_down",
+                status = "COMPLETED",
+                detail = "via=SCROLL_DOWN ok",
+            )
+            return true
+        }
+
+        // If scroll action is not supported, fallback to DPAD_DOWN (focus move).
+        val okDpad = try {
+            focusAt(x, y)
+            performFocusMove(View.FOCUS_DOWN)
+        } catch (_: Exception) {
+            null
+        }
+
         recordGesture(
             type = "scroll_down",
-            status = if (ok == true) "COMPLETED" else "REJECTED",
-            detail = if (ok == true) "via=SCROLL_DOWN ok" else "via=SCROLL_DOWN failed",
+            status = if (okDpad == true) "COMPLETED" else "REJECTED",
+            detail = if (okDpad == true) "via=DPAD_DOWN ok" else "via=SCROLL_DOWN failed; DPAD_DOWN failed",
         )
-        return ok == true
+        return okDpad == true
     }
 
-    fun dpadLeft(): Boolean {
-        recordGesture(type = "dpad_left", status = "DISPATCHING", detail = "")
+    fun dpadLeftAt(x: Int, y: Int): Boolean {
+        recordGesture(type = "dpad_left", status = "DISPATCHING", detail = "x=$x y=$y")
         val ok = try {
+            focusAt(x, y)
             performFocusMove(View.FOCUS_LEFT)
         } catch (_: Exception) {
             null
@@ -149,9 +186,10 @@ class GestureController(
         return ok == true
     }
 
-    fun dpadRight(): Boolean {
-        recordGesture(type = "dpad_right", status = "DISPATCHING", detail = "")
+    fun dpadRightAt(x: Int, y: Int): Boolean {
+        recordGesture(type = "dpad_right", status = "DISPATCHING", detail = "x=$x y=$y")
         val ok = try {
+            focusAt(x, y)
             performFocusMove(View.FOCUS_RIGHT)
         } catch (_: Exception) {
             null
@@ -193,6 +231,68 @@ class GestureController(
                 current?.recycle()
             } catch (_: Exception) {
             }
+        }
+    }
+
+    private fun focusAt(x: Int, y: Int): Boolean? {
+        val root = service.rootInActiveWindow ?: return null
+        var best: AccessibilityNodeInfo? = null
+        try {
+            val bounds = Rect()
+            var bestArea = Long.MAX_VALUE
+
+            val stack = ArrayDeque<AccessibilityNodeInfo>()
+            stack.add(root)
+
+            while (stack.isNotEmpty()) {
+                val node = stack.removeLast()
+                try {
+                    node.getBoundsInScreen(bounds)
+                    if (bounds.contains(x, y)) {
+                        val area = bounds.width().toLong() * bounds.height().toLong()
+                        if (area in 1 until bestArea) {
+                            best?.recycle()
+                            best = AccessibilityNodeInfo.obtain(node)
+                            bestArea = area
+                        }
+                    }
+
+                    for (i in 0 until node.childCount) {
+                        val child = node.getChild(i)
+                        if (child != null) stack.add(child)
+                    }
+                } finally {
+                    node.recycle()
+                }
+            }
+
+            val bestNode = best ?: return null
+
+            // Prefer focusing a focusable ancestor; fallback to clickable.
+            var target: AccessibilityNodeInfo? = bestNode
+            while (target != null && target.isEnabled && !(target.isFocusable || target.isClickable)) {
+                val parent = target.parent
+                if (parent == null) break
+                if (target !== bestNode) {
+                    target.recycle()
+                }
+                target = parent
+            }
+
+            val okInput = target?.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+            val okA11y = if (okInput == true) true else target?.performAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS)
+
+            if (target != null && target !== bestNode) {
+                target.recycle()
+            }
+            bestNode.recycle()
+            return okA11y
+        } catch (_: Exception) {
+            try {
+                best?.recycle()
+            } catch (_: Exception) {
+            }
+            return null
         }
     }
 

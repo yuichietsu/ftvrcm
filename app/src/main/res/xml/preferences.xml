@@ -78,14 +78,14 @@
             android:title="@string/prefs_mouse_key_scroll_up"
             android:entries="@array/key_entries"
             android:entryValues="@array/key_values"
-            android:defaultValue="167" />
+            android:defaultValue="166" />
 
         <ListPreference
             android:key="mouse_key_scroll_down"
             android:title="@string/prefs_mouse_key_scroll_down"
             android:entries="@array/key_entries"
             android:entryValues="@array/key_values"
-            android:defaultValue="166" />
+            android:defaultValue="167" />
 
         <ListPreference
             android:key="mouse_key_dpad_left"

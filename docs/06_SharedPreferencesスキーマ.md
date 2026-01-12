@@ -105,8 +105,8 @@ com.ftvrcm_preferences.xml
   <string>21:mouse_left</string>
   <string>22:mouse_right</string>
   <string>23:mouse_click</string>
-        <string>167:mouse_scroll_up</string>
-        <string>166:mouse_scroll_down</string>
+        <string>166:mouse_scroll_up</string>
+        <string>167:mouse_scroll_down</string>
         <string>89:mouse_dpad_left</string>
         <string>90:mouse_dpad_right</string>
   <string>4:launch_app_com.android.chrome</string>
