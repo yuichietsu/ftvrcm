@@ -88,20 +88,28 @@
         android:text="スクロール領域（模様付き）"
         android:textStyle="bold" />
 
-    <ScrollView
-        android:id="@+id/scrollArea"
+    <HorizontalScrollView
+        android:id="@+id/scrollAreaH"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="8dp"
         android:layout_weight="1"
-        android:scrollbars="vertical">
+        android:scrollbars="horizontal">
 
-        <LinearLayout
-            android:id="@+id/patternContainer"
-            android:layout_width="match_parent"
+        <ScrollView
+            android:id="@+id/scrollAreaV"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical" />
+            android:scrollbars="vertical">
 
-    </ScrollView>
+            <LinearLayout
+                android:id="@+id/patternContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+        </ScrollView>
+
+    </HorizontalScrollView>
 
 </LinearLayout>
