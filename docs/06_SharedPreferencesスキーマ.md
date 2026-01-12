@@ -137,10 +137,10 @@ com.ftvrcm_preferences.xml
 | `mouse_left` | ポインタ左移動 |
 | `mouse_right` | ポインタ右移動 |
 | `mouse_click` | タップ（短押し）/ロングタップ（長押し） |
-| `mouse_scroll_up` | 上スクロール/選択（短押し: `ACTION_SCROLL_UP`、長押し: `DPAD_UP` 相当） |
-| `mouse_scroll_down` | 下スクロール/選択（短押し: `ACTION_SCROLL_DOWN`、長押し: `DPAD_DOWN` 相当） |
-| `mouse_scroll_left` | 左スクロール/選択（短押し: `ACTION_SCROLL_LEFT`、長押し: `DPAD_LEFT` 相当） |
-| `mouse_scroll_right` | 右スクロール/選択（短押し: `ACTION_SCROLL_RIGHT`、長押し: `DPAD_RIGHT` 相当） |
+| `mouse_scroll_up` | 上スクロール/選択（短押し: `ACTION_SCROLL_UP`（失敗時は`ACTION_SCROLL_BACKWARD`も試行）、長押し: `DPAD_UP` 相当→フォーカス移動後のコントロール位置へカーソル移動） |
+| `mouse_scroll_down` | 下スクロール/選択（短押し: `ACTION_SCROLL_DOWN`（失敗時は`ACTION_SCROLL_FORWARD`も試行）、長押し: `DPAD_DOWN` 相当→フォーカス移動後のコントロール位置へカーソル移動） |
+| `mouse_scroll_left` | 左スクロール/選択（短押し: `ACTION_SCROLL_LEFT`、長押し: `DPAD_LEFT` 相当→フォーカス移動後のコントロール位置へカーソル移動） |
+| `mouse_scroll_right` | 右スクロール/選択（短押し: `ACTION_SCROLL_RIGHT`、長押し: `DPAD_RIGHT` 相当→フォーカス移動後のコントロール位置へカーソル移動） |
 
 ---
 

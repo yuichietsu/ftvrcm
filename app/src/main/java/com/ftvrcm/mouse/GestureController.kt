@@ -99,7 +99,9 @@ class GestureController(
                 x = x,
                 y = y,
                 primaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP.id),
-                secondaryActions = intArrayOf(),
+                // Some devices reject ACTION_SCROLL_UP/DOWN but accept the legacy forward/backward actions.
+                // This is NOT a DPAD fallback.
+                secondaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_BACKWARD.id),
                 preferTarget = { !isHorizontalScrollContainer(it) },
             )
         } catch (_: Exception) {
@@ -108,7 +110,7 @@ class GestureController(
         recordGesture(
             type = "scroll_up",
             status = if (ok == true) "COMPLETED" else "REJECTED",
-            detail = if (ok == true) "via=SCROLL_UP ok" else "via=SCROLL_UP failed",
+            detail = if (ok == true) "via=SCROLL_UP/BACKWARD ok" else "via=SCROLL_UP/BACKWARD failed",
         )
         return ok == true
     }
@@ -120,7 +122,9 @@ class GestureController(
                 x = x,
                 y = y,
                 primaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.id),
-                secondaryActions = intArrayOf(),
+                // Some devices reject ACTION_SCROLL_UP/DOWN but accept the legacy forward/backward actions.
+                // This is NOT a DPAD fallback.
+                secondaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD.id),
                 preferTarget = { !isHorizontalScrollContainer(it) },
             )
         } catch (_: Exception) {
@@ -129,7 +133,7 @@ class GestureController(
         recordGesture(
             type = "scroll_down",
             status = if (ok == true) "COMPLETED" else "REJECTED",
-            detail = if (ok == true) "via=SCROLL_DOWN ok" else "via=SCROLL_DOWN failed",
+            detail = if (ok == true) "via=SCROLL_DOWN/FORWARD ok" else "via=SCROLL_DOWN/FORWARD failed",
         )
         return ok == true
     }

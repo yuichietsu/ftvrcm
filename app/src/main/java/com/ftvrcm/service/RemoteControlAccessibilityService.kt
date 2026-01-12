@@ -3,6 +3,7 @@ package com.ftvrcm.service
 import android.accessibilityservice.AccessibilityService
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.ViewConfiguration
 import android.view.KeyEvent
 import android.graphics.Rect
@@ -33,6 +34,9 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private var scrollSelectKeyLongPressTriggered: Boolean = false
     private var scrollSelectKeyDirection: Int = 0
 
+    private var pendingCursorMoveAfterFocusChange: Boolean = false
+    private var pendingCursorMoveDeadlineMs: Long = 0L
+
     private val scrollSelectKeyLongPressRunnable = Runnable {
         if (mode != OperationMode.MOUSE) return@Runnable
         if (!scrollSelectKeyIsDown) return@Runnable
@@ -40,7 +44,10 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
         scrollSelectKeyLongPressTriggered = true
         clearMoveRepeat()
-        moveCursorToFocusedControl()
+
+        // Long press: first move focus (DPAD), then move cursor to the newly focused control.
+        pendingCursorMoveAfterFocusChange = true
+        pendingCursorMoveDeadlineMs = SystemClock.uptimeMillis() + 800L
 
         when (scrollSelectKeyDirection) {
             0 -> gestures.dpadUp()
@@ -119,7 +126,39 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // no-op
+        if (!pendingCursorMoveAfterFocusChange) return
+        if (mode != OperationMode.MOUSE) {
+            pendingCursorMoveAfterFocusChange = false
+            return
+        }
+
+        val now = SystemClock.uptimeMillis()
+        if (now > pendingCursorMoveDeadlineMs) {
+            pendingCursorMoveAfterFocusChange = false
+            return
+        }
+
+        val e = event ?: return
+        val t = e.eventType
+        if (t != AccessibilityEvent.TYPE_VIEW_FOCUSED && t != AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED) return
+
+        val src = e.source
+        val moved = try {
+            if (src != null) {
+                moveCursorToNode(src)
+            } else {
+                moveCursorToFocusedControl()
+            }
+        } finally {
+            try {
+                src?.recycle()
+            } catch (_: Exception) {
+            }
+        }
+
+        if (moved) {
+            pendingCursorMoveAfterFocusChange = false
+        }
     }
 
     override fun onInterrupt() {
@@ -364,6 +403,25 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 focus?.recycle()
             } catch (_: Exception) {
             }
+        }
+    }
+
+    private fun moveCursorToNode(node: AccessibilityNodeInfo): Boolean {
+        val bounds = Rect()
+        return try {
+            node.getBoundsInScreen(bounds)
+            if (bounds.isEmpty) return false
+
+            val cx = bounds.centerX()
+            val cy = bounds.centerY()
+            // CursorOverlay is 48x48.
+            cursor.setPosition(cx - 24, cy - 24)
+            val p = cursor.position()
+            lastCursorX = p.x
+            lastCursorY = p.y
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 
