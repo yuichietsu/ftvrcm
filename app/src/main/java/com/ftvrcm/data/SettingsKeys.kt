@@ -21,6 +21,8 @@ object SettingsKeys {
     const val MOUSE_KEY_SCROLL_LEFT = "mouse_key_scroll_left"
     const val MOUSE_KEY_SCROLL_RIGHT = "mouse_key_scroll_right"
 
+    const val MOUSE_KEY_SCROLL_SELECT_LONGPRESS_TOGGLE = "mouse_key_scroll_select_longpress_toggle" // String/int
+
     const val MOUSE_CURSOR_START_POSITION = "mouse_cursor_start_position" // String
     const val MOUSE_CURSOR_LAST_X = "mouse_cursor_last_x" // int
     const val MOUSE_CURSOR_LAST_Y = "mouse_cursor_last_y" // int

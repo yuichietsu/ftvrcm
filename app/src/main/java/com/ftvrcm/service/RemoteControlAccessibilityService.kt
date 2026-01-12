@@ -3,12 +3,9 @@ package com.ftvrcm.service
 import android.accessibilityservice.AccessibilityService
 import android.os.Handler
 import android.os.Looper
-import android.os.SystemClock
 import android.view.ViewConfiguration
 import android.view.KeyEvent
-import android.graphics.Rect
 import android.view.accessibility.AccessibilityEvent
-import android.view.accessibility.AccessibilityNodeInfo
 import com.ftvrcm.action.ActionFactory
 import com.ftvrcm.data.SettingsStore
 import com.ftvrcm.domain.OperationMode
@@ -34,8 +31,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private var scrollSelectKeyLongPressTriggered: Boolean = false
     private var scrollSelectKeyDirection: Int = 0
 
-    private var pendingCursorMoveAfterFocusChange: Boolean = false
-    private var pendingCursorMoveDeadlineMs: Long = 0L
+    private var scrollSelectLongPressIsSelectMode: Boolean = true
 
     private val scrollSelectKeyLongPressRunnable = Runnable {
         if (mode != OperationMode.MOUSE) return@Runnable
@@ -45,15 +41,23 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         scrollSelectKeyLongPressTriggered = true
         clearMoveRepeat()
 
-        // Long press: first move focus (DPAD), then move cursor to the newly focused control.
-        pendingCursorMoveAfterFocusChange = true
-        pendingCursorMoveDeadlineMs = SystemClock.uptimeMillis() + 800L
-
-        when (scrollSelectKeyDirection) {
-            0 -> gestures.dpadUp()
-            1 -> gestures.dpadDown()
-            2 -> gestures.dpadLeft()
-            3 -> gestures.dpadRight()
+        // Long press behavior is toggleable (Scroll <-> Select(DPAD)).
+        // Cursor position is NOT moved in either mode.
+        if (scrollSelectLongPressIsSelectMode) {
+            when (scrollSelectKeyDirection) {
+                0 -> gestures.dpadUp()
+                1 -> gestures.dpadDown()
+                2 -> gestures.dpadLeft()
+                3 -> gestures.dpadRight()
+            }
+        } else {
+            val c = cursor.center()
+            when (scrollSelectKeyDirection) {
+                0 -> gestures.scrollUp(c.x, c.y)
+                1 -> gestures.scrollDown(c.x, c.y)
+                2 -> gestures.scrollLeft(c.x, c.y)
+                3 -> gestures.scrollRight(c.x, c.y)
+            }
         }
     }
 
@@ -112,6 +116,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             if (mode == OperationMode.MOUSE) {
                 applyCursorStartPositionIfNeeded()
                 cursor.show()
+                updateCursorStyleForScrollSelectMode()
                 val p = cursor.position()
                 lastCursorX = p.x
                 lastCursorY = p.y
@@ -126,39 +131,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (!pendingCursorMoveAfterFocusChange) return
-        if (mode != OperationMode.MOUSE) {
-            pendingCursorMoveAfterFocusChange = false
-            return
-        }
-
-        val now = SystemClock.uptimeMillis()
-        if (now > pendingCursorMoveDeadlineMs) {
-            pendingCursorMoveAfterFocusChange = false
-            return
-        }
-
-        val e = event ?: return
-        val t = e.eventType
-        if (t != AccessibilityEvent.TYPE_VIEW_FOCUSED && t != AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED) return
-
-        val src = e.source
-        val moved = try {
-            if (src != null) {
-                moveCursorToNode(src)
-            } else {
-                moveCursorToFocusedControl()
-            }
-        } finally {
-            try {
-                src?.recycle()
-            } catch (_: Exception) {
-            }
-        }
-
-        if (moved) {
-            pendingCursorMoveAfterFocusChange = false
-        }
+        // no-op
     }
 
     override fun onInterrupt() {
@@ -247,6 +220,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         val mouseKeyScrollDown = settings.getMouseKeyScrollDown()
         val mouseKeyScrollLeft = settings.getMouseKeyScrollLeft()
         val mouseKeyScrollRight = settings.getMouseKeyScrollRight()
+        val mouseKeyScrollSelectLongPressToggle = settings.getMouseKeyScrollSelectLongPressToggle()
 
         val isHandledMouseKey = keyCode == mouseKeyUp ||
             keyCode == mouseKeyDown ||
@@ -256,7 +230,22 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             keyCode == mouseKeyScrollUp ||
             keyCode == mouseKeyScrollDown ||
             keyCode == mouseKeyScrollLeft ||
-            keyCode == mouseKeyScrollRight
+            keyCode == mouseKeyScrollRight ||
+            keyCode == mouseKeyScrollSelectLongPressToggle
+
+        // Toggle long-press behavior for scroll/select keys.
+        if (keyCode == mouseKeyScrollSelectLongPressToggle) {
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> {
+                    if (event.repeatCount > 0) return true
+                    scrollSelectLongPressIsSelectMode = !scrollSelectLongPressIsSelectMode
+                    updateCursorStyleForScrollSelectMode()
+                    return true
+                }
+                KeyEvent.ACTION_UP -> return true
+                else -> return true
+            }
+        }
 
         // Tap key handling (single tap / long tap)
         if (keyCode == mouseKeyClick) {
@@ -375,56 +364,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun moveCursorToFocusedControl(): Boolean {
-        val root = rootInActiveWindow ?: return false
-
-        var focus: AccessibilityNodeInfo? = null
-        try {
-            focus = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-                ?: root.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)
-            if (focus == null) return false
-
-            val bounds = Rect()
-            focus.getBoundsInScreen(bounds)
-            if (bounds.isEmpty) return false
-
-            val cx = bounds.centerX()
-            val cy = bounds.centerY()
-            // CursorOverlay is 48x48.
-            cursor.setPosition(cx - 24, cy - 24)
-            val p = cursor.position()
-            lastCursorX = p.x
-            lastCursorY = p.y
-            return true
-        } catch (_: Exception) {
-            return false
-        } finally {
-            try {
-                focus?.recycle()
-            } catch (_: Exception) {
-            }
-        }
-    }
-
-    private fun moveCursorToNode(node: AccessibilityNodeInfo): Boolean {
-        val bounds = Rect()
-        return try {
-            node.getBoundsInScreen(bounds)
-            if (bounds.isEmpty) return false
-
-            val cx = bounds.centerX()
-            val cy = bounds.centerY()
-            // CursorOverlay is 48x48.
-            cursor.setPosition(cx - 24, cy - 24)
-            val p = cursor.position()
-            lastCursorX = p.x
-            lastCursorY = p.y
-            true
-        } catch (_: Exception) {
-            false
-        }
-    }
-
     override fun onDestroy() {
         clearPendingToggle()
         clearPendingTapKey()
@@ -441,6 +380,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         if (mode == OperationMode.MOUSE) {
             applyCursorStartPositionIfNeeded()
             cursor.show()
+            updateCursorStyleForScrollSelectMode()
             val p = cursor.position()
             lastCursorX = p.x
             lastCursorY = p.y
@@ -449,6 +389,12 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             settings.setLastCursorPosition(lastCursorX, lastCursorY)
             cursor.hide()
         }
+    }
+
+    private fun updateCursorStyleForScrollSelectMode() {
+        cursor.setStyle(
+            if (scrollSelectLongPressIsSelectMode) CursorOverlay.CursorStyle.DPAD else CursorOverlay.CursorStyle.POINTER,
+        )
     }
 
     private fun clearPendingTapKey() {

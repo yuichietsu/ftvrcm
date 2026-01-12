@@ -57,6 +57,9 @@ class SettingsStore(context: Context) {
             putString(SettingsKeys.MOUSE_KEY_SCROLL_LEFT, "89")
             putString(SettingsKeys.MOUSE_KEY_SCROLL_RIGHT, "90")
 
+            // Toggle for scroll/select long-press behavior (default: PLAY/PAUSE)
+            putString(SettingsKeys.MOUSE_KEY_SCROLL_SELECT_LONGPRESS_TOGGLE, "85")
+
             // Cursor start position in mouse mode
             putString(SettingsKeys.MOUSE_CURSOR_START_POSITION, "center")
 
@@ -180,6 +183,9 @@ class SettingsStore(context: Context) {
     fun getMouseKeyScrollDown(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_DOWN, "167")?.toIntOrNull() ?: 167
     fun getMouseKeyScrollLeft(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_LEFT, "89")?.toIntOrNull() ?: 89
     fun getMouseKeyScrollRight(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_RIGHT, "90")?.toIntOrNull() ?: 90
+
+    fun getMouseKeyScrollSelectLongPressToggle(): Int =
+        prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_SELECT_LONGPRESS_TOGGLE, "85")?.toIntOrNull() ?: 85
 
     fun getActionKeyCode(): Int = prefs.getString(SettingsKeys.ACTION_KEYCODE, "4")?.toIntOrNull() ?: 4
     fun getActionType(): String = prefs.getString(SettingsKeys.ACTION_TYPE, "none") ?: "none"
