@@ -206,6 +206,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
             var ok = false
             var detail: String? = null
             var authLikely = false
+            var eofLikely = false
 
             try {
                 android.util.Log.i(TAG, "enableAccessibilityViaAdb start host=$adbHost port=$adbPort")
@@ -265,6 +266,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
                 val msg = (t.message ?: "").lowercase()
                 authLikely = msg.contains("unauthorized") || msg.contains("auth") || msg.contains("denied")
+                eofLikely = t is java.io.EOFException
             }
 
             activity?.runOnUiThread {
@@ -275,6 +277,8 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 } else {
                     val msg = if (authLikely) {
                         getString(R.string.prefs_enable_accessibility_via_adb_failed_auth)
+                    } else if (eofLikely) {
+                        getString(R.string.prefs_enable_accessibility_via_adb_failed_eof)
                     } else {
                         getString(R.string.prefs_enable_accessibility_via_adb_failed)
                     }

@@ -124,9 +124,6 @@ class AdbInputClient(
         }
 
         val result = LinkedHashSet<String>()
-        result += "127.0.0.1"
-        result += "localhost"
-
         try {
             val interfaces = NetworkInterface.getNetworkInterfaces() ?: return result.toList()
             for (ni in Collections.list(interfaces)) {
@@ -143,6 +140,10 @@ class AdbInputClient(
         } catch (t: Throwable) {
             Log.w(tag, "failed to enumerate local IPs (${t.javaClass.simpleName}: ${t.message})")
         }
+
+        // Try loopback last.
+        result += "127.0.0.1"
+        result += "localhost"
 
         return result.toList()
     }
