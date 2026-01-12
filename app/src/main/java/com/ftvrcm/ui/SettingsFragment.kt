@@ -74,6 +74,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 SettingsKeys.MOUSE_KEY_SCROLL_DOWN,
                 SettingsKeys.MOUSE_KEY_SCROLL_LEFT,
                 SettingsKeys.MOUSE_KEY_SCROLL_RIGHT,
+                SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE,
                 -> SettingsStore(requireContext()).upsertMouseKeyMapping()
 
                 SettingsKeys.ACTION_KEYCODE,

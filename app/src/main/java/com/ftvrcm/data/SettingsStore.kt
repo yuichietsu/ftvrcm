@@ -57,8 +57,8 @@ class SettingsStore(context: Context) {
             putString(SettingsKeys.MOUSE_KEY_SCROLL_LEFT, "89")
             putString(SettingsKeys.MOUSE_KEY_SCROLL_RIGHT, "90")
 
-            // Toggle for scroll/select long-press behavior (default: PLAY/PAUSE)
-            putString(SettingsKeys.MOUSE_KEY_SCROLL_SELECT_LONGPRESS_TOGGLE, "85")
+            // Toggle cursor/dpad behavior (default: PLAY/PAUSE)
+            putString(SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE, "85")
 
             // Cursor start position in mouse mode
             putString(SettingsKeys.MOUSE_CURSOR_START_POSITION, "center")
@@ -184,8 +184,19 @@ class SettingsStore(context: Context) {
     fun getMouseKeyScrollLeft(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_LEFT, "89")?.toIntOrNull() ?: 89
     fun getMouseKeyScrollRight(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_RIGHT, "90")?.toIntOrNull() ?: 90
 
-    fun getMouseKeyScrollSelectLongPressToggle(): Int =
-        prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_SELECT_LONGPRESS_TOGGLE, "85")?.toIntOrNull() ?: 85
+    fun getMouseKeyCursorDpadToggle(): Int {
+        val newValue = prefs.getString(SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE, null)
+        if (newValue != null) return newValue.toIntOrNull() ?: 85
+
+        // Migration: reuse old key if present.
+        val oldValue = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_SELECT_LONGPRESS_TOGGLE, null)
+        if (oldValue != null) {
+            prefs.edit { putString(SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE, oldValue) }
+            return oldValue.toIntOrNull() ?: 85
+        }
+
+        return 85
+    }
 
     fun getActionKeyCode(): Int = prefs.getString(SettingsKeys.ACTION_KEYCODE, "4")?.toIntOrNull() ?: 4
     fun getActionType(): String = prefs.getString(SettingsKeys.ACTION_TYPE, "none") ?: "none"

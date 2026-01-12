@@ -98,9 +98,9 @@ class GestureController(
             performNodeScrollAt(
                 x = x,
                 y = y,
-                // Prefer BACKWARD/FORWARD for better compatibility/performance on some devices.
-                primaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_BACKWARD.id),
-                secondaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP.id),
+                primaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP.id),
+                // Some devices reject UP/DOWN; keep legacy fallback for compatibility.
+                secondaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_BACKWARD.id),
                 preferTarget = { !isHorizontalScrollContainer(it) },
             )
         } catch (_: Exception) {
@@ -109,7 +109,7 @@ class GestureController(
         recordGesture(
             type = "scroll_up",
             status = if (ok == true) "COMPLETED" else "REJECTED",
-            detail = if (ok == true) "via=SCROLL_BACKWARD/UP ok" else "via=SCROLL_BACKWARD/UP failed",
+            detail = if (ok == true) "via=SCROLL_UP/BACKWARD ok" else "via=SCROLL_UP/BACKWARD failed",
         )
         return ok == true
     }
@@ -120,9 +120,9 @@ class GestureController(
             performNodeScrollAt(
                 x = x,
                 y = y,
-                // Prefer BACKWARD/FORWARD for better compatibility/performance on some devices.
-                primaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD.id),
-                secondaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.id),
+                primaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.id),
+                // Some devices reject UP/DOWN; keep legacy fallback for compatibility.
+                secondaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD.id),
                 preferTarget = { !isHorizontalScrollContainer(it) },
             )
         } catch (_: Exception) {
@@ -131,7 +131,7 @@ class GestureController(
         recordGesture(
             type = "scroll_down",
             status = if (ok == true) "COMPLETED" else "REJECTED",
-            detail = if (ok == true) "via=SCROLL_FORWARD/DOWN ok" else "via=SCROLL_FORWARD/DOWN failed",
+            detail = if (ok == true) "via=SCROLL_DOWN/FORWARD ok" else "via=SCROLL_DOWN/FORWARD failed",
         )
         return ok == true
     }

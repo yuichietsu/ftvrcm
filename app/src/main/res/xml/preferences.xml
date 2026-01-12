@@ -75,35 +75,35 @@
 
         <ListPreference
             android:key="mouse_key_scroll_up"
-            android:title="@string/prefs_mouse_key_scroll_up_select"
+            android:title="@string/prefs_mouse_key_scroll_up"
             android:entries="@array/key_entries"
             android:entryValues="@array/key_values"
             android:defaultValue="166" />
 
         <ListPreference
             android:key="mouse_key_scroll_down"
-            android:title="@string/prefs_mouse_key_scroll_down_select"
+            android:title="@string/prefs_mouse_key_scroll_down"
             android:entries="@array/key_entries"
             android:entryValues="@array/key_values"
             android:defaultValue="167" />
 
         <ListPreference
             android:key="mouse_key_scroll_left"
-            android:title="@string/prefs_mouse_key_scroll_left_select"
+            android:title="@string/prefs_mouse_key_scroll_left"
             android:entries="@array/key_entries"
             android:entryValues="@array/key_values"
             android:defaultValue="89" />
 
         <ListPreference
             android:key="mouse_key_scroll_right"
-            android:title="@string/prefs_mouse_key_scroll_right_select"
+            android:title="@string/prefs_mouse_key_scroll_right"
             android:entries="@array/key_entries"
             android:entryValues="@array/key_values"
             android:defaultValue="90" />
 
         <ListPreference
-            android:key="mouse_key_scroll_select_longpress_toggle"
-            android:title="@string/prefs_mouse_key_scroll_select_longpress_toggle"
+            android:key="mouse_key_cursor_dpad_toggle"
+            android:title="@string/prefs_mouse_key_cursor_dpad_toggle"
             android:entries="@array/key_entries"
             android:entryValues="@array/key_values"
             android:defaultValue="85" />

@@ -28,38 +28,8 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private var tapKeyLongPressTriggered: Boolean = false
 
     private var scrollSelectKeyIsDown: Boolean = false
-    private var scrollSelectKeyLongPressTriggered: Boolean = false
-    private var scrollSelectKeyDirection: Int = 0
 
-    private var scrollSelectLongPressIsSelectMode: Boolean = true
-
-    private val scrollSelectKeyLongPressRunnable = Runnable {
-        if (mode != OperationMode.MOUSE) return@Runnable
-        if (!scrollSelectKeyIsDown) return@Runnable
-        if (scrollSelectKeyLongPressTriggered) return@Runnable
-
-        scrollSelectKeyLongPressTriggered = true
-        clearMoveRepeat()
-
-        // Long press behavior is toggleable (Scroll <-> Select(DPAD)).
-        // Cursor position is NOT moved in either mode.
-        if (scrollSelectLongPressIsSelectMode) {
-            when (scrollSelectKeyDirection) {
-                0 -> gestures.dpadUp()
-                1 -> gestures.dpadDown()
-                2 -> gestures.dpadLeft()
-                3 -> gestures.dpadRight()
-            }
-        } else {
-            val c = cursor.center()
-            when (scrollSelectKeyDirection) {
-                0 -> gestures.scrollUp(c.x, c.y)
-                1 -> gestures.scrollDown(c.x, c.y)
-                2 -> gestures.scrollLeft(c.x, c.y)
-                3 -> gestures.scrollRight(c.x, c.y)
-            }
-        }
-    }
+    private var isDpadMode: Boolean = false
 
     private val tapKeyLongPressRunnable = Runnable {
         if (mode != OperationMode.MOUSE) return@Runnable
@@ -116,7 +86,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             if (mode == OperationMode.MOUSE) {
                 applyCursorStartPositionIfNeeded()
                 cursor.show()
-                updateCursorStyleForScrollSelectMode()
+                updateCursorStyleForInputMode()
                 val p = cursor.position()
                 lastCursorX = p.x
                 lastCursorY = p.y
@@ -220,7 +190,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         val mouseKeyScrollDown = settings.getMouseKeyScrollDown()
         val mouseKeyScrollLeft = settings.getMouseKeyScrollLeft()
         val mouseKeyScrollRight = settings.getMouseKeyScrollRight()
-        val mouseKeyScrollSelectLongPressToggle = settings.getMouseKeyScrollSelectLongPressToggle()
+        val mouseKeyCursorDpadToggle = settings.getMouseKeyCursorDpadToggle()
 
         val isHandledMouseKey = keyCode == mouseKeyUp ||
             keyCode == mouseKeyDown ||
@@ -231,20 +201,31 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             keyCode == mouseKeyScrollDown ||
             keyCode == mouseKeyScrollLeft ||
             keyCode == mouseKeyScrollRight ||
-            keyCode == mouseKeyScrollSelectLongPressToggle
+            keyCode == mouseKeyCursorDpadToggle
 
-        // Toggle long-press behavior for scroll/select keys.
-        if (keyCode == mouseKeyScrollSelectLongPressToggle) {
+        // Toggle cursor/dpad mode.
+        if (keyCode == mouseKeyCursorDpadToggle) {
             when (event.action) {
                 KeyEvent.ACTION_DOWN -> {
                     if (event.repeatCount > 0) return true
-                    scrollSelectLongPressIsSelectMode = !scrollSelectLongPressIsSelectMode
-                    updateCursorStyleForScrollSelectMode()
+                    isDpadMode = !isDpadMode
+                    updateCursorStyleForInputMode()
                     return true
                 }
                 KeyEvent.ACTION_UP -> return true
                 else -> return true
             }
+        }
+
+        // In DPAD mode, let physical DPAD keys behave as normal system navigation.
+        if (isDpadMode && (keyCode == KeyEvent.KEYCODE_DPAD_UP ||
+                keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
+                keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
+                keyCode == KeyEvent.KEYCODE_DPAD_RIGHT ||
+                keyCode == KeyEvent.KEYCODE_DPAD_CENTER)) {
+            clearMoveRepeat()
+            clearPendingTapKey()
+            return false
         }
 
         // Tap key handling (single tap / long tap)
@@ -281,9 +262,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             }
         }
 
-        // Scroll/Select keys:
-        // - Short press: ACTION_SCROLL_(UP/DOWN/LEFT/RIGHT)
-        // - Long press: move cursor to focused control, then DPAD_(UP/DOWN/LEFT/RIGHT)
+        // Scroll keys (always): ACTION_SCROLL_(UP/DOWN/LEFT/RIGHT)
         val isScrollSelectKey = keyCode == mouseKeyScrollUp ||
             keyCode == mouseKeyScrollDown ||
             keyCode == mouseKeyScrollLeft ||
@@ -294,29 +273,11 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 KeyEvent.ACTION_DOWN -> {
                     if (event.repeatCount > 0) return true
                     scrollSelectKeyIsDown = true
-                    scrollSelectKeyLongPressTriggered = false
-                    scrollSelectKeyDirection = when (keyCode) {
-                        mouseKeyScrollUp -> 0
-                        mouseKeyScrollDown -> 1
-                        mouseKeyScrollLeft -> 2
-                        else -> 3
-                    }
-                    mainHandler.removeCallbacks(scrollSelectKeyLongPressRunnable)
-                    mainHandler.postDelayed(
-                        scrollSelectKeyLongPressRunnable,
-                        ViewConfiguration.getLongPressTimeout().toLong(),
-                    )
                     return true
                 }
 
                 KeyEvent.ACTION_UP -> {
                     scrollSelectKeyIsDown = false
-                    mainHandler.removeCallbacks(scrollSelectKeyLongPressRunnable)
-
-                    if (scrollSelectKeyLongPressTriggered) {
-                        scrollSelectKeyLongPressTriggered = false
-                        return true
-                    }
 
                     clearMoveRepeat()
                     val c = cursor.center()
@@ -380,7 +341,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         if (mode == OperationMode.MOUSE) {
             applyCursorStartPositionIfNeeded()
             cursor.show()
-            updateCursorStyleForScrollSelectMode()
+            updateCursorStyleForInputMode()
             val p = cursor.position()
             lastCursorX = p.x
             lastCursorY = p.y
@@ -391,10 +352,8 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun updateCursorStyleForScrollSelectMode() {
-        cursor.setStyle(
-            if (scrollSelectLongPressIsSelectMode) CursorOverlay.CursorStyle.DPAD else CursorOverlay.CursorStyle.POINTER,
-        )
+    private fun updateCursorStyleForInputMode() {
+        cursor.setStyle(if (isDpadMode) CursorOverlay.CursorStyle.DPAD else CursorOverlay.CursorStyle.POINTER)
     }
 
     private fun clearPendingTapKey() {
