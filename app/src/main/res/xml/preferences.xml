@@ -128,6 +128,12 @@
 
     <PreferenceCategory android:title="@string/prefs_category_system">
 
+        <Preference
+            android:key="status_accessibility_service"
+            android:title="@string/prefs_status_accessibility_service"
+            android:summary="@string/prefs_status_unknown"
+            android:selectable="false" />
+
         <SwitchPreferenceCompat
             android:key="background_monitoring_enabled"
             android:title="バックグラウンド監視"
@@ -145,9 +151,9 @@
             android:summary="@string/prefs_open_app_details_settings_summary" />
 
         <Preference
-            android:key="open_system_settings"
-            android:title="@string/prefs_open_system_settings"
-            android:summary="@string/prefs_open_system_settings_summary" />
+            android:key="reset_defaults"
+            android:title="@string/prefs_reset_defaults"
+            android:summary="@string/prefs_reset_defaults_summary" />
 
     </PreferenceCategory>
 

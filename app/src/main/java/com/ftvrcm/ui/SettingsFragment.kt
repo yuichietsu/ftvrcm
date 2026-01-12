@@ -8,12 +8,14 @@ import android.os.Bundle
 import android.content.SharedPreferences
 import android.provider.Settings
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import com.ftvrcm.R
 import com.ftvrcm.data.SettingsKeys
 import com.ftvrcm.data.SettingsStore
 import com.ftvrcm.domain.OperationMode
+import com.ftvrcm.service.RemoteControlAccessibilityService
 
 class SettingsFragment : PreferenceFragmentCompat() {
 
@@ -33,12 +35,14 @@ class SettingsFragment : PreferenceFragmentCompat() {
             openAppDetailsSettings()
         }
 
-        val openSystemSettings = findPreference<Preference>("open_system_settings")
-        openSystemSettings?.setOnPreferenceClickListener {
-            openSystemSettings()
+        val resetDefaults = findPreference<Preference>("reset_defaults")
+        resetDefaults?.setOnPreferenceClickListener {
+            confirmResetDefaults()
+            true
         }
 
         refreshModeSummary()
+        refreshRequiredStateSummary()
 
         val prefs = preferenceManager.sharedPreferences ?: return
         val l = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -75,6 +79,12 @@ class SettingsFragment : PreferenceFragmentCompat() {
         prefs.registerOnSharedPreferenceChangeListener(l)
     }
 
+    override fun onResume() {
+        super.onResume()
+        refreshModeSummary()
+        refreshRequiredStateSummary()
+    }
+
     override fun onDestroy() {
         val l = listener
         if (l != null) {
@@ -95,17 +105,64 @@ class SettingsFragment : PreferenceFragmentCompat() {
         }
     }
 
+    private fun refreshRequiredStateSummary() {
+        val statusPref = findPreference<Preference>("status_accessibility_service")
+        statusPref?.summary = if (isAccessibilityServiceEnabled()) {
+            getString(R.string.prefs_status_accessibility_service_on)
+        } else {
+            getString(R.string.prefs_status_accessibility_service_off)
+        }
+    }
+
+    private fun isAccessibilityServiceEnabled(): Boolean {
+        val context = requireContext()
+
+        val enabled = try {
+            Settings.Secure.getInt(context.contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED)
+        } catch (_: Exception) {
+            0
+        }
+        if (enabled != 1) return false
+
+        val expected = ComponentName(context, RemoteControlAccessibilityService::class.java)
+        val raw = Settings.Secure.getString(
+            context.contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+        ) ?: return false
+
+        val services = raw.split(':')
+        for (s in services) {
+            val cn = ComponentName.unflattenFromString(s) ?: continue
+            if (cn.packageName == expected.packageName && cn.className == expected.className) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    private fun confirmResetDefaults() {
+        AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.prefs_reset_defaults))
+            .setMessage("設定をデフォルトに戻します。よろしいですか？")
+            .setPositiveButton("戻す") { _, _ ->
+                SettingsStore(requireContext()).resetToDefaults()
+                Toast.makeText(requireContext(), "デフォルト設定に戻しました", Toast.LENGTH_SHORT).show()
+                activity?.recreate()
+            }
+            .setNegativeButton("キャンセル", null)
+            .show()
+    }
+
     private fun openAccessibilitySettings(): Boolean {
         val context = requireContext()
-        val me = ComponentName(context, com.ftvrcm.service.RemoteControlAccessibilityService::class.java)
+        val me = ComponentName(context, RemoteControlAccessibilityService::class.java)
 
         val intents = listOf(
             // Newer Android builds can open the details page for a specific service.
             Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS")
                 .putExtra("android.provider.extra.ACCESSIBILITY_COMPONENT_NAME", me.flattenToString()),
             Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS),
-            // Fire OS variants sometimes hide/relocate accessibility; at least open Settings.
-            Intent(Settings.ACTION_SETTINGS),
             // As a last resort, guide user to this app's details page.
             Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
                 .setData(Uri.parse("package:${context.packageName}")),
@@ -119,15 +176,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
         val intents = listOf(
             Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
                 .setData(Uri.parse("package:${context.packageName}")),
-            Intent(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS),
-            Intent(Settings.ACTION_SETTINGS),
-        )
-        return startFirstAvailable(intents)
-    }
-
-    private fun openSystemSettings(): Boolean {
-        val intents = listOf(
-            Intent(Settings.ACTION_SETTINGS),
             Intent(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS),
         )
         return startFirstAvailable(intents)

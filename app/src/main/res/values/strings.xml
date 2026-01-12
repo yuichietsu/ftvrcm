@@ -11,7 +11,7 @@
     <string name="prefs_toggle_longpress">長押しで切り替え</string>
 
     <string name="prefs_category_mouse">マウス入力</string>
-    <string name="prefs_mouse_speed">移動量(px/step)</string>
+    <string name="prefs_mouse_speed">移動量</string>
     <string name="prefs_mouse_speed_summary">%1$d</string>
 
     <string name="prefs_mouse_key_up">上移動キー</string>
@@ -33,14 +33,19 @@
 
     <string name="prefs_category_system">システム</string>
 
+    <string name="prefs_status_accessibility_service">必要状態：アクセシビリティサービス</string>
+    <string name="prefs_status_unknown">未確認</string>
+    <string name="prefs_status_accessibility_service_on">ON（有効）</string>
+    <string name="prefs_status_accessibility_service_off">OFF（無効：アクセシビリティ設定で本サービスをONにしてください）</string>
+
     <string name="prefs_open_accessibility_settings">アクセシビリティ設定を開く</string>
     <string name="prefs_open_accessibility_settings_summary">常時モード切替を有効にするには本サービスをONにしてください</string>
 
     <string name="prefs_open_app_details_settings">アプリ情報を開く</string>
     <string name="prefs_open_app_details_settings_summary">権限や通知設定など、このアプリの詳細設定を開きます</string>
 
-    <string name="prefs_open_system_settings">端末設定を開く</string>
-    <string name="prefs_open_system_settings_summary">Fire OSの設定トップを開きます（機種により表示が異なります）</string>
+    <string name="prefs_reset_defaults">デフォルト設定に戻す</string>
+    <string name="prefs_reset_defaults_summary">すべての設定を初期値に戻します</string>
 
     <string name="mode_normal">通常操作</string>
     <string name="mode_mouse">マウス操作</string>

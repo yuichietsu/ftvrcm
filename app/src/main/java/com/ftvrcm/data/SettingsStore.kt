@@ -10,6 +10,11 @@ class SettingsStore(context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences(SettingsKeys.PREFS_NAME, Context.MODE_PRIVATE)
 
+    fun resetToDefaults() {
+        prefs.edit { clear() }
+        initializeDefaultsIfNeeded()
+    }
+
     fun initializeDefaultsIfNeeded() {
         val version = prefs.getInt(SettingsKeys.SETTINGS_VERSION, 0)
         if (version != 0) return
