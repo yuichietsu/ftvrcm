@@ -18,7 +18,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="この画面の枠内に、タップ/ダブルタップ/ロングタップ/スワイプを注入してください（タッチ操作モードで操作）。" />
+        android:text="この画面上で、タップ/ダブルタップ/ロングタップ/スワイプを注入してください（タッチ操作モードで操作）。" />
 
     <TextView
         android:id="@+id/lastEvent"

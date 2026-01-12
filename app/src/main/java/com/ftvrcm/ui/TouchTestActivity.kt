@@ -11,21 +11,31 @@ import kotlin.math.abs
 
 class TouchTestActivity : AppCompatActivity() {
 
+    private lateinit var lastEvent: TextView
+    private lateinit var detector: GestureDetector
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_touch_test)
 
-        val lastEvent = findViewById<TextView>(R.id.lastEvent)
+        lastEvent = findViewById(R.id.lastEvent)
         val pad = findViewById<View>(R.id.pad)
+        pad.isClickable = true
+        pad.isFocusable = true
 
         fun setEvent(text: String) {
             lastEvent.text = "最終イベント: $text"
         }
 
-        val detector = GestureDetector(
+        detector = GestureDetector(
             this,
             object : GestureDetector.SimpleOnGestureListener() {
                 override fun onDown(e: MotionEvent): Boolean = true
+
+                override fun onSingleTapUp(e: MotionEvent): Boolean {
+                    setEvent("タップ")
+                    return true
+                }
 
                 override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
                     setEvent("タップ")
@@ -66,10 +76,13 @@ class TouchTestActivity : AppCompatActivity() {
                 }
             },
         )
+    }
 
-        pad.setOnTouchListener { _, event ->
-            detector.onTouchEvent(event)
-            true
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (ev.actionMasked == MotionEvent.ACTION_DOWN) {
+            lastEvent.text = "最終イベント: タッチ開始 (x=${ev.x.toInt()}, y=${ev.y.toInt()})"
         }
+        detector.onTouchEvent(ev)
+        return super.dispatchTouchEvent(ev)
     }
 }

@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.content.SharedPreferences
 import android.provider.Settings
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.preference.Preference
@@ -82,6 +83,17 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
         listener = l
         prefs.registerOnSharedPreferenceChangeListener(l)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        val horizontalPadding = resources.getDimensionPixelSize(R.dimen.settings_list_horizontal_padding)
+        val rv = listView
+        rv.setPaddingRelative(horizontalPadding, rv.paddingTop, horizontalPadding, rv.paddingBottom)
+        rv.clipToPadding = false
+        rv.isVerticalScrollBarEnabled = false
+        rv.overScrollMode = View.OVER_SCROLL_NEVER
     }
 
     override fun onResume() {
