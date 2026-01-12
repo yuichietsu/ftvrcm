@@ -40,7 +40,7 @@ class SettingsStore(context: Context) {
         prefs.edit {
             putString(SettingsKeys.OPERATION_MODE, OperationMode.NORMAL.name)
 
-            putString(SettingsKeys.TOGGLE_KEYCODE, "4") // BACK
+            putString(SettingsKeys.TOGGLE_KEYCODE, "82") // MENU (Avoid Fire TV BACK long-press conflicts)
             putBoolean(SettingsKeys.TOGGLE_LONGPRESS, true)
 
             putInt(SettingsKeys.MOUSE_POINTER_SPEED, 10)
@@ -114,7 +114,7 @@ class SettingsStore(context: Context) {
         prefs.edit { putString(SettingsKeys.OPERATION_MODE, mode.name) }
     }
 
-    fun getToggleKeyCode(): Int = prefs.getString(SettingsKeys.TOGGLE_KEYCODE, "4")?.toIntOrNull() ?: 4
+    fun getToggleKeyCode(): Int = prefs.getString(SettingsKeys.TOGGLE_KEYCODE, "82")?.toIntOrNull() ?: 82
     fun isToggleLongPress(): Boolean = prefs.getBoolean(SettingsKeys.TOGGLE_LONGPRESS, true)
 
     fun getMousePointerSpeedPx(): Int = prefs.getInt(SettingsKeys.MOUSE_POINTER_SPEED, 10).coerceIn(1, 200)

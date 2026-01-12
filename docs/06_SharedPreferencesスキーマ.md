@@ -54,6 +54,25 @@ com.ftvrcm_preferences.xml
 
 ---
 
+### 1.1 モード切り替えキー（toggle_keycode / toggle_longpress）
+
+| 項目 | 値 |
+|------|-----|
+| **キー** | `toggle_keycode` / `toggle_longpress` |
+| **型** | String / Boolean |
+| **デフォルト** | `82`（`KEYCODE_MENU`） / `true` |
+| **説明** | 操作モード（通常/タッチ操作）を切り替えるキーと、切り替えを長押しにするかどうか |
+
+**例**：
+```xml
+<string name="toggle_keycode">82</string>
+<boolean name="toggle_longpress" value="true" />
+```
+
+補足：Fire TV（Fire OS）では `KEYCODE_BACK`（4）長押しがシステム動作と競合し、アクセシビリティが無効化される場合があります。
+
+---
+
 ### 2. マウス感度（mouse_sensitivity）
 
 | 項目 | 値 |

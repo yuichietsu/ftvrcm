@@ -4,14 +4,17 @@ import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.content.SharedPreferences
 import android.provider.Settings
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.view.KeyEvent
 import android.view.accessibility.AccessibilityManager
 import android.widget.Toast
 import androidx.core.content.getSystemService
 import androidx.appcompat.app.AlertDialog
+import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceGroup
@@ -55,15 +58,20 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
         refreshModeSummary()
         refreshRequiredStateSummary()
+        refreshToggleKeySummary()
 
         val prefs = preferenceManager.sharedPreferences ?: return
         val l = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             when (key) {
                 SettingsKeys.OPERATION_MODE,
                 SettingsKeys.TOGGLE_KEYCODE,
+                SettingsKeys.TOGGLE_LONGPRESS,
                 SettingsKeys.MOUSE_POINTER_SPEED,
                 SettingsKeys.EMULATION_METHOD,
-                -> refreshModeSummary()
+                -> {
+                    refreshModeSummary()
+                    refreshToggleKeySummary()
+                }
             }
 
             when (key) {
@@ -98,6 +106,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         super.onResume()
         refreshModeSummary()
         refreshRequiredStateSummary()
+        refreshToggleKeySummary()
     }
 
     override fun onDestroy() {
@@ -118,6 +127,34 @@ class SettingsFragment : PreferenceFragmentCompat() {
             OperationMode.NORMAL -> getString(R.string.mode_normal)
             OperationMode.MOUSE -> getString(R.string.mode_mouse)
         }
+    }
+
+    private fun refreshToggleKeySummary() {
+        val toggleKeyPref = findPreference<ListPreference>(SettingsKeys.TOGGLE_KEYCODE) ?: return
+
+        val keyCode = toggleKeyPref.value?.toIntOrNull()
+        val label = toggleKeyPref.entry?.toString() ?: toggleKeyPref.value ?: ""
+
+        val prefs = preferenceManager.sharedPreferences
+        val longPressEnabled = prefs?.getBoolean(SettingsKeys.TOGGLE_LONGPRESS, true) ?: true
+
+        val warning = if (
+            isAmazonDevice() &&
+            longPressEnabled &&
+            keyCode == KeyEvent.KEYCODE_BACK
+        ) {
+            getString(R.string.prefs_toggle_key_warning_back_longpress)
+        } else {
+            null
+        }
+
+        toggleKeyPref.summary = if (warning == null) label else "$label\n$warning"
+    }
+
+    private fun isAmazonDevice(): Boolean {
+        val manufacturer = Build.MANUFACTURER ?: ""
+        val brand = Build.BRAND ?: ""
+        return manufacturer.equals("Amazon", ignoreCase = true) || brand.equals("Amazon", ignoreCase = true)
     }
 
     private fun refreshRequiredStateSummary() {
