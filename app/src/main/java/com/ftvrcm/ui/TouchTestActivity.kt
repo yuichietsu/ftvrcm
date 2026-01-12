@@ -14,6 +14,8 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.ftvrcm.R
+import android.os.SystemClock
+import android.view.ViewConfiguration
 import kotlin.math.abs
 
 class TouchTestActivity : AppCompatActivity() {
@@ -58,9 +60,25 @@ class TouchTestActivity : AppCompatActivity() {
             items,
         )
 
+        var lastClickAtMs = 0L
+        var lastClickPos = ListView.INVALID_POSITION
+        val doubleTapTimeoutMs = ViewConfiguration.getDoubleTapTimeout().toLong()
+
         list.setOnItemClickListener { _, _, position, _ ->
             list.setItemChecked(position, true)
-            setEvent("リスト: クリック (${items[position]})")
+            val now = SystemClock.uptimeMillis()
+
+            // If injection falls back to ACTION_CLICK, MotionEvent-based double tap detection may not run.
+            // Detect double tap using consecutive item clicks as a backup.
+            if (position == lastClickPos && now - lastClickAtMs <= doubleTapTimeoutMs) {
+                setEvent("リスト: ダブルタップ (${items[position]})")
+                lastClickAtMs = 0L
+                lastClickPos = ListView.INVALID_POSITION
+            } else {
+                setEvent("リスト: クリック (${items[position]})")
+                lastClickAtMs = now
+                lastClickPos = position
+            }
         }
 
         list.setOnItemLongClickListener { _, _, position, _ ->

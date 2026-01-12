@@ -99,7 +99,8 @@
         <ScrollView
             android:id="@+id/scrollAreaV"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
             android:scrollbars="vertical">
 
             <LinearLayout

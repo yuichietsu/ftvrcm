@@ -98,9 +98,37 @@ class GestureController(
                     val dx = endX - startX
                     val dy = endY - startY
                     if (abs(dy) > abs(dx)) {
-                        // Swipe up -> scroll forward, swipe down -> scroll backward.
-                        val forward = dy < 0
-                        performNodeScrollAt(startX, startY, forward)
+                        // Swipe up -> scroll down/forward, swipe down -> scroll up/backward.
+                        val actions = if (dy < 0) {
+                            intArrayOf(
+                                AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.id,
+                                AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,
+                            )
+                        } else {
+                            intArrayOf(
+                                AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP.id,
+                                AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD,
+                            )
+                        }
+                        performNodeScrollAt(startX, startY, actions)
+                    } else {
+                        // Swipe left -> scroll right, swipe right -> scroll left.
+                        val actions = if (dx < 0) {
+                            intArrayOf(
+                                AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.id,
+                                AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,
+                                AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.id,
+                                AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD,
+                            )
+                        } else {
+                            intArrayOf(
+                                AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.id,
+                                AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD,
+                                AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.id,
+                                AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,
+                            )
+                        }
+                        performNodeScrollAt(startX, startY, actions)
                     }
                 }
             },
@@ -237,7 +265,7 @@ class GestureController(
         }
     }
 
-    private fun performNodeScrollAt(x: Int, y: Int, forward: Boolean): Boolean? {
+    private fun performNodeScrollAt(x: Int, y: Int, actions: IntArray): Boolean? {
         val root = service.rootInActiveWindow ?: return null
         var best: AccessibilityNodeInfo? = null
         try {
@@ -271,9 +299,24 @@ class GestureController(
 
             val bestNode = best ?: return null
 
-            // Prefer closest scrollable ancestor.
+            // Prefer the closest ancestor that is scrollable AND accepts one of the requested actions.
             var target: AccessibilityNodeInfo? = bestNode
-            while (target != null && !target.isScrollable) {
+            while (target != null) {
+                if (target.isScrollable) {
+                    for (a in actions) {
+                        val ok = try {
+                            target.performAction(a)
+                        } catch (_: Exception) {
+                            null
+                        }
+                        if (ok == true) {
+                            if (target !== bestNode) target.recycle()
+                            bestNode.recycle()
+                            return true
+                        }
+                    }
+                }
+
                 val parent = target.parent
                 if (parent == null) break
                 if (target !== bestNode) {
@@ -282,18 +325,8 @@ class GestureController(
                 target = parent
             }
 
-            val action = if (forward) {
-                AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
-            } else {
-                AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
-            }
-            val ret = target?.performAction(action)
-
-            if (target != null && target !== bestNode) {
-                target.recycle()
-            }
             bestNode.recycle()
-            return ret
+            return null
         } catch (_: Exception) {
             try {
                 best?.recycle()
