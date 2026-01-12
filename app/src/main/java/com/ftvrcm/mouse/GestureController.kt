@@ -15,6 +15,35 @@ class GestureController(
 
     private val handler = Handler(Looper.getMainLooper())
 
+    private fun dispatchGestureWithRetry(
+        gesture: GestureDescription,
+        retries: Int,
+        onFinalCancelled: () -> Unit,
+    ): Boolean {
+        fun attempt(remaining: Int): Boolean {
+            return service.dispatchGesture(
+                gesture,
+                object : AccessibilityService.GestureResultCallback() {
+                    override fun onCompleted(gestureDescription: GestureDescription?) {
+                        // no-op
+                    }
+
+                    override fun onCancelled(gestureDescription: GestureDescription?) {
+                        if (remaining > 0) {
+                            // Retry shortly after cancellation. This reduces cases where Fire OS cancels sporadically.
+                            handler.postDelayed({ attempt(remaining - 1) }, 30L)
+                        } else {
+                            onFinalCancelled()
+                        }
+                    }
+                },
+                handler,
+            )
+        }
+
+        return attempt(retries)
+    }
+
     fun tap(x: Int, y: Int): Boolean {
         val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
         val gesture = GestureDescription.Builder()
@@ -90,59 +119,63 @@ class GestureController(
             .addStroke(GestureDescription.StrokeDescription(path, 0, durationMs))
             .build()
 
-        val accepted = service.dispatchGesture(
-            gesture,
-            object : AccessibilityService.GestureResultCallback() {
-                override fun onCancelled(gestureDescription: GestureDescription?) {
-                    // Best-effort fallback for vertical scroll.
-                    val dx = endX - startX
-                    val dy = endY - startY
-                    if (abs(dy) > abs(dx)) {
-                        // Swipe up -> scroll down, swipe down -> scroll up.
-                        // Prefer non-horizontal scroll containers so that vertical swipes don't become horizontal moves.
-                        val primary = if (dy < 0) {
-                            intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.id)
-                        } else {
-                            intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP.id)
-                        }
-                        val secondary = if (dy < 0) {
-                            intArrayOf(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
-                        } else {
-                            intArrayOf(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
-                        }
-                        performNodeScrollAt(
-                            x = startX,
-                            y = startY,
-                            primaryActions = primary,
-                            secondaryActions = secondary,
-                            preferTarget = { !isHorizontalScrollContainer(it) },
+        // Fire OS may cancel gesture injection sporadically.
+        // Retry a few times before falling back to accessibility scroll actions.
+        return dispatchGestureWithRetry(
+            gesture = gesture,
+            retries = 2,
+            onFinalCancelled = {
+                val dx = endX - startX
+                val dy = endY - startY
+                if (abs(dy) > abs(dx)) {
+                    // Swipe up -> scroll down, swipe down -> scroll up.
+                    // Prefer non-horizontal scroll containers so that vertical swipes don't become horizontal moves.
+                    val primary = if (dy < 0) {
+                        intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.id)
+                    } else {
+                        intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP.id)
+                    }
+                    val secondary = if (dy < 0) {
+                        intArrayOf(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+                    } else {
+                        intArrayOf(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)
+                    }
+                    performNodeScrollAt(
+                        x = startX,
+                        y = startY,
+                        primaryActions = primary,
+                        secondaryActions = secondary,
+                        preferTarget = { !isHorizontalScrollContainer(it) },
+                    )
+                } else {
+                    // Swipe left -> scroll right, swipe right -> scroll left.
+                    // Prefer horizontal containers; fall back to forward/backward if needed.
+                    val primary = if (dx < 0) {
+                        intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.id)
+                    } else {
+                        intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.id)
+                    }
+                    val secondary = if (dx < 0) {
+                        intArrayOf(
+                            AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,
+                            AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.id,
                         )
                     } else {
-                        // Swipe left -> scroll right, swipe right -> scroll left.
-                        // Prefer horizontal containers; fall back to forward/backward if needed.
-                        val primary = if (dx < 0) {
-                            intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.id)
-                        } else {
-                            intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.id)
-                        }
-                        val secondary = if (dx < 0) {
-                            intArrayOf(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD, AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.id)
-                        } else {
-                            intArrayOf(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD, AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.id)
-                        }
-                        performNodeScrollAt(
-                            x = startX,
-                            y = startY,
-                            primaryActions = primary,
-                            secondaryActions = secondary,
-                            preferTarget = { isHorizontalScrollContainer(it) },
+                        intArrayOf(
+                            AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD,
+                            AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.id,
                         )
                     }
+                    performNodeScrollAt(
+                        x = startX,
+                        y = startY,
+                        primaryActions = primary,
+                        secondaryActions = secondary,
+                        preferTarget = { isHorizontalScrollContainer(it) },
+                    )
                 }
             },
-            handler,
         )
-        return accepted
     }
 
     private companion object {
