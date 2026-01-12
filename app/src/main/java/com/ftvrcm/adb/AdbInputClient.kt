@@ -1,10 +1,13 @@
 package com.ftvrcm.adb
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
+import androidx.core.content.edit
 import dadb.AdbKeyPair
 import dadb.AdbShellResponse
 import dadb.Dadb
+import com.ftvrcm.data.SettingsKeys
 import java.io.File
 import java.net.Inet4Address
 import java.net.NetworkInterface
@@ -40,6 +43,33 @@ class AdbInputClient(
         submitShell("input swipe $x1 $y1 $x2 $y2 $durationMs")
     }
 
+    private fun record(type: String, status: String, detail: String) {
+        try {
+            context.getSharedPreferences(SettingsKeys.PREFS_NAME, Context.MODE_PRIVATE)
+                .edit {
+                    putString(SettingsKeys.LAST_GESTURE_TYPE, type)
+                    putString(SettingsKeys.LAST_GESTURE_STATUS, status)
+                    putString(SettingsKeys.LAST_GESTURE_DETAIL, detail)
+                    putLong(SettingsKeys.LAST_GESTURE_AT_MS, SystemClock.uptimeMillis())
+                }
+        } catch (_: Throwable) {
+        }
+    }
+
+    private fun inferType(command: String): String {
+        val c = command.trim()
+        return when {
+            c.startsWith("input tap ") -> "adb_tap"
+            c.startsWith("input swipe ") -> {
+                // crude heuristic: swipe-to-self is used for long press
+                val parts = c.split(' ').filter { it.isNotBlank() }
+                if (parts.size >= 6 && parts[2] == parts[4] && parts[3] == parts[5]) "adb_long_press" else "adb_swipe"
+            }
+            c.startsWith("settings put ") || c.startsWith("settings get ") -> "adb_settings"
+            else -> "adb_shell"
+        }
+    }
+
     /**
      * Runs a shell command synchronously.
      *
@@ -61,13 +91,40 @@ class AdbInputClient(
 
     private fun submitShell(command: String) {
         executor.execute {
+            val type = inferType(command)
+            record(type = type, status = "DISPATCHING", detail = command)
             try {
                 val d = getOrCreateDadb()
                 // Use shell_v2 output; Dadb.shell returns AdbShellResponse.
                 val resp = d.shell(command)
+                val ok = resp.exitCode == 0
                 Log.d(tag, "shell ok: $command (exitCode=${resp.exitCode})")
+                record(
+                    type = type,
+                    status = if (ok) "COMPLETED" else "FAILED",
+                    detail = buildString {
+                        append(command)
+                        append("\nexitCode=")
+                        append(resp.exitCode)
+                        val err = resp.errorOutput.trim()
+                        if (err.isNotEmpty()) {
+                            append("\nstderr=")
+                            append(err.take(400))
+                        }
+                        val out = resp.output.trim()
+                        if (out.isNotEmpty()) {
+                            append("\nstdout=")
+                            append(out.take(400))
+                        }
+                    },
+                )
             } catch (t: Throwable) {
                 Log.w(tag, "shell failed: $command (${t.javaClass.simpleName}: ${t.message})")
+                record(
+                    type = type,
+                    status = "FAILED",
+                    detail = "$command\n${t.javaClass.simpleName}: ${t.message}",
+                )
                 // Reset connection so next command retries.
                 try {
                     dadb?.close()
