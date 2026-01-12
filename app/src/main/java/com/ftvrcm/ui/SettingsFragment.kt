@@ -7,11 +7,11 @@ import android.net.Uri
 import android.os.Bundle
 import android.content.SharedPreferences
 import android.provider.Settings
-import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
+import androidx.preference.PreferenceGroup
 import com.ftvrcm.R
 import com.ftvrcm.data.SettingsKeys
 import com.ftvrcm.data.SettingsStore
@@ -25,6 +25,8 @@ class SettingsFragment : PreferenceFragmentCompat() {
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         preferenceManager.sharedPreferencesName = SettingsKeys.PREFS_NAME
         setPreferencesFromResource(R.xml.preferences, rootKey)
+
+        preferenceScreen?.let { disableIconSpaceReservedRecursively(it) }
 
         val openAccessibility = findPreference<Preference>("open_accessibility_settings")
         openAccessibility?.setOnPreferenceClickListener {
@@ -85,15 +87,13 @@ class SettingsFragment : PreferenceFragmentCompat() {
         prefs.registerOnSharedPreferenceChangeListener(l)
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+    private fun disableIconSpaceReservedRecursively(pref: Preference) {
+        pref.isIconSpaceReserved = false
 
-        val horizontalPadding = resources.getDimensionPixelSize(R.dimen.settings_list_horizontal_padding)
-        val rv = listView
-        rv.setPaddingRelative(horizontalPadding, rv.paddingTop, horizontalPadding, rv.paddingBottom)
-        rv.clipToPadding = false
-        rv.isVerticalScrollBarEnabled = false
-        rv.overScrollMode = View.OVER_SCROLL_NEVER
+        val group = pref as? PreferenceGroup ?: return
+        for (i in 0 until group.preferenceCount) {
+            disableIconSpaceReservedRecursively(group.getPreference(i))
+        }
     }
 
     override fun onResume() {
