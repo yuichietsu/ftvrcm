@@ -1,0 +1,41 @@
+<resources>
+    <string name="app_name">ftvrcm</string>
+
+    <string name="accessibility_service_description">リモコン入力を監視して操作モード切替・マウス操作・アクション実行を行います</string>
+
+    <string name="prefs_category_mode">操作モード</string>
+    <string name="prefs_mode_current">現在のモード</string>
+    <string name="prefs_mode_current_summary">%1$s</string>
+
+    <string name="prefs_toggle_key">モード切り替えキー</string>
+    <string name="prefs_toggle_longpress">長押しで切り替え</string>
+
+    <string name="prefs_category_mouse">マウス入力</string>
+    <string name="prefs_mouse_speed">移動量(px/step)</string>
+    <string name="prefs_mouse_speed_summary">%1$d</string>
+
+    <string name="prefs_mouse_key_up">上移動キー</string>
+    <string name="prefs_mouse_key_down">下移動キー</string>
+    <string name="prefs_mouse_key_left">左移動キー</string>
+    <string name="prefs_mouse_key_right">右移動キー</string>
+    <string name="prefs_mouse_key_click">クリックキー</string>
+    <string name="prefs_mouse_key_longclick">長押しクリックキー</string>
+
+    <string name="prefs_category_actions">ボタンアクション</string>
+    <string name="prefs_action_key">アクション割当キー</string>
+    <string name="prefs_action_type">割り当てるアクション</string>
+    <string name="prefs_action_param">アクションパラメータ</string>
+
+    <string name="prefs_category_system">システム</string>
+    <string name="prefs_open_accessibility_settings">アクセシビリティ設定を開く</string>
+    <string name="prefs_open_accessibility_settings_summary">常時モード切替を有効にするには本サービスをONにしてください</string>
+
+    <string name="mode_normal">通常操作</string>
+    <string name="mode_mouse">マウス操作</string>
+
+    <string name="action_none">未割当</string>
+    <string name="action_launch_app">アプリ起動（packageName）</string>
+    <string name="action_open_url">URLを開く</string>
+    <string name="action_volume_up">音量上げ</string>
+    <string name="action_volume_down">音量下げ</string>
+</resources>

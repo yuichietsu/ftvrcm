@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory android:title="@string/prefs_category_mode">
+
+        <Preference
+            android:key="operation_mode_current"
+            android:title="@string/prefs_mode_current"
+            android:summary="@string/prefs_mode_current_summary" />
+
+        <ListPreference
+            android:key="toggle_keycode"
+            android:title="@string/prefs_toggle_key"
+            android:entries="@array/key_entries"
+            android:entryValues="@array/key_values"
+            android:defaultValue="82" />
+
+        <SwitchPreferenceCompat
+            android:key="toggle_longpress"
+            android:title="@string/prefs_toggle_longpress"
+            android:defaultValue="true" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/prefs_category_mouse">
+
+        <SeekBarPreference
+            android:key="mouse_pointer_speed"
+            android:title="@string/prefs_mouse_speed"
+            android:min="1"
+            android:max="50"
+            android:defaultValue="10" />
+
+        <ListPreference
+            android:key="mouse_key_up"
+            android:title="@string/prefs_mouse_key_up"
+            android:entries="@array/key_entries"
+            android:entryValues="@array/key_values"
+            android:defaultValue="19" />
+
+        <ListPreference
+            android:key="mouse_key_down"
+            android:title="@string/prefs_mouse_key_down"
+            android:entries="@array/key_entries"
+            android:entryValues="@array/key_values"
+            android:defaultValue="20" />
+
+        <ListPreference
+            android:key="mouse_key_left"
+            android:title="@string/prefs_mouse_key_left"
+            android:entries="@array/key_entries"
+            android:entryValues="@array/key_values"
+            android:defaultValue="21" />
+
+        <ListPreference
+            android:key="mouse_key_right"
+            android:title="@string/prefs_mouse_key_right"
+            android:entries="@array/key_entries"
+            android:entryValues="@array/key_values"
+            android:defaultValue="22" />
+
+        <ListPreference
+            android:key="mouse_key_click"
+            android:title="@string/prefs_mouse_key_click"
+            android:entries="@array/key_entries"
+            android:entryValues="@array/key_values"
+            android:defaultValue="23" />
+
+        <ListPreference
+            android:key="mouse_key_longclick"
+            android:title="@string/prefs_mouse_key_longclick"
+            android:entries="@array/key_entries"
+            android:entryValues="@array/key_values"
+            android:defaultValue="4" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/prefs_category_actions">
+
+        <ListPreference
+            android:key="action_keycode"
+            android:title="@string/prefs_action_key"
+            android:entries="@array/key_entries"
+            android:entryValues="@array/key_values"
+            android:defaultValue="4" />
+
+        <ListPreference
+            android:key="action_type"
+            android:title="@string/prefs_action_type"
+            android:entries="@array/action_entries"
+            android:entryValues="@array/action_values"
+            android:defaultValue="none" />
+
+        <EditTextPreference
+            android:key="action_param"
+            android:title="@string/prefs_action_param"
+            android:defaultValue="" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/prefs_category_system">
+
+        <SwitchPreferenceCompat
+            android:key="background_monitoring_enabled"
+            android:title="バックグラウンド監視"
+            android:summary="他のアプリ実行中でもキー監視を行います"
+            android:defaultValue="true" />
+
+        <Preference
+            android:key="open_accessibility_settings"
+            android:title="@string/prefs_open_accessibility_settings"
+            android:summary="@string/prefs_open_accessibility_settings_summary" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

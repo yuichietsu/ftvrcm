@@ -1,0 +1,39 @@
+<resources>
+    <string-array name="key_entries">
+        <item>DPAD_UP</item>
+        <item>DPAD_DOWN</item>
+        <item>DPAD_LEFT</item>
+        <item>DPAD_RIGHT</item>
+        <item>DPAD_CENTER</item>
+        <item>BACK</item>
+        <item>MENU</item>
+        <item>MEDIA_PLAY_PAUSE</item>
+    </string-array>
+
+    <string-array name="key_values">
+        <item>19</item>
+        <item>20</item>
+        <item>21</item>
+        <item>22</item>
+        <item>23</item>
+        <item>4</item>
+        <item>82</item>
+        <item>85</item>
+    </string-array>
+
+    <string-array name="action_entries">
+        <item>@string/action_none</item>
+        <item>@string/action_launch_app</item>
+        <item>@string/action_open_url</item>
+        <item>@string/action_volume_up</item>
+        <item>@string/action_volume_down</item>
+    </string-array>
+
+    <string-array name="action_values">
+        <item>none</item>
+        <item>launch_app</item>
+        <item>open_url</item>
+        <item>volume_up</item>
+        <item>volume_down</item>
+    </string-array>
+</resources>
