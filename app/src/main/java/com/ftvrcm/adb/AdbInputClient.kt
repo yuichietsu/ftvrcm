@@ -101,8 +101,8 @@ class AdbInputClient(
                     host = candidate,
                     port = port,
                     keyPair = keyPair,
-                    connectTimeout = 1200,
-                    socketTimeout = 1200,
+                    connectTimeout = 5000,
+                    socketTimeout = 5000,
                     keepAlive = true,
                 )
                 dadb = created

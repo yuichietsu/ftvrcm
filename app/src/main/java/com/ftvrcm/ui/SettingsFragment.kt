@@ -25,6 +25,8 @@ import com.ftvrcm.data.SettingsStore
 import com.ftvrcm.domain.OperationMode
 import com.ftvrcm.service.RemoteControlAccessibilityService
 
+private const val TAG = "SettingsFragment"
+
 class SettingsFragment : PreferenceFragmentCompat() {
 
     private var listener: SharedPreferences.OnSharedPreferenceChangeListener? = null
@@ -205,9 +207,15 @@ class SettingsFragment : PreferenceFragmentCompat() {
             var detail: String? = null
 
             try {
+                android.util.Log.i(TAG, "enableAccessibilityViaAdb start host=$adbHost port=$adbPort")
                 AdbInputClient(context.applicationContext, adbHost, adbPort).use { adb ->
                     val getResp = adb.runShellBlocking("settings get secure enabled_accessibility_services")
                     val current = getResp.output.trim().let { if (it == "null") "" else it }
+
+                    android.util.Log.i(
+                        TAG,
+                        "settings get enabled_accessibility_services exit=${getResp.exitCode} out=${getResp.output.trim()} err=${getResp.errorOutput.trim()}",
+                    )
 
                     val next = when {
                         current.isBlank() -> component
@@ -215,19 +223,44 @@ class SettingsFragment : PreferenceFragmentCompat() {
                         else -> "$current:$component"
                     }
 
-                    val putServicesResp = adb.runShellBlocking(
-                        "settings put secure enabled_accessibility_services $next",
+                    // Some builds behave better when accessibility_enabled is set first.
+                    val putEnabledResp = adb.runShellBlocking("settings put secure accessibility_enabled 1")
+                    val putServicesResp = adb.runShellBlocking("settings put secure enabled_accessibility_services $next")
+
+                    android.util.Log.i(
+                        TAG,
+                        "settings put accessibility_enabled exit=${putEnabledResp.exitCode} out=${putEnabledResp.output.trim()} err=${putEnabledResp.errorOutput.trim()}",
                     )
-                    val putEnabledResp = adb.runShellBlocking(
-                        "settings put secure accessibility_enabled 1",
+                    android.util.Log.i(
+                        TAG,
+                        "settings put enabled_accessibility_services exit=${putServicesResp.exitCode} out=${putServicesResp.output.trim()} err=${putServicesResp.errorOutput.trim()}",
                     )
 
                     ok = putServicesResp.exitCode == 0 && putEnabledResp.exitCode == 0
-                    detail = "get(exit=${getResp.exitCode}) putServices(exit=${putServicesResp.exitCode}) putEnabled(exit=${putEnabledResp.exitCode})"
+
+                    val err = listOf(
+                        "get.err=${getResp.errorOutput}",
+                        "putEnabled.err=${putEnabledResp.errorOutput}",
+                        "putServices.err=${putServicesResp.errorOutput}",
+                    ).joinToString(" ").trim()
+
+                    detail = buildString {
+                        append("get=")
+                        append(getResp.exitCode)
+                        append(" putEnabled=")
+                        append(putEnabledResp.exitCode)
+                        append(" putServices=")
+                        append(putServicesResp.exitCode)
+                        if (err.isNotBlank()) {
+                            append("\n")
+                            append(err.take(300))
+                        }
+                    }
                 }
             } catch (t: Throwable) {
                 ok = false
                 detail = "${t.javaClass.simpleName}: ${t.message}"
+                android.util.Log.w(TAG, "enableAccessibilityViaAdb failed ($detail)", t)
             }
 
             activity?.runOnUiThread {
