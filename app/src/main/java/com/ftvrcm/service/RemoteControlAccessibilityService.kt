@@ -1,6 +1,7 @@
 package com.ftvrcm.service
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -92,6 +93,14 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             cursor = CursorOverlay(this)
             gestures = GestureController(this)
 
+            // Some Fire OS builds are flaky about key filtering unless explicitly requested at runtime.
+            try {
+                val info = serviceInfo
+                info.flags = info.flags or AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
+                serviceInfo = info
+            } catch (_: Throwable) {
+            }
+
             Log.i(tag, "service connected")
 
             mode = settings.getOperationMode()
@@ -139,9 +148,10 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
-        if (!settings.isBackgroundMonitoringEnabled()) return false
-
         val keyCode = event.keyCode
+
+        // Keep mode in sync with preferences even if they were changed externally (e.g. via ADB).
+        syncModeFromSettingsIfNeeded()
 
         // 1) Toggle mode (always available)
         val toggleKey = settings.getToggleKeyCode()
@@ -195,6 +205,10 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 }
             }
         }
+
+        // If background monitoring is disabled, do not intercept other keys in NORMAL mode.
+        // (Toggle key is still handled above so the user can recover.)
+        if (mode != OperationMode.MOUSE && !settings.isBackgroundMonitoringEnabled()) return false
 
         // 2) Mouse mode key mapping
         if (mode != OperationMode.MOUSE) return false
@@ -421,6 +435,30 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             lastCursorY = p.y
         } else {
             // Remember last cursor position for "previous" start.
+            settings.setLastCursorPosition(lastCursorX, lastCursorY)
+            cursor.hide()
+        }
+    }
+
+    private fun syncModeFromSettingsIfNeeded() {
+        val current = settings.getOperationMode()
+        if (current == mode) return
+
+        clearMoveRepeat()
+        clearPendingTapKey()
+        clearPendingToggle()
+
+        mode = current
+        Log.i(tag, "mode synced from prefs -> $mode")
+
+        if (mode == OperationMode.MOUSE) {
+            applyCursorStartPositionIfNeeded()
+            cursor.show()
+            updateCursorStyleForInputMode()
+            val p = cursor.position()
+            lastCursorX = p.x
+            lastCursorY = p.y
+        } else {
             settings.setLastCursorPosition(lastCursorX, lastCursorY)
             cursor.hide()
         }
