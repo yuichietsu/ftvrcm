@@ -14,6 +14,8 @@ import com.ftvrcm.domain.OperationMode
 import com.ftvrcm.mouse.CursorOverlay
 import com.ftvrcm.mouse.GestureController
 import com.ftvrcm.proxy.ProxyInputClient
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 class RemoteControlAccessibilityService : AccessibilityService() {
 
@@ -40,6 +42,8 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
     private var isDpadMode: Boolean = false
 
+    private val proxyExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+
     private val tapKeyLongPressRunnable = Runnable {
         if (mode != OperationMode.MOUSE) return@Runnable
         if (!tapKeyIsDown) return@Runnable
@@ -50,7 +54,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         val c = cursor.center()
         when (settings.getEmulationMethod()) {
             EmulationMethod.ACCESSIBILITY_SERVICE -> gestures.longPress(c.x, c.y)
-            EmulationMethod.PROXY -> proxy()?.longPress(c.x, c.y)
+            EmulationMethod.PROXY -> dispatchProxy("longPress") { proxy()?.longPress(c.x, c.y) }
         }
     }
 
@@ -301,7 +305,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                         }
                         EmulationMethod.PROXY -> {
                             Log.i(tag, "tap via proxy at (${c.x},${c.y})")
-                            proxy()?.tap(c.x, c.y)
+                            dispatchProxy("tap") { proxy()?.tap(c.x, c.y) }
                         }
                     }
                     return true
@@ -351,30 +355,38 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                             // Swipe around cursor center.
                             val half = distance / 2
                             when (keyCode) {
-                                mouseKeyScrollUp -> proxy()?.swipe(
+                                mouseKeyScrollUp -> dispatchProxy("swipe_up") {
+                                    proxy()?.swipe(
                                     clampX(c.x),
                                     clampY(c.y + half),
                                     clampX(c.x),
                                     clampY(c.y - half),
-                                )
-                                mouseKeyScrollDown -> proxy()?.swipe(
+                                    )
+                                }
+                                mouseKeyScrollDown -> dispatchProxy("swipe_down") {
+                                    proxy()?.swipe(
                                     clampX(c.x),
                                     clampY(c.y - half),
                                     clampX(c.x),
                                     clampY(c.y + half),
-                                )
-                                mouseKeyScrollLeft -> proxy()?.swipe(
+                                    )
+                                }
+                                mouseKeyScrollLeft -> dispatchProxy("swipe_left") {
+                                    proxy()?.swipe(
                                     clampX(c.x + half),
                                     clampY(c.y),
                                     clampX(c.x - half),
                                     clampY(c.y),
-                                )
-                                mouseKeyScrollRight -> proxy()?.swipe(
+                                    )
+                                }
+                                mouseKeyScrollRight -> dispatchProxy("swipe_right") {
+                                    proxy()?.swipe(
                                     clampX(c.x - half),
                                     clampY(c.y),
                                     clampX(c.x + half),
                                     clampY(c.y),
-                                )
+                                    )
+                                }
                             }
 
                             Log.i(tag, "swipe via proxy keyCode=$keyCode center=(${c.x},${c.y}) distance=$distance")
@@ -423,7 +435,22 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         clearPendingTapKey()
         clearMoveRepeat()
         cursor.hide()
+        try {
+            proxyExecutor.shutdownNow()
+        } catch (_: Throwable) {
+        }
         super.onDestroy()
+    }
+
+    private fun dispatchProxy(op: String, block: () -> Unit) {
+        // Never do network I/O on the main thread (Fire OS throws NetworkOnMainThreadException).
+        proxyExecutor.execute {
+            try {
+                block()
+            } catch (t: Throwable) {
+                Log.w(tag, "proxy dispatch failed op=$op (${t.javaClass.simpleName}: ${t.message})")
+            }
+        }
     }
 
     private fun toggleMode() {
