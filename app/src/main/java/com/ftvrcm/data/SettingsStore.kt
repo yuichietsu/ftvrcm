@@ -40,7 +40,7 @@ class SettingsStore(context: Context) {
         prefs.edit {
             putString(SettingsKeys.OPERATION_MODE, OperationMode.NORMAL.name)
 
-            putString(SettingsKeys.TOGGLE_KEYCODE, "85") // PLAY/PAUSE (Avoid Fire TV BACK long-press conflicts)
+            putString(SettingsKeys.TOGGLE_KEYCODE, "82") // MENU (Avoid Fire TV BACK long-press conflicts)
             putBoolean(SettingsKeys.TOGGLE_LONGPRESS, true)
 
             putInt(SettingsKeys.MOUSE_POINTER_SPEED, 10)
@@ -64,8 +64,9 @@ class SettingsStore(context: Context) {
             putString(SettingsKeys.MOUSE_KEY_SCROLL_LEFT, "89")
             putString(SettingsKeys.MOUSE_KEY_SCROLL_RIGHT, "90")
 
-            // Toggle cursor/dpad behavior (default: PLAY/PAUSE)
-            putString(SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE, "85")
+            // Toggle cursor/dpad behavior (default: MENU)
+            // NOTE: default uses the same key as mode toggle for convenience.
+            putString(SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE, "82")
 
             // Cursor start position in mouse mode
             putString(SettingsKeys.MOUSE_CURSOR_START_POSITION, "center")
@@ -84,8 +85,6 @@ class SettingsStore(context: Context) {
                     "90:mouse_scroll_right",
                 ),
             )
-
-            putBoolean(SettingsKeys.BACKGROUND_MONITORING_ENABLED, true)
         }
     }
 
@@ -114,18 +113,14 @@ class SettingsStore(context: Context) {
         prefs.edit { putString(SettingsKeys.OPERATION_MODE, mode.name) }
     }
 
-    fun getToggleKeyCode(): Int = prefs.getString(SettingsKeys.TOGGLE_KEYCODE, "85")?.toIntOrNull() ?: 85
+    fun getToggleKeyCode(): Int = prefs.getString(SettingsKeys.TOGGLE_KEYCODE, "82")?.toIntOrNull() ?: 82
     fun isToggleLongPress(): Boolean = prefs.getBoolean(SettingsKeys.TOGGLE_LONGPRESS, true)
 
     fun getMousePointerSpeedPx(): Int = prefs.getInt(SettingsKeys.MOUSE_POINTER_SPEED, 10).coerceIn(1, 200)
 
     fun getEmulationMethod(): EmulationMethod {
         val value = prefs.getString(SettingsKeys.EMULATION_METHOD, EmulationMethod.ACCESSIBILITY_SERVICE.name)
-        return if (value == EmulationMethod.PROXY.name || value == "ADB") {
-            EmulationMethod.PROXY
-        } else {
-            EmulationMethod.ACCESSIBILITY_SERVICE
-        }
+        return if (value == EmulationMethod.PROXY.name) EmulationMethod.PROXY else EmulationMethod.ACCESSIBILITY_SERVICE
     }
 
     fun getProxyHost(): String = prefs.getString(SettingsKeys.PROXY_HOST, "") ?: ""
@@ -147,8 +142,6 @@ class SettingsStore(context: Context) {
     fun getMouseKeyScrollRight(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_RIGHT, "90")?.toIntOrNull() ?: 90
 
     fun getMouseKeyCursorDpadToggle(): Int =
-        prefs.getString(SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE, "85")?.toIntOrNull() ?: 85
+        prefs.getString(SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE, "82")?.toIntOrNull() ?: 82
 
-    // Always enabled: this app's purpose is global key monitoring.
-    fun isBackgroundMonitoringEnabled(): Boolean = true
 }

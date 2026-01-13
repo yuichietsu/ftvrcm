@@ -109,7 +109,7 @@ class GestureController(
                 x = x,
                 y = y,
                 primaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP.id),
-                // Some devices reject UP/DOWN; keep legacy fallback for compatibility.
+                // Some devices reject UP/DOWN; use BACKWARD as a fallback.
                 secondaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_BACKWARD.id),
                 preferTarget = { !isHorizontalScrollContainer(it) },
             )
@@ -131,7 +131,7 @@ class GestureController(
                 x = x,
                 y = y,
                 primaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.id),
-                // Some devices reject UP/DOWN; keep legacy fallback for compatibility.
+                // Some devices reject UP/DOWN; use FORWARD as a fallback.
                 secondaryActions = intArrayOf(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD.id),
                 preferTarget = { !isHorizontalScrollContainer(it) },
             )

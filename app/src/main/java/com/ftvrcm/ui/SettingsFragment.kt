@@ -69,7 +69,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         refreshModeSummary()
         refreshRequiredStateSummary()
         refreshToggleKeySummary()
-        refreshProxyHealthPreference()
+        refreshProxyPreferences()
 
         val prefs = preferenceManager.sharedPreferences ?: return
         val l = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -79,10 +79,13 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 SettingsKeys.TOGGLE_LONGPRESS,
                 SettingsKeys.MOUSE_POINTER_SPEED,
                 SettingsKeys.EMULATION_METHOD,
+                SettingsKeys.PROXY_HOST,
+                SettingsKeys.PROXY_PORT,
+                SettingsKeys.PROXY_TOKEN,
                 -> {
                     refreshModeSummary()
                     refreshToggleKeySummary()
-                    refreshProxyHealthPreference()
+                    refreshProxyPreferences()
                 }
             }
 
@@ -119,21 +122,36 @@ class SettingsFragment : PreferenceFragmentCompat() {
         refreshModeSummary()
         refreshRequiredStateSummary()
         refreshToggleKeySummary()
-        refreshProxyHealthPreference()
+        refreshProxyPreferences()
     }
 
-    private fun refreshProxyHealthPreference() {
-        val pref = findPreference<Preference>("proxy_health_check") ?: return
+    private fun refreshProxyPreferences() {
         val store = SettingsStore(requireContext())
         val isProxy = store.getEmulationMethod() == EmulationMethod.PROXY
-        pref.isEnabled = isProxy
+
+        val host = findPreference<Preference>(SettingsKeys.PROXY_HOST)
+        val port = findPreference<Preference>(SettingsKeys.PROXY_PORT)
+        val token = findPreference<Preference>(SettingsKeys.PROXY_TOKEN)
+        val health = findPreference<Preference>("proxy_health_check")
+
+        host?.isEnabled = isProxy
+        port?.isEnabled = isProxy
+        token?.isEnabled = isProxy
+        health?.isEnabled = isProxy
+
+        if (!isProxy) {
+            // Keep health check visible but disabled to hint the dependency.
+            health?.summary = getString(R.string.prefs_proxy_health_check_summary_disabled)
+        } else {
+            health?.summary = getString(R.string.prefs_proxy_health_check_summary)
+        }
     }
 
     private fun runProxyHealthCheck() {
         val context = requireContext()
         val pref = findPreference<Preference>("proxy_health_check")
         pref?.isEnabled = false
-        pref?.summary = "確認中…"
+        pref?.summary = getString(R.string.prefs_proxy_health_check_running)
 
         Thread {
             val store = SettingsStore(context.applicationContext)
@@ -150,8 +168,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
             activity?.runOnUiThread {
                 if (!isAdded) return@runOnUiThread
-                refreshProxyHealthPreference()
-                pref?.summary = getString(R.string.prefs_proxy_health_check_summary)
+                refreshProxyPreferences()
 
                 Toast.makeText(
                     context,
@@ -264,13 +281,13 @@ class SettingsFragment : PreferenceFragmentCompat() {
     private fun confirmResetDefaults() {
         AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.prefs_reset_defaults))
-            .setMessage("設定をデフォルトに戻します。よろしいですか？")
-            .setPositiveButton("戻す") { _, _ ->
+            .setMessage(getString(R.string.prefs_reset_confirm_message))
+            .setPositiveButton(getString(R.string.prefs_reset_confirm_positive)) { _, _ ->
                 SettingsStore(requireContext()).resetToDefaults()
-                Toast.makeText(requireContext(), "デフォルト設定に戻しました", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.prefs_reset_done), Toast.LENGTH_SHORT).show()
                 activity?.recreate()
             }
-            .setNegativeButton("キャンセル", null)
+            .setNegativeButton(getString(R.string.prefs_common_cancel), null)
             .show()
     }
 

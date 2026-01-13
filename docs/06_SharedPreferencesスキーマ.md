@@ -28,7 +28,6 @@ com.ftvrcm_preferences.xml
     ├── mouse_key_cursor_dpad_toggle
     ├── mouse_cursor_start_position
     ├── key_mapping
-    ├── background_monitoring_enabled（現在は常時有効）
     ├── last_gesture_type
     ├── last_gesture_status
     ├── last_gesture_detail
@@ -61,12 +60,12 @@ com.ftvrcm_preferences.xml
 |------|-----|
 | **キー** | `toggle_keycode` / `toggle_longpress` |
 | **型** | String / Boolean |
-| **デフォルト** | `85`（`KEYCODE_MEDIA_PLAY_PAUSE`） / `true` |
+| **デフォルト** | `82`（`KEYCODE_MENU`） / `true` |
 | **説明** | 操作モード（通常/タッチ操作）を切り替えるキーと、切り替えを長押しにするかどうか |
 
 **例**：
 ```xml
-<string name="toggle_keycode">85</string>
+<string name="toggle_keycode">82</string>
 <boolean name="toggle_longpress" value="true" />
 ```
 
@@ -200,27 +199,8 @@ com.ftvrcm_preferences.xml
 | `mouse_scroll_down` | 下スクロール（`ACCESSIBILITY_SERVICE`）/ 下スワイプ（`PROXY`） |
 | `mouse_scroll_left` | 左スクロール（`ACCESSIBILITY_SERVICE`）/ 左スワイプ（`PROXY`） |
 | `mouse_scroll_right` | 右スクロール（`ACCESSIBILITY_SERVICE`）/ 右スワイプ（`PROXY`） |
-| `mouse_key_cursor_dpad_toggle` | 入力モード（カーソル/方向キー）切り替えキー（デフォルト: `MEDIA_PLAY_PAUSE`） |
-
-
-### 5. バックグラウンド監視（background_monitoring_enabled）
-
-| 項目 | 値 |
-|------|-----|
-| **キー** | `background_monitoring_enabled` |
-| **型** | Boolean |
-| **値** | `true` \| `false` |
-| **デフォルト** | `true` |
-| **説明** | 旧仕様の名残。現在は常時有効（設定画面からは変更不可） |
-
-**例**：
-```xml
-<boolean name="background_monitoring_enabled" value="true" />
-```
-
----
-
-### 6. 最終ジェスチャ記録（last_gesture_*）
+| `mouse_key_cursor_dpad_toggle` | 入力モード（カーソル/方向キー）切り替えキー（デフォルト: `MENU`） |
+### 5. 最終ジェスチャ記録（last_gesture_*）
 
 TouchTestActivity（動作確認画面）で「最後に注入したジェスチャがどう処理されたか（成功/キャンセル/フォールバック等）」を確認するためのデバッグ用途の記録です。
 
@@ -270,7 +250,6 @@ class SettingsStore(context: Context) {
                     "90:mouse_scroll_right",
                 ),
             )
-            putBoolean("background_monitoring_enabled", true)
             apply()
         }
     }

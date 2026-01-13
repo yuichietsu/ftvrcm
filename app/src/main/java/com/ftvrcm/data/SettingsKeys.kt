@@ -10,7 +10,7 @@ object SettingsKeys {
 
     const val MOUSE_POINTER_SPEED = "mouse_pointer_speed" // int
 
-    const val EMULATION_METHOD = "emulation_method" // String: ACCESSIBILITY_SERVICE|PROXY (legacy: ADB)
+    const val EMULATION_METHOD = "emulation_method" // String: ACCESSIBILITY_SERVICE|PROXY
 
     // Proxy: FireTV app -> PC proxy -> adb -> FireTV
     const val PROXY_HOST = "proxy_host" // String: hostname/IP
@@ -36,8 +36,6 @@ object SettingsKeys {
 
     // docs/06
     const val KEY_MAPPING = "key_mapping" // StringSet: {keyCode}:{actionId}
-
-    const val BACKGROUND_MONITORING_ENABLED = "background_monitoring_enabled" // boolean
 
     // Gesture debug (for TouchTestActivity)
     const val LAST_GESTURE_TYPE = "last_gesture_type" // String
