@@ -208,6 +208,17 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                     val wasTriggered = pendingToggleTriggered
                     clearPendingToggle()
 
+                    // Short press: when the toggle key is also used as cursor/DPAD toggle,
+                    // switch input mode in MOUSE mode.
+                    val cursorDpadToggleKey = settings.getMouseKeyCursorDpadToggle()
+                    if (!wasTriggered && mode == OperationMode.MOUSE && keyCode == cursorDpadToggleKey) {
+                        isDpadMode = !isDpadMode
+                        clearMoveRepeat()
+                        clearPendingTapKey()
+                        updateCursorStyleForInputMode()
+                        return true
+                    }
+
                     // Short press: preserve BACK behavior via accessibility global action.
                     if (!wasTriggered && keyCode == KeyEvent.KEYCODE_BACK) {
                         performGlobalAction(GLOBAL_ACTION_BACK)
