@@ -149,12 +149,6 @@
             android:summary="@string/prefs_status_unknown"
             android:selectable="false" />
 
-        <SwitchPreferenceCompat
-            android:key="background_monitoring_enabled"
-            android:title="バックグラウンド監視"
-            android:summary="他のアプリ実行中でもキー監視を行います"
-            android:defaultValue="true" />
-
         <Preference
             android:key="open_accessibility_settings"
             android:title="@string/prefs_open_accessibility_settings"

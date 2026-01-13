@@ -28,7 +28,7 @@ com.ftvrcm_preferences.xml
     ├── mouse_key_cursor_dpad_toggle
     ├── mouse_cursor_start_position
     ├── key_mapping
-    ├── background_monitoring_enabled
+    ├── background_monitoring_enabled（現在は常時有効）
     ├── last_gesture_type
     ├── last_gesture_status
     ├── last_gesture_detail
@@ -203,7 +203,7 @@ com.ftvrcm_preferences.xml
 | `mouse_key_cursor_dpad_toggle` | 入力モード（カーソル/方向キー）切り替えキー（デフォルト: `MEDIA_PLAY_PAUSE`） |
 
 
-### 5. バックグラウンド監視有効フラグ（background_monitoring_enabled）
+### 5. バックグラウンド監視（background_monitoring_enabled）
 
 | 項目 | 値 |
 |------|-----|
@@ -211,7 +211,7 @@ com.ftvrcm_preferences.xml
 | **型** | Boolean |
 | **値** | `true` \| `false` |
 | **デフォルト** | `true` |
-| **説明** | バックグラウンドサービスでリモコンイベント監視するか |
+| **説明** | 旧仕様の名残。現在は常時有効（設定画面からは変更不可） |
 
 **例**：
 ```xml

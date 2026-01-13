@@ -149,5 +149,6 @@ class SettingsStore(context: Context) {
     fun getMouseKeyCursorDpadToggle(): Int =
         prefs.getString(SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE, "85")?.toIntOrNull() ?: 85
 
-    fun isBackgroundMonitoringEnabled(): Boolean = prefs.getBoolean(SettingsKeys.BACKGROUND_MONITORING_ENABLED, true)
+    // Always enabled: this app's purpose is global key monitoring.
+    fun isBackgroundMonitoringEnabled(): Boolean = true
 }

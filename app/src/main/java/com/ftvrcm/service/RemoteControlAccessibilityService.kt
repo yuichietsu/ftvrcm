@@ -153,6 +153,14 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         // Keep mode in sync with preferences even if they were changed externally (e.g. via ADB).
         syncModeFromSettingsIfNeeded()
 
+        // Debug aid: if key events are not reaching this service on Fire OS, nothing else will work.
+        if (mode == OperationMode.MOUSE) {
+            Log.v(
+                tag,
+                "onKeyEvent keyCode=$keyCode action=${event.action} repeat=${event.repeatCount} mode=$mode emu=${settings.getEmulationMethod()} dpad=$isDpadMode",
+            )
+        }
+
         // 1) Toggle mode (always available)
         val toggleKey = settings.getToggleKeyCode()
         val toggleLongPress = settings.isToggleLongPress()
