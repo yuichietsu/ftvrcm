@@ -19,8 +19,9 @@
 
     <string name="prefs_emulation_method">エミュレーション方法</string>
 
-    <string name="prefs_adb_host">ADB接続先ホスト</string>
-    <string name="prefs_adb_port">ADB接続先ポート</string>
+    <string name="prefs_proxy_host">プロキシホスト（PC）</string>
+    <string name="prefs_proxy_port">プロキシポート</string>
+    <string name="prefs_proxy_token">プロキシトークン（任意）</string>
 
     <string name="prefs_category_key_mapping">キー割り当て</string>
 

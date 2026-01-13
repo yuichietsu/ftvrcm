@@ -1,0 +1,14 @@
+{
+  "name": "ftvrcm-proxy-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Minimal ADB proxy server for ftvrcm (Fire TV app -> PC -> adb).",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

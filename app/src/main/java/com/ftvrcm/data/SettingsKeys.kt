@@ -10,11 +10,16 @@ object SettingsKeys {
 
     const val MOUSE_POINTER_SPEED = "mouse_pointer_speed" // int
 
-    const val EMULATION_METHOD = "emulation_method" // String: ACCESSIBILITY_SERVICE|ADB
+    const val EMULATION_METHOD = "emulation_method" // String: ACCESSIBILITY_SERVICE|PROXY (legacy: ADB)
 
-    // ADB (used when EMULATION_METHOD=ADB)
+    // Legacy: direct adbd connection (Fire OS 8 may block).
     const val ADB_HOST = "adb_host" // String: "auto" | hostname/IP
     const val ADB_PORT = "adb_port" // String (EditTextPreference) / store as Int
+
+    // Proxy: FireTV app -> PC proxy -> adb -> FireTV
+    const val PROXY_HOST = "proxy_host" // String: hostname/IP
+    const val PROXY_PORT = "proxy_port" // String (EditTextPreference) / store as Int
+    const val PROXY_TOKEN = "proxy_token" // String
 
     const val MOUSE_KEY_UP = "mouse_key_up" // String/int
     const val MOUSE_KEY_DOWN = "mouse_key_down"

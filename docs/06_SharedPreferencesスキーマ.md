@@ -13,6 +13,9 @@ com.ftvrcm_preferences.xml
     ├── operation_mode
     ├── mouse_pointer_speed
     ├── emulation_method
+    ├── proxy_host
+    ├── proxy_port
+    ├── proxy_token
     ├── adb_host
     ├── adb_port
     ├── mouse_key_up
@@ -112,33 +115,39 @@ com.ftvrcm_preferences.xml
 |------|-----|
 | **キー** | `emulation_method` |
 | **型** | String |
-| **値** | `ACCESSIBILITY_SERVICE` \| `ADB` |
+| **値** | `ACCESSIBILITY_SERVICE` \| `PROXY` |
 | **デフォルト** | `ACCESSIBILITY_SERVICE` |
-| **説明** | タップ/スクロール系の注入方法を選択します（`ADB`の場合は`input tap/swipe`を使用） |
+| **説明** | タップ/スクロール系の注入方法を選択します（`PROXY`の場合はPC上のプロキシ経由で`adb shell input`を使用） |
 
 **例**：
 ```xml
-<string name="emulation_method">ADB</string>
+<string name="emulation_method">PROXY</string>
 ```
 
 ---
 
-### 3.2 ADB接続先（adb_host / adb_port）
+### 3.2 プロキシ接続先（proxy_host / proxy_port / proxy_token）
 
-`emulation_method=ADB` の場合に、アプリ内ADBクライアントが接続する `adbd` の接続先を指定します。
+`emulation_method=PROXY` の場合に、アプリが接続するPC上のプロキシ（HTTP）の接続先を指定します。
 
 | 項目 | 値 |
 |------|-----|
-| **キー** | `adb_host` / `adb_port` |
-| **型** | String / String |
-| **デフォルト** | `auto` / `5555` |
-| **説明** | `adb_host=auto` の場合、`127.0.0.1`・`localhost`・端末のIPv4アドレス群を順に試行します |
+| **キー** | `proxy_host` / `proxy_port` / `proxy_token` |
+| **型** | String / String / String |
+| **デフォルト** | 空 / `8787` / 空 |
+| **説明** | `proxy_token` は任意（推奨）。PC側プロキシでトークンを設定している場合に同じ値を入れます |
 
 **例**：
 ```xml
-<string name="adb_host">192.168.11.12</string>
-<string name="adb_port">5555</string>
+<string name="proxy_host">192.168.11.127</string>
+<string name="proxy_port">8787</string>
+<string name="proxy_token">change-me</string>
 ```
+
+### 3.3 （レガシー）ADB接続先（adb_host / adb_port）
+
+過去バージョンではアプリ内ADBクライアントで `adbd` に直接接続していましたが、Fire OS 8 以降ではブロックされる場合があります。
+互換性のため設定キーは残っていますが、現在の推奨は `PROXY` 方式です。
 
 ### 4. キーマッピング（key_mapping）
 
@@ -189,10 +198,10 @@ com.ftvrcm_preferences.xml
 | `mouse_left` | ポインタ左移動 |
 | `mouse_right` | ポインタ右移動 |
 | `mouse_click` | タップ（短押し）/ロングタップ（長押し） |
-| `mouse_scroll_up` | 上スクロール（`ACCESSIBILITY_SERVICE`）/ 上スワイプ（`ADB`） |
-| `mouse_scroll_down` | 下スクロール（`ACCESSIBILITY_SERVICE`）/ 下スワイプ（`ADB`） |
-| `mouse_scroll_left` | 左スクロール（`ACCESSIBILITY_SERVICE`）/ 左スワイプ（`ADB`） |
-| `mouse_scroll_right` | 右スクロール（`ACCESSIBILITY_SERVICE`）/ 右スワイプ（`ADB`） |
+| `mouse_scroll_up` | 上スクロール（`ACCESSIBILITY_SERVICE`）/ 上スワイプ（`PROXY`） |
+| `mouse_scroll_down` | 下スクロール（`ACCESSIBILITY_SERVICE`）/ 下スワイプ（`PROXY`） |
+| `mouse_scroll_left` | 左スクロール（`ACCESSIBILITY_SERVICE`）/ 左スワイプ（`PROXY`） |
+| `mouse_scroll_right` | 右スクロール（`ACCESSIBILITY_SERVICE`）/ 右スワイプ（`PROXY`） |
 | `mouse_key_cursor_dpad_toggle` | 入力モード（カーソル/方向キー）切り替えキー（デフォルト: `MEDIA_PLAY_PAUSE`） |
 
 

@@ -47,10 +47,15 @@ class SettingsStore(context: Context) {
 
             putString(SettingsKeys.EMULATION_METHOD, EmulationMethod.ACCESSIBILITY_SERVICE.name)
 
-            // ADB target (when EMULATION_METHOD=ADB)
+            // Legacy ADB target (direct adbd; Fire OS 8 may block local connections)
             // "auto" will try localhost + device IPs.
             putString(SettingsKeys.ADB_HOST, "auto")
             putString(SettingsKeys.ADB_PORT, "5555")
+
+            // Proxy target (PC proxy server)
+            putString(SettingsKeys.PROXY_HOST, "")
+            putString(SettingsKeys.PROXY_PORT, "8787")
+            putString(SettingsKeys.PROXY_TOKEN, "")
 
             putString(SettingsKeys.MOUSE_KEY_UP, "19")
             putString(SettingsKeys.MOUSE_KEY_DOWN, "20")
@@ -121,13 +126,24 @@ class SettingsStore(context: Context) {
 
     fun getEmulationMethod(): EmulationMethod {
         val value = prefs.getString(SettingsKeys.EMULATION_METHOD, EmulationMethod.ACCESSIBILITY_SERVICE.name)
-        return if (value == EmulationMethod.ADB.name) EmulationMethod.ADB else EmulationMethod.ACCESSIBILITY_SERVICE
+        return if (value == EmulationMethod.PROXY.name || value == "ADB") {
+            EmulationMethod.PROXY
+        } else {
+            EmulationMethod.ACCESSIBILITY_SERVICE
+        }
     }
 
     fun getAdbHost(): String = prefs.getString(SettingsKeys.ADB_HOST, "auto") ?: "auto"
 
     fun getAdbPort(): Int = (prefs.getString(SettingsKeys.ADB_PORT, "5555")?.toIntOrNull() ?: 5555)
         .coerceIn(1, 65535)
+
+    fun getProxyHost(): String = prefs.getString(SettingsKeys.PROXY_HOST, "") ?: ""
+
+    fun getProxyPort(): Int = (prefs.getString(SettingsKeys.PROXY_PORT, "8787")?.toIntOrNull() ?: 8787)
+        .coerceIn(1, 65535)
+
+    fun getProxyToken(): String = prefs.getString(SettingsKeys.PROXY_TOKEN, "") ?: ""
 
     fun getMouseKeyUp(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_UP, "19")?.toIntOrNull() ?: 19
     fun getMouseKeyDown(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_DOWN, "20")?.toIntOrNull() ?: 20

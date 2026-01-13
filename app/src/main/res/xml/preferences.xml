@@ -34,15 +34,21 @@
             app:useSimpleSummaryProvider="true" />
 
         <EditTextPreference
-            android:key="adb_host"
-            android:title="@string/prefs_adb_host"
-            android:defaultValue="auto"
+            android:key="proxy_host"
+            android:title="@string/prefs_proxy_host"
+            android:defaultValue=""
             app:useSimpleSummaryProvider="true" />
 
         <EditTextPreference
-            android:key="adb_port"
-            android:title="@string/prefs_adb_port"
-            android:defaultValue="5555"
+            android:key="proxy_port"
+            android:title="@string/prefs_proxy_port"
+            android:defaultValue="8787"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            android:key="proxy_token"
+            android:title="@string/prefs_proxy_token"
+            android:defaultValue=""
             app:useSimpleSummaryProvider="true" />
 
         <SeekBarPreference

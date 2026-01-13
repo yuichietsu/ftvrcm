@@ -13,6 +13,7 @@ import com.ftvrcm.domain.EmulationMethod
 import com.ftvrcm.domain.OperationMode
 import com.ftvrcm.mouse.CursorOverlay
 import com.ftvrcm.mouse.GestureController
+import com.ftvrcm.proxy.ProxyInputClient
 
 class RemoteControlAccessibilityService : AccessibilityService() {
 
@@ -24,6 +25,11 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private var adbInput: AdbInputClient? = null
     private var adbHost: String? = null
     private var adbPort: Int? = null
+
+    private var proxyInput: ProxyInputClient? = null
+    private var proxyHost: String? = null
+    private var proxyPort: Int? = null
+    private var proxyToken: String? = null
 
     private var mode: OperationMode = OperationMode.NORMAL
 
@@ -47,7 +53,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         val c = cursor.center()
         when (settings.getEmulationMethod()) {
             EmulationMethod.ACCESSIBILITY_SERVICE -> gestures.longPress(c.x, c.y)
-            EmulationMethod.ADB -> adb()?.longPress(c.x, c.y)
+            EmulationMethod.PROXY -> proxy()?.longPress(c.x, c.y)
         }
     }
 
@@ -139,6 +145,23 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             adbPort = null
             null
         }
+    }
+
+    private fun proxy(): ProxyInputClient? {
+        val host = settings.getProxyHost()
+        val port = settings.getProxyPort()
+        val token = settings.getProxyToken()
+
+        val current = proxyInput
+        if (current != null && proxyHost == host && proxyPort == port && proxyToken == token) return current
+
+        proxyInput = ProxyInputClient(this, host = host, port = port, token = token).also {
+            proxyHost = host
+            proxyPort = port
+            proxyToken = token
+        }
+
+        return proxyInput
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -288,9 +311,9 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                             Log.i(tag, "tap via accessibility at (${c.x},${c.y})")
                             gestures.tap(c.x, c.y)
                         }
-                        EmulationMethod.ADB -> {
-                            Log.i(tag, "tap via adb at (${c.x},${c.y})")
-                            adb()?.tap(c.x, c.y)
+                        EmulationMethod.PROXY -> {
+                            Log.i(tag, "tap via proxy at (${c.x},${c.y})")
+                            proxy()?.tap(c.x, c.y)
                         }
                     }
                     return true
@@ -328,7 +351,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                                 mouseKeyScrollRight -> gestures.scrollRight(c.x, c.y)
                             }
                         }
-                        EmulationMethod.ADB -> {
+                        EmulationMethod.PROXY -> {
                             val dm = resources.displayMetrics
                             val w = dm.widthPixels
                             val h = dm.heightPixels
@@ -340,25 +363,25 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                             // Swipe around cursor center.
                             val half = distance / 2
                             when (keyCode) {
-                                mouseKeyScrollUp -> adb()?.swipe(
+                                mouseKeyScrollUp -> proxy()?.swipe(
                                     clampX(c.x),
                                     clampY(c.y + half),
                                     clampX(c.x),
                                     clampY(c.y - half),
                                 )
-                                mouseKeyScrollDown -> adb()?.swipe(
+                                mouseKeyScrollDown -> proxy()?.swipe(
                                     clampX(c.x),
                                     clampY(c.y - half),
                                     clampX(c.x),
                                     clampY(c.y + half),
                                 )
-                                mouseKeyScrollLeft -> adb()?.swipe(
+                                mouseKeyScrollLeft -> proxy()?.swipe(
                                     clampX(c.x + half),
                                     clampY(c.y),
                                     clampX(c.x - half),
                                     clampY(c.y),
                                 )
-                                mouseKeyScrollRight -> adb()?.swipe(
+                                mouseKeyScrollRight -> proxy()?.swipe(
                                     clampX(c.x - half),
                                     clampY(c.y),
                                     clampX(c.x + half),
@@ -366,7 +389,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                                 )
                             }
 
-                            Log.i(tag, "swipe via adb keyCode=$keyCode center=(${c.x},${c.y}) distance=$distance")
+                            Log.i(tag, "swipe via proxy keyCode=$keyCode center=(${c.x},${c.y}) distance=$distance")
                         }
                     }
                     return true

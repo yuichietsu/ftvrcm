@@ -1,12 +1,12 @@
 <resources>
     <string-array name="emulation_method_entries">
         <item>Accessibility Service</item>
-        <item>ADB</item>
+        <item>プロキシ</item>
     </string-array>
 
     <string-array name="emulation_method_values">
         <item>ACCESSIBILITY_SERVICE</item>
-        <item>ADB</item>
+        <item>PROXY</item>
     </string-array>
 
     <string-array name="key_entries">
