@@ -47,11 +47,6 @@ class SettingsStore(context: Context) {
 
             putString(SettingsKeys.EMULATION_METHOD, EmulationMethod.ACCESSIBILITY_SERVICE.name)
 
-            // Legacy ADB target (direct adbd; Fire OS 8 may block local connections)
-            // "auto" will try localhost + device IPs.
-            putString(SettingsKeys.ADB_HOST, "auto")
-            putString(SettingsKeys.ADB_PORT, "5555")
-
             // Proxy target (PC proxy server)
             putString(SettingsKeys.PROXY_HOST, "")
             putString(SettingsKeys.PROXY_PORT, "8787")
@@ -132,11 +127,6 @@ class SettingsStore(context: Context) {
             EmulationMethod.ACCESSIBILITY_SERVICE
         }
     }
-
-    fun getAdbHost(): String = prefs.getString(SettingsKeys.ADB_HOST, "auto") ?: "auto"
-
-    fun getAdbPort(): Int = (prefs.getString(SettingsKeys.ADB_PORT, "5555")?.toIntOrNull() ?: 5555)
-        .coerceIn(1, 65535)
 
     fun getProxyHost(): String = prefs.getString(SettingsKeys.PROXY_HOST, "") ?: ""
 

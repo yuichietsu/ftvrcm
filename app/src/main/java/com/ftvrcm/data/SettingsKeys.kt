@@ -12,10 +12,6 @@ object SettingsKeys {
 
     const val EMULATION_METHOD = "emulation_method" // String: ACCESSIBILITY_SERVICE|PROXY (legacy: ADB)
 
-    // Legacy: direct adbd connection (Fire OS 8 may block).
-    const val ADB_HOST = "adb_host" // String: "auto" | hostname/IP
-    const val ADB_PORT = "adb_port" // String (EditTextPreference) / store as Int
-
     // Proxy: FireTV app -> PC proxy -> adb -> FireTV
     const val PROXY_HOST = "proxy_host" // String: hostname/IP
     const val PROXY_PORT = "proxy_port" // String (EditTextPreference) / store as Int

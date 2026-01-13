@@ -19,10 +19,11 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceGroup
 import com.ftvrcm.R
-import com.ftvrcm.adb.AdbInputClient
 import com.ftvrcm.data.SettingsKeys
 import com.ftvrcm.data.SettingsStore
+import com.ftvrcm.domain.EmulationMethod
 import com.ftvrcm.domain.OperationMode
+import com.ftvrcm.proxy.ProxyInputClient
 import com.ftvrcm.service.RemoteControlAccessibilityService
 
 private const val TAG = "SettingsFragment"
@@ -59,16 +60,16 @@ class SettingsFragment : PreferenceFragmentCompat() {
             true
         }
 
-        val enableViaAdb = findPreference<Preference>("enable_accessibility_via_adb")
-        enableViaAdb?.setOnPreferenceClickListener {
-            enableAccessibilityViaAdb()
+        val proxyHealth = findPreference<Preference>("proxy_health_check")
+        proxyHealth?.setOnPreferenceClickListener {
+            runProxyHealthCheck()
             true
         }
 
         refreshModeSummary()
         refreshRequiredStateSummary()
         refreshToggleKeySummary()
-        refreshEnableViaAdbPreference()
+        refreshProxyHealthPreference()
 
         val prefs = preferenceManager.sharedPreferences ?: return
         val l = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -81,6 +82,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 -> {
                     refreshModeSummary()
                     refreshToggleKeySummary()
+                    refreshProxyHealthPreference()
                 }
             }
 
@@ -117,7 +119,47 @@ class SettingsFragment : PreferenceFragmentCompat() {
         refreshModeSummary()
         refreshRequiredStateSummary()
         refreshToggleKeySummary()
-        refreshEnableViaAdbPreference()
+        refreshProxyHealthPreference()
+    }
+
+    private fun refreshProxyHealthPreference() {
+        val pref = findPreference<Preference>("proxy_health_check") ?: return
+        val store = SettingsStore(requireContext())
+        val isProxy = store.getEmulationMethod() == EmulationMethod.PROXY
+        pref.isEnabled = isProxy
+    }
+
+    private fun runProxyHealthCheck() {
+        val context = requireContext()
+        val pref = findPreference<Preference>("proxy_health_check")
+        pref?.isEnabled = false
+        pref?.summary = "確認中…"
+
+        Thread {
+            val store = SettingsStore(context.applicationContext)
+            val host = store.getProxyHost()
+            val port = store.getProxyPort()
+            val token = store.getProxyToken()
+
+            val ok = ProxyInputClient(
+                context.applicationContext,
+                host = host,
+                port = port,
+                token = token,
+            ).healthCheck()
+
+            activity?.runOnUiThread {
+                if (!isAdded) return@runOnUiThread
+                refreshProxyHealthPreference()
+                pref?.summary = getString(R.string.prefs_proxy_health_check_summary)
+
+                Toast.makeText(
+                    context,
+                    if (ok) "プロキシ疎通OK" else "プロキシ疎通NG（詳細は last_gesture_* を確認）",
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
+        }.start()
     }
 
     override fun onDestroy() {
@@ -175,128 +217,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
         } else {
             getString(R.string.prefs_status_accessibility_service_off)
         }
-    }
-
-    private fun refreshEnableViaAdbPreference() {
-        val pref = findPreference<Preference>("enable_accessibility_via_adb") ?: return
-        val enabled = isAccessibilityServiceEnabled()
-        pref.isEnabled = !enabled
-    }
-
-    private fun enableAccessibilityViaAdb() {
-        if (isAccessibilityServiceEnabled()) {
-            Toast.makeText(requireContext(), getString(R.string.prefs_status_accessibility_service_on), Toast.LENGTH_SHORT).show()
-            refreshEnableViaAdbPreference()
-            return
-        }
-
-        val context = requireContext()
-        val pref = findPreference<Preference>("enable_accessibility_via_adb")
-        pref?.isEnabled = false
-        pref?.summary = getString(R.string.prefs_enable_accessibility_via_adb_running)
-
-        val store = SettingsStore(context)
-        val adbHost = store.getAdbHost()
-        val adbPort = store.getAdbPort()
-
-        val expected = ComponentName(context, RemoteControlAccessibilityService::class.java)
-        val component = "${expected.packageName}/${expected.className}"
-
-        Thread {
-            var ok = false
-            var detail: String? = null
-            var authLikely = false
-            var eofLikely = false
-
-            try {
-                android.util.Log.i(TAG, "enableAccessibilityViaAdb start host=$adbHost port=$adbPort")
-                AdbInputClient(context.applicationContext, adbHost, adbPort).use { adb ->
-                    val getResp = adb.runShellBlocking("settings get secure enabled_accessibility_services")
-                    val current = getResp.output.trim().let { if (it == "null") "" else it }
-
-                    android.util.Log.i(
-                        TAG,
-                        "settings get enabled_accessibility_services exit=${getResp.exitCode} out=${getResp.output.trim()} err=${getResp.errorOutput.trim()}",
-                    )
-
-                    val next = when {
-                        current.isBlank() -> component
-                        current.split(':').any { it.trim() == component } -> current
-                        else -> "$current:$component"
-                    }
-
-                    // Some builds behave better when accessibility_enabled is set first.
-                    val putEnabledResp = adb.runShellBlocking("settings put secure accessibility_enabled 1")
-                    val putServicesResp = adb.runShellBlocking("settings put secure enabled_accessibility_services $next")
-
-                    android.util.Log.i(
-                        TAG,
-                        "settings put accessibility_enabled exit=${putEnabledResp.exitCode} out=${putEnabledResp.output.trim()} err=${putEnabledResp.errorOutput.trim()}",
-                    )
-                    android.util.Log.i(
-                        TAG,
-                        "settings put enabled_accessibility_services exit=${putServicesResp.exitCode} out=${putServicesResp.output.trim()} err=${putServicesResp.errorOutput.trim()}",
-                    )
-
-                    ok = putServicesResp.exitCode == 0 && putEnabledResp.exitCode == 0
-
-                    val err = listOf(
-                        "get.err=${getResp.errorOutput}",
-                        "putEnabled.err=${putEnabledResp.errorOutput}",
-                        "putServices.err=${putServicesResp.errorOutput}",
-                    ).joinToString(" ").trim()
-
-                    detail = buildString {
-                        append("get=")
-                        append(getResp.exitCode)
-                        append(" putEnabled=")
-                        append(putEnabledResp.exitCode)
-                        append(" putServices=")
-                        append(putServicesResp.exitCode)
-                        if (err.isNotBlank()) {
-                            append("\n")
-                            append(err.take(300))
-                        }
-                    }
-                }
-            } catch (t: Throwable) {
-                ok = false
-                detail = "${t.javaClass.simpleName}: ${t.message}"
-                android.util.Log.w(TAG, "enableAccessibilityViaAdb failed ($detail)", t)
-
-                val msg = (t.message ?: "").lowercase()
-                authLikely = msg.contains("unauthorized") || msg.contains("auth") || msg.contains("denied")
-                eofLikely = t is java.io.EOFException
-            }
-
-            activity?.runOnUiThread {
-                if (!isAdded) return@runOnUiThread
-
-                if (ok) {
-                    Toast.makeText(context, getString(R.string.prefs_enable_accessibility_via_adb_done), Toast.LENGTH_LONG).show()
-                } else {
-                    val msg = if (authLikely) {
-                        getString(R.string.prefs_enable_accessibility_via_adb_failed_auth)
-                    } else if (eofLikely) {
-                        getString(R.string.prefs_enable_accessibility_via_adb_failed_eof)
-                    } else {
-                        getString(R.string.prefs_enable_accessibility_via_adb_failed)
-                    }
-                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                }
-
-                pref?.summary = if (ok || detail.isNullOrBlank()) {
-                    getString(R.string.prefs_enable_accessibility_via_adb_summary)
-                } else {
-                    getString(R.string.prefs_enable_accessibility_via_adb_summary) + "\n" + detail
-                }
-
-                refreshRequiredStateSummary()
-                refreshEnableViaAdbPreference()
-
-                // Note: detail is already attached to the preference summary.
-            }
-        }.start()
     }
 
     private fun isAccessibilityServiceEnabled(): Boolean {

@@ -149,11 +149,6 @@
             android:summary="@string/prefs_status_unknown"
             android:selectable="false" />
 
-        <Preference
-            android:key="enable_accessibility_via_adb"
-            android:title="@string/prefs_enable_accessibility_via_adb"
-            android:summary="@string/prefs_enable_accessibility_via_adb_summary" />
-
         <SwitchPreferenceCompat
             android:key="background_monitoring_enabled"
             android:title="バックグラウンド監視"
@@ -178,6 +173,11 @@
     </PreferenceCategory>
 
     <PreferenceCategory android:title="動作確認">
+
+        <Preference
+            android:key="proxy_health_check"
+            android:title="@string/prefs_proxy_health_check"
+            android:summary="@string/prefs_proxy_health_check_summary" />
 
         <Preference
             android:key="open_touch_test"

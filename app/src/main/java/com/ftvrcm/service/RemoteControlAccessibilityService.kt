@@ -7,7 +7,6 @@ import android.util.Log
 import android.view.ViewConfiguration
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
-import com.ftvrcm.adb.AdbInputClient
 import com.ftvrcm.data.SettingsStore
 import com.ftvrcm.domain.EmulationMethod
 import com.ftvrcm.domain.OperationMode
@@ -22,9 +21,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private lateinit var settings: SettingsStore
     private lateinit var cursor: CursorOverlay
     private lateinit var gestures: GestureController
-    private var adbInput: AdbInputClient? = null
-    private var adbHost: String? = null
-    private var adbPort: Int? = null
 
     private var proxyInput: ProxyInputClient? = null
     private var proxyHost: String? = null
@@ -95,10 +91,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             settings = SettingsStore(this).also { it.initializeDefaultsIfNeeded() }
             cursor = CursorOverlay(this)
             gestures = GestureController(this)
-            // Create lazily to avoid unnecessary ADB connections on startup.
-            adbInput = null
-            adbHost = null
-            adbPort = null
 
             Log.i(tag, "service connected")
 
@@ -118,32 +110,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             } catch (_: Throwable) {
                 // ignore
             }
-        }
-    }
-
-    private fun adb(): AdbInputClient? {
-        val host = settings.getAdbHost()
-        val port = settings.getAdbPort()
-
-        val current = adbInput
-        if (current != null && adbHost == host && adbPort == port) return current
-
-        try {
-            current?.close()
-        } catch (_: Throwable) {
-        }
-
-        return try {
-            AdbInputClient(this, host = host, port = port).also {
-                adbInput = it
-                adbHost = host
-                adbPort = port
-            }
-        } catch (_: Throwable) {
-            adbInput = null
-            adbHost = null
-            adbPort = null
-            null
         }
     }
 
@@ -435,10 +401,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         clearPendingTapKey()
         clearMoveRepeat()
         cursor.hide()
-        adbInput?.close()
-        adbInput = null
-        adbHost = null
-        adbPort = null
         super.onDestroy()
     }
 

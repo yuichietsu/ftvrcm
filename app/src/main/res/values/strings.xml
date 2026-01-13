@@ -23,6 +23,9 @@
     <string name="prefs_proxy_port">プロキシポート</string>
     <string name="prefs_proxy_token">プロキシトークン（任意）</string>
 
+    <string name="prefs_proxy_health_check">プロキシ疎通テスト</string>
+    <string name="prefs_proxy_health_check_summary">現在のプロキシ設定で /health を呼び出して疎通確認します</string>
+
     <string name="prefs_category_key_mapping">キー割り当て</string>
 
     <string name="prefs_mouse_key_up">上移動</string>
@@ -44,14 +47,6 @@
     <string name="prefs_status_unknown">未確認</string>
     <string name="prefs_status_accessibility_service_on">ON（有効）</string>
     <string name="prefs_status_accessibility_service_off">OFF（無効：アクセシビリティ設定で本サービスをONにしてください）</string>
-
-    <string name="prefs_enable_accessibility_via_adb">ADBでアクセシビリティを有効化</string>
-    <string name="prefs_enable_accessibility_via_adb_summary">ADB経由で必要な設定（enabled_accessibility_services / accessibility_enabled）を投入します</string>
-    <string name="prefs_enable_accessibility_via_adb_running">ADBで有効化中…</string>
-    <string name="prefs_enable_accessibility_via_adb_done">ADBで有効化しました。設定画面に戻って状態を確認してください。</string>
-    <string name="prefs_enable_accessibility_via_adb_failed">ADBでの有効化に失敗しました（ADB接続/認証/端末制限の可能性）。</string>
-    <string name="prefs_enable_accessibility_via_adb_failed_auth">ADB認証に失敗しました。端末側に「ADBデバッグを許可」ダイアログが出ていないか確認してください（このアプリは独自のADB鍵を使用します）。</string>
-    <string name="prefs_enable_accessibility_via_adb_failed_eof">ADB接続がすぐ切断されました（端末側制限の可能性）。adb_host を端末IP（例：192.168.x.x）に明示して再試行してください。ダメならPCのadbで有効化してください。</string>
 
     <string name="prefs_open_accessibility_settings">アクセシビリティ設定を開く</string>
     <string name="prefs_open_accessibility_settings_summary">常時モード切替を有効にするには本サービスをONにしてください</string>

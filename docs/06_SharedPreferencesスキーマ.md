@@ -16,8 +16,6 @@ com.ftvrcm_preferences.xml
     ├── proxy_host
     ├── proxy_port
     ├── proxy_token
-    ├── adb_host
-    ├── adb_port
     ├── mouse_key_up
     ├── mouse_key_down
     ├── mouse_key_left
@@ -144,10 +142,10 @@ com.ftvrcm_preferences.xml
 <string name="proxy_token">change-me</string>
 ```
 
-### 3.3 （レガシー）ADB接続先（adb_host / adb_port）
+### 3.3 （レガシー）アプリ内ADB直結について
 
-過去バージョンではアプリ内ADBクライアントで `adbd` に直接接続していましたが、Fire OS 8 以降ではブロックされる場合があります。
-互換性のため設定キーは残っていますが、現在の推奨は `PROXY` 方式です。
+過去バージョンではアプリ内ADBクライアントで `adbd` に直接接続する方式がありましたが、Fire OS 8 以降ではブロック/不安定になりやすいため撤去しました。
+現在は `emulation_method=PROXY`（PC上プロキシ経由）を推奨します。
 
 ### 4. キーマッピング（key_mapping）
 

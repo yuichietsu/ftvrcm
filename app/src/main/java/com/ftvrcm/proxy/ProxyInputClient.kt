@@ -43,6 +43,52 @@ class ProxyInputClient(
         )
     }
 
+    fun healthCheck(): Boolean {
+        val type = "proxy_health"
+        record(type = type, status = "DISPATCHING", detail = "GET /health")
+
+        val normalizedHost = host.trim()
+        if (normalizedHost.isEmpty()) {
+            record(type = type, status = "FAILED", detail = "proxy_host is empty")
+            return false
+        }
+
+        val url = URL("http://$normalizedHost:$port/health")
+        try {
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 2500
+                readTimeout = 2500
+                if (token.isNotBlank()) {
+                    setRequestProperty("X-Auth-Token", token)
+                }
+            }
+
+            val code = conn.responseCode
+            val body = try {
+                val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                stream?.let {
+                    BufferedReader(InputStreamReader(it, Charsets.UTF_8)).use { r -> r.readText() }
+                } ?: ""
+            } catch (_: Throwable) {
+                ""
+            }
+
+            val ok = code in 200..299
+            Log.i(tag, "proxy /health http=$code")
+            record(
+                type = type,
+                status = if (ok) "COMPLETED" else "FAILED",
+                detail = "http=$code url=$url\n${body.take(800)}",
+            )
+            return ok
+        } catch (t: Throwable) {
+            Log.w(tag, "proxy /health failed (${t.javaClass.simpleName}: ${t.message})")
+            record(type = type, status = "FAILED", detail = "${t.javaClass.simpleName}: ${t.message}")
+            return false
+        }
+    }
+
     private fun record(type: String, status: String, detail: String) {
         try {
             context.getSharedPreferences(SettingsKeys.PREFS_NAME, Context.MODE_PRIVATE)

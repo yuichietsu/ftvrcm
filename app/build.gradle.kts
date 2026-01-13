@@ -42,7 +42,4 @@ dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.preference:preference-ktx:1.2.1")
-
-    // ADB client (for ADB-based touch emulation)
-    implementation("dev.mobile:dadb:1.2.10")
 }
