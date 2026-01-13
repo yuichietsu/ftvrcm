@@ -21,6 +21,31 @@ export PORT="8787"
 node server.js
 ```
 
+### デバッグログ
+
+起動時ログに加えて、リクエスト/adb実行をログに出したい場合は以下を指定します。
+
+- `--debug`（または `-d`）: リクエストの概要（メソッド/パス/ステータス/処理時間）を出力
+- `--log-body`: 受信したJSONボディを出力（`X-Auth-Token` は常に `<redacted>`）
+- `--log-adb`: 実行した `adb ...` コマンドと stdout/stderr を出力
+
+環境変数でも指定できます。
+
+- `PROXY_DEBUG=1`
+- `PROXY_LOG_BODY=1`
+- `PROXY_LOG_ADB=1`
+
+例：
+
+```bash
+cd proxy-server
+export FIRETV_SERIAL="192.168.11.12:5555"
+export PROXY_TOKEN="change-me"
+export HOST="0.0.0.0"
+export PORT="8787"
+node server.js --debug --log-adb
+```
+
 ## API
 
 - `GET /health`

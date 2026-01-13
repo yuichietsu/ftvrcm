@@ -4,6 +4,23 @@ import { spawn } from 'node:child_process';
 const PORT = parseInt(process.env.PORT ?? '8787', 10);
 const HOST = process.env.HOST ?? '0.0.0.0';
 
+function hasFlag(name, shortName) {
+  const argv = process.argv.slice(2);
+  if (argv.includes(name)) return true;
+  if (shortName && argv.includes(shortName)) return true;
+  return false;
+}
+
+function envBool(name) {
+  const v = process.env[name];
+  if (v == null) return false;
+  return v === '1' || v.toLowerCase() === 'true' || v.toLowerCase() === 'yes' || v.toLowerCase() === 'on';
+}
+
+const DEBUG = hasFlag('--debug', '-d') || envBool('PROXY_DEBUG');
+const LOG_BODY = hasFlag('--log-body') || envBool('PROXY_LOG_BODY');
+const LOG_ADB = hasFlag('--log-adb') || envBool('PROXY_LOG_ADB');
+
 // Optional shared secret. If set, clients must send `X-Auth-Token: <token>`.
 const PROXY_TOKEN = process.env.PROXY_TOKEN ?? '';
 
@@ -48,6 +65,21 @@ function requireAuth(req) {
   if (!PROXY_TOKEN) return true;
   const token = req.headers['x-auth-token'];
   return typeof token === 'string' && token === PROXY_TOKEN;
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function safeHeadersForLog(req) {
+  const headers = { ...req.headers };
+  if (headers['x-auth-token']) headers['x-auth-token'] = '<redacted>';
+  return headers;
+}
+
+function log(...args) {
+  // eslint-disable-next-line no-console
+  console.log(...args);
 }
 
 function runAdb(serial, args) {
@@ -95,35 +127,67 @@ function getSerial(body) {
 }
 
 const server = http.createServer(async (req, res) => {
+  const requestId = Math.random().toString(16).slice(2, 10);
+  const startedAt = Date.now();
+  const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+
   try {
     if (!requireAuth(req)) {
+      if (DEBUG) {
+        log(`${nowIso()} [${requestId}] 401 unauthorized ${req.method} ${url.pathname} from=${req.socket.remoteAddress}`);
+      }
       return json(res, 401, { ok: false, error: 'unauthorized' });
     }
 
-    const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+    const respond = (statusCode, body) => {
+      if (DEBUG) {
+        const ms = Date.now() - startedAt;
+        const extra =
+          body && typeof body === 'object' && 'exitCode' in body
+            ? ` exitCode=${body.exitCode} ok=${body.ok}`
+            : '';
+        log(`${nowIso()} [${requestId}] ${statusCode} ${req.method} ${url.pathname} ${ms}ms from=${req.socket.remoteAddress}${extra}`);
+      }
+      return json(res, statusCode, body);
+    };
 
     if (req.method === 'GET' && url.pathname === '/health') {
-      return json(res, 200, { ok: true });
+      if (DEBUG) {
+        log(`${nowIso()} [${requestId}] health from=${req.socket.remoteAddress}`);
+      }
+      return respond(200, { ok: true });
     }
 
     if (req.method !== 'POST') {
-      return json(res, 405, { ok: false, error: 'method not allowed' });
+      return respond(405, { ok: false, error: 'method not allowed' });
     }
 
     const body = await readJson(req);
+    if (DEBUG) {
+      log(`${nowIso()} [${requestId}] request headers=${JSON.stringify(safeHeadersForLog(req))}`);
+      if (LOG_BODY) {
+        log(`${nowIso()} [${requestId}] request body=${JSON.stringify(body)}`);
+      }
+    }
+
     const serial = getSerial(body);
     if (!serial) {
-      return json(res, 400, { ok: false, error: 'missing serial (set FIRETV_SERIAL or pass serial in body)' });
+      return respond(400, { ok: false, error: 'missing serial (set FIRETV_SERIAL or pass serial in body)' });
     }
 
     if (url.pathname === '/tap') {
       const x = Number(body.x);
       const y = Number(body.y);
       if (!Number.isFinite(x) || !Number.isFinite(y)) {
-        return json(res, 400, { ok: false, error: 'invalid x/y' });
+        return respond(400, { ok: false, error: 'invalid x/y' });
       }
       const result = await runAdb(serial, ['shell', 'input', 'tap', String(Math.round(x)), String(Math.round(y))]);
-      return json(res, result.ok ? 200 : 500, result);
+      if (DEBUG && LOG_ADB) {
+        log(`${nowIso()} [${requestId}] adb ${result.command}`);
+        if (result.stderr) log(`${nowIso()} [${requestId}] adb stderr=${JSON.stringify(result.stderr)}`);
+        if (result.stdout) log(`${nowIso()} [${requestId}] adb stdout=${JSON.stringify(result.stdout)}`);
+      }
+      return respond(result.ok ? 200 : 500, result);
     }
 
     if (url.pathname === '/swipe') {
@@ -134,7 +198,7 @@ const server = http.createServer(async (req, res) => {
       const durationMs = Number.isFinite(Number(body.durationMs)) ? Math.max(0, Math.round(Number(body.durationMs))) : 200;
 
       if (![x1, y1, x2, y2].every(Number.isFinite)) {
-        return json(res, 400, { ok: false, error: 'invalid x1/y1/x2/y2' });
+        return respond(400, { ok: false, error: 'invalid x1/y1/x2/y2' });
       }
 
       const result = await runAdb(serial, [
@@ -147,7 +211,12 @@ const server = http.createServer(async (req, res) => {
         String(Math.round(y2)),
         String(durationMs),
       ]);
-      return json(res, result.ok ? 200 : 500, result);
+      if (DEBUG && LOG_ADB) {
+        log(`${nowIso()} [${requestId}] adb ${result.command}`);
+        if (result.stderr) log(`${nowIso()} [${requestId}] adb stderr=${JSON.stringify(result.stderr)}`);
+        if (result.stdout) log(`${nowIso()} [${requestId}] adb stdout=${JSON.stringify(result.stdout)}`);
+      }
+      return respond(result.ok ? 200 : 500, result);
     }
 
     if (url.pathname === '/longPress') {
@@ -156,7 +225,7 @@ const server = http.createServer(async (req, res) => {
       const durationMs = Number.isFinite(Number(body.durationMs)) ? Math.max(0, Math.round(Number(body.durationMs))) : 600;
 
       if (!Number.isFinite(x) || !Number.isFinite(y)) {
-        return json(res, 400, { ok: false, error: 'invalid x/y' });
+        return respond(400, { ok: false, error: 'invalid x/y' });
       }
 
       // long press via swipe-to-self
@@ -170,22 +239,33 @@ const server = http.createServer(async (req, res) => {
         String(Math.round(y)),
         String(durationMs),
       ]);
-      return json(res, result.ok ? 200 : 500, result);
+      if (DEBUG && LOG_ADB) {
+        log(`${nowIso()} [${requestId}] adb ${result.command}`);
+        if (result.stderr) log(`${nowIso()} [${requestId}] adb stderr=${JSON.stringify(result.stderr)}`);
+        if (result.stdout) log(`${nowIso()} [${requestId}] adb stdout=${JSON.stringify(result.stdout)}`);
+      }
+      return respond(result.ok ? 200 : 500, result);
     }
 
-    return json(res, 404, { ok: false, error: 'not found' });
+    return respond(404, { ok: false, error: 'not found' });
   } catch (e) {
-    return json(res, 500, { ok: false, error: String(e?.message ?? e) });
+    const message = String(e?.message ?? e);
+    if (DEBUG) {
+      log(`${nowIso()} [${requestId}] 500 error=${JSON.stringify(message)}`);
+    }
+    return json(res, 500, { ok: false, error: message });
   }
 });
 
 server.listen(PORT, HOST, () => {
-  // eslint-disable-next-line no-console
-  console.log(`ftvrcm-proxy-server listening on http://${HOST}:${PORT}`);
+  log(`ftvrcm-proxy-server listening on http://${HOST}:${PORT}`);
+  if (DEBUG) {
+    log(`debug enabled: LOG_BODY=${LOG_BODY} LOG_ADB=${LOG_ADB}`);
+  }
   if (!DEFAULT_SERIAL) {
-    console.log('WARN: FIRETV_SERIAL is not set; clients must pass serial in request body.');
+    log('WARN: FIRETV_SERIAL is not set; clients must pass serial in request body.');
   }
   if (!PROXY_TOKEN) {
-    console.log('WARN: PROXY_TOKEN is not set; requests are not authenticated.');
+    log('WARN: PROXY_TOKEN is not set; requests are not authenticated.');
   }
 });
