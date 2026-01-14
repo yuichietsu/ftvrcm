@@ -13,7 +13,6 @@ import android.os.SystemClock
 import android.view.ViewConfiguration
 import android.content.SharedPreferences
 import com.ftvrcm.data.SettingsKeys
-import android.app.AlertDialog
 import android.widget.FrameLayout
 import kotlin.math.max
 
@@ -21,8 +20,6 @@ class TouchTestActivity : AppCompatActivity() {
 
     private lateinit var lastEvent: TextView
     private lateinit var lastGesture: TextView
-
-    private var lastGestureFullText: String = ""
 
     private var gestureListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
 
@@ -53,22 +50,10 @@ class TouchTestActivity : AppCompatActivity() {
             }
 
             // Keep 2-line fixed height; overflow is ellipsized by TextView.
-            lastGestureFullText = text
             lastGesture.text = text
         }
 
         refreshLastGesture()
-
-        lastGesture.setOnClickListener {
-            try {
-                AlertDialog.Builder(this)
-                    .setTitle("最終ジェスチャ")
-                    .setMessage(lastGestureFullText.ifBlank { lastGesture.text?.toString().orEmpty() })
-                    .setPositiveButton("OK", null)
-                    .show()
-            } catch (_: Throwable) {
-            }
-        }
 
         // Ensure the swipe test area overflows both horizontally and vertically
         // even on large displays (e.g., 4K), so vertical scrolling is actually testable.
@@ -107,9 +92,9 @@ class TouchTestActivity : AppCompatActivity() {
         fun attachButtonHandlers(button: Button, name: String) {
             button.isAllCaps = false
             button.isLongClickable = true
-            button.setOnClickListener { setEvent("$name: クリック") }
+            button.setOnClickListener { setEvent("$name: タップ") }
             button.setOnLongClickListener {
-                setEvent("$name: ロングクリック")
+                setEvent("$name: 長押し")
                 true
             }
         }
@@ -129,10 +114,11 @@ class TouchTestActivity : AppCompatActivity() {
 
         var pendingClickAtMs = 0L
         var pendingClickPos = ListView.INVALID_POSITION
+        var suppressNextItemClick = false
         val commitSingleClick = Runnable {
             val pos = pendingClickPos
             if (pos != ListView.INVALID_POSITION) {
-                setEvent("リスト: クリック (${items[pos]})")
+                setEvent("リスト: タップ (${items[pos]})")
             }
             pendingClickAtMs = 0L
             pendingClickPos = ListView.INVALID_POSITION
@@ -151,6 +137,14 @@ class TouchTestActivity : AppCompatActivity() {
 
         list.setOnItemClickListener { _, _, position, _ ->
             list.setItemChecked(position, true)
+
+            // When MotionEvent-based double tap is detected, ListView may still emit
+            // an item click afterward. Suppress that click to avoid overwriting the double tap event.
+            if (suppressNextItemClick) {
+                suppressNextItemClick = false
+                return@setOnItemClickListener
+            }
+
             val now = SystemClock.uptimeMillis()
 
             // If injection falls back to ACTION_CLICK, MotionEvent-based double tap detection may not run.
@@ -168,7 +162,7 @@ class TouchTestActivity : AppCompatActivity() {
         list.setOnItemLongClickListener { _, _, position, _ ->
             list.setItemChecked(position, true)
             cancelPendingSingleClick()
-            setEvent("リスト: ロングクリック (${items[position]})")
+            setEvent("リスト: 長押し (${items[position]})")
             true
         }
 
@@ -177,13 +171,20 @@ class TouchTestActivity : AppCompatActivity() {
             object : GestureDetector.SimpleOnGestureListener() {
                 override fun onDown(e: MotionEvent): Boolean = true
 
-                override fun onDoubleTap(e: MotionEvent): Boolean {
+                // Confirm double tap on ACTION_UP (closer to how item click is emitted) to avoid
+                // the double tap event being overwritten by a later item click.
+                override fun onDoubleTapEvent(e: MotionEvent): Boolean {
+                    if (e.action != MotionEvent.ACTION_UP) return false
+
                     val pos = list.pointToPosition(e.x.toInt(), e.y.toInt())
                     if (pos != ListView.INVALID_POSITION) {
                         list.setItemChecked(pos, true)
+                        suppressNextItemClick = true
                         commitDoubleTap(pos)
                         return true
                     }
+
+                    suppressNextItemClick = true
                     cancelPendingSingleClick()
                     setEvent("リスト: ダブルタップ")
                     return true

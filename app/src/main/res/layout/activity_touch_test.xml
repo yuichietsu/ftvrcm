@@ -37,8 +37,6 @@
         android:includeFontPadding="false"
         android:maxLines="2"
         android:minLines="2"
-        android:clickable="true"
-        android:focusable="true"
         android:text="最終ジェスチャ: -" />
 
     <TextView
@@ -51,7 +49,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="検出: クリック / ロングクリック"
+        android:text="検出: タップ / 長押し"
         android:textColor="#B0B0B0"
         android:textSize="12sp" />
 
@@ -107,7 +105,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="検出: クリック / ダブルタップ / ロングクリック"
+                android:text="検出: タップ / ダブルタップ / 長押し"
                 android:textColor="#B0B0B0"
                 android:textSize="12sp" />
 
