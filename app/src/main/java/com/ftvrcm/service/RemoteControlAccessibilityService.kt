@@ -995,6 +995,10 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                     PinchAction.OUT -> gestures.pinchOut(x1Start, y1Start, x1End, y1End, x2Start, y2Start, x2End, y2End)
                 }
 
+                if (settings.isTouchVisualFeedbackEnabled()) {
+                    cursor.showPinchFeedback(isZoomOut = action == PinchAction.OUT)
+                }
+
                 Log.i(
                     tag,
                     "pinch via accessibility action=$action center=(${c.x},${c.y}) distance=$distance (${distancePercent}%)",
@@ -1032,6 +1036,10 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 )
 
                 if (!accepted) return
+
+                if (settings.isTouchVisualFeedbackEnabled()) {
+                    cursor.showPinchFeedback(isZoomOut = action == PinchAction.OUT)
+                }
 
                 Log.i(
                     tag,

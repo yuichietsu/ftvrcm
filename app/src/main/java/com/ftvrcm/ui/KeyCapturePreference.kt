@@ -33,26 +33,7 @@ class KeyCapturePreference @JvmOverloads constructor(
 
     override fun onClick() {
         super.onClick()
-        showActionDialog()
-    }
-
-    private fun showActionDialog() {
-        AlertDialog.Builder(context)
-            .setTitle(title)
-            .setMessage(R.string.prefs_key_capture_action_message)
-            .setPositiveButton(R.string.prefs_key_capture_assign) { _, _ ->
-                showKeyCaptureDialog()
-            }
-            .setNeutralButton(R.string.prefs_key_capture_clear) { _, _ ->
-                val storedValue = "0"
-                if (callChangeListener(storedValue)) {
-                    persistString(storedValue)
-                    currentValue = storedValue
-                    updateSummary(storedValue)
-                }
-            }
-            .setNegativeButton(R.string.prefs_common_cancel, null)
-            .show()
+        showKeyCaptureDialog()
     }
 
     private fun showKeyCaptureDialog() {
@@ -70,12 +51,38 @@ class KeyCapturePreference @JvmOverloads constructor(
             .setNegativeButton(R.string.prefs_common_cancel) { _, _ -> }
             .create()
 
+        val timeoutMs = 5000L
+        val doubleTapTimeoutMs = android.view.ViewConfiguration.getDoubleTapTimeout().toLong()
+        var lastBackAtMs = 0L
+
+        val timeoutRunnable = Runnable {
+            dialog.dismiss()
+        }
+
         dialog.setOnShowListener {
             messageView.requestFocus()
+            messageView.postDelayed(timeoutRunnable, timeoutMs)
         }
 
         dialog.setOnKeyListener { _, keyCode, event ->
             if (event.action != KeyEvent.ACTION_DOWN) return@setOnKeyListener true
+
+            if (keyCode == KeyEvent.KEYCODE_BACK) {
+                val now = android.os.SystemClock.uptimeMillis()
+                if (now - lastBackAtMs <= doubleTapTimeoutMs) {
+                    messageView.removeCallbacks(timeoutRunnable)
+                    val storedValue = "0"
+                    if (callChangeListener(storedValue)) {
+                        persistString(storedValue)
+                        currentValue = storedValue
+                        updateSummary(storedValue)
+                    }
+                    dialog.dismiss()
+                } else {
+                    lastBackAtMs = now
+                }
+                return@setOnKeyListener true
+            }
 
             val storedValue = if (keyCode == KeyEvent.KEYCODE_UNKNOWN && event.scanCode > 0) {
                 (-event.scanCode).toString()
@@ -88,11 +95,13 @@ class KeyCapturePreference @JvmOverloads constructor(
                 currentValue = storedValue
                 updateSummary(storedValue)
             }
+            messageView.removeCallbacks(timeoutRunnable)
             dialog.dismiss()
             true
         }
 
         dialog.setCanceledOnTouchOutside(false)
+        dialog.setCancelable(false)
         dialog.show()
     }
 

@@ -12,9 +12,8 @@
     <string name="prefs_toggle_key_warning_back_longpress">注意：Fire TVではBACK長押しがシステム動作と競合し、アクセシビリティが無効化される場合があります。別のキー（例：MENU）を推奨します。</string>
     <string name="prefs_key_capture_summary">現在: %1$s
 クリックしてキーを割り当て</string>
-    <string name="prefs_key_capture_action_message">設定方法を選択してください</string>
-    <string name="prefs_key_capture_assign">キーを割り当てる</string>
-    <string name="prefs_key_capture_dialog_message">割り当てたいリモコンのキーを押してください</string>
+    <string name="prefs_key_capture_dialog_message">割り当てたいリモコンのキーを押してください
+BACKをダブルタップで割り当てなし、5秒でキャンセル</string>
     <string name="prefs_key_capture_clear">割り当てなし</string>
     <string name="prefs_key_capture_unassigned">未割り当て</string>
 

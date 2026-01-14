@@ -119,6 +119,11 @@ class CursorOverlay(private val context: Context) {
         feedbackView?.addSwipeTrail(x1 = x1, y1 = y1, x2 = x2, y2 = y2)
     }
 
+    fun showPinchFeedback(isZoomOut: Boolean) {
+        val c = center()
+        feedbackView?.addPinchEffect(c.x, c.y, isZoomOut = isZoomOut)
+    }
+
     fun moveBy(dx: Int, dy: Int) {
         val p = params ?: return
         val displaySize = getDisplaySize()
@@ -399,6 +404,42 @@ class CursorOverlay(private val context: Context) {
             }
         }
 
+        private inner class PinchEffect(
+            private val cx: Float,
+            private val cy: Float,
+            private val isZoomOut: Boolean,
+            override val startedAtMs: Long,
+            override val durationMs: Long,
+        ) : Effect {
+            override fun draw(canvas: Canvas, nowMs: Long) {
+                val t = ((nowMs - startedAtMs).toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+
+                val fade = when {
+                    t < 0.7f -> 1f
+                    else -> (1f - ((t - 0.7f) / 0.3f)).coerceIn(0f, 1f)
+                }
+
+                val startOffset = dp(18f)
+                val endOffset = dp(64f)
+                val offset = if (isZoomOut) {
+                    startOffset + (endOffset - startOffset) * t
+                } else {
+                    endOffset - (endOffset - startOffset) * t
+                }
+
+                val alpha = (fade * 255).toInt().coerceIn(0, 255)
+                pinchOuterPaint.alpha = alpha
+                pinchInnerPaint.alpha = alpha
+
+                val leftX = cx - offset
+                val rightX = cx + offset
+                canvas.drawCircle(leftX, cy, dp(7f), pinchOuterPaint)
+                canvas.drawCircle(leftX, cy, dp(4f), pinchInnerPaint)
+                canvas.drawCircle(rightX, cy, dp(7f), pinchOuterPaint)
+                canvas.drawCircle(rightX, cy, dp(4f), pinchInnerPaint)
+            }
+        }
+
         private val effects = ArrayDeque<Effect>()
 
         private val traceOuterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -430,6 +471,16 @@ class CursorOverlay(private val context: Context) {
             strokeWidth = dp(2.2f)
         }
 
+        private val pinchOuterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            color = 0xFFFFFFFF.toInt()
+        }
+
+        private val pinchInnerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            color = 0xFF000000.toInt()
+        }
+
         fun addSwipeTrail(x1: Int, y1: Int, x2: Int, y2: Int) {
             val now = SystemClock.uptimeMillis()
             effects.addLast(
@@ -440,6 +491,20 @@ class CursorOverlay(private val context: Context) {
                     y2 = y2.toFloat(),
                     startedAtMs = now,
                     durationMs = 360L,
+                ),
+            )
+            invalidate()
+        }
+
+        fun addPinchEffect(centerX: Int, centerY: Int, isZoomOut: Boolean) {
+            val now = SystemClock.uptimeMillis()
+            effects.addLast(
+                PinchEffect(
+                    cx = centerX.toFloat(),
+                    cy = centerY.toFloat(),
+                    isZoomOut = isZoomOut,
+                    startedAtMs = now,
+                    durationMs = 420L,
                 ),
             )
             invalidate()
