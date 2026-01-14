@@ -12,33 +12,27 @@ class SwipePatternView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
 ) : View(context, attrs) {
 
-    private val basePaintA = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF1C1C1C.toInt() }
-    private val basePaintB = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF5A5A5A.toInt() }
+    private val basePaintA = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF1E1E1E.toInt() }
+    private val basePaintB = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF2A2A2A.toInt() }
 
     private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        color = 0x99FFFFFF.toInt()
-        strokeWidth = dp(1.5f)
+        color = 0x33FFFFFF.toInt()
+        strokeWidth = dp(1.2f)
     }
 
     private val stripePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        color = 0xCC00B0FF.toInt()
-        strokeWidth = dp(6f)
+        color = 0x885FA7B2.toInt() // muted teal
+        strokeWidth = dp(5f)
         strokeCap = Paint.Cap.ROUND
     }
 
     private val stripeHighlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        color = 0xEEFFFFFF.toInt()
-        strokeWidth = dp(2.5f)
+        color = 0x44FFFFFF.toInt()
+        strokeWidth = dp(2.2f)
         strokeCap = Paint.Cap.ROUND
-    }
-
-    private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = 0xFFFFEB3B.toInt()
-        textSize = dp(14f)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -95,7 +89,6 @@ class SwipePatternView @JvmOverloads constructor(
             offset += step
         }
 
-        canvas.drawText("SWIPE", dp(10f), dp(20f), labelPaint)
     }
 
     private fun dp(value: Float): Float =

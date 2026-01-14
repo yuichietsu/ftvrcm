@@ -30,26 +30,36 @@
     <TextView
         android:id="@+id/lastGesture"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="52dp"
         android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
         android:ellipsize="end"
+        android:includeFontPadding="false"
         android:maxLines="2"
         android:minLines="2"
+        android:clickable="true"
+        android:focusable="true"
         android:text="最終ジェスチャ: -" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="ボタン"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="検出: クリック / ロングクリック"
+        android:textColor="#B0B0B0"
+        android:textSize="12sp" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="6dp"
         android:orientation="horizontal">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:layout_marginEnd="8dp"
-            android:text="ボタン"
-            android:textStyle="bold" />
 
         <Button
             android:id="@+id/btnA"
@@ -94,6 +104,13 @@
                 android:text="リスト"
                 android:textStyle="bold" />
 
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="検出: クリック / ダブルタップ / ロングクリック"
+                android:textColor="#B0B0B0"
+                android:textSize="12sp" />
+
             <ListView
                 android:id="@+id/list"
                 android:layout_width="match_parent"
@@ -115,8 +132,15 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="スワイプ確認"
+                android:text="スワイプ確認（上下左右）"
                 android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="確認: 縦/横スクロールが成立するか"
+                android:textColor="#B0B0B0"
+                android:textSize="12sp" />
 
             <HorizontalScrollView
                 android:id="@+id/swipeTestHScroll"
@@ -135,14 +159,15 @@
                     android:scrollbars="vertical">
 
                     <FrameLayout
-                        android:layout_width="1200dp"
-                        android:layout_height="1200dp"
+                        android:id="@+id/swipePatternContainer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
                         android:background="#222222">
 
                         <com.ftvrcm.ui.SwipePatternView
                             android:id="@+id/swipePattern"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent" />
+                            android:layout_width="1600dp"
+                            android:layout_height="1600dp" />
 
                     </FrameLayout>
                 </ScrollView>

@@ -84,15 +84,15 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             }
 
             EmulationMethod.PROXY -> {
-                dispatchProxyInput(
+                val accepted = dispatchProxyInput(
                     op = "longPress",
                     block = { proxy()?.longPress(c.x, c.y) == true },
-                    onCompletedOnMainThread = { ok ->
-                        if (ok && settings.isTouchVisualFeedbackEnabled()) {
-                            cursor.showTapFeedback(isLongPress = true)
-                        }
-                    },
+                    onCompletedOnMainThread = { _ -> },
                 )
+
+                if (accepted && settings.isTouchVisualFeedbackEnabled()) {
+                    cursor.showTapFeedback(isLongPress = true)
+                }
             }
         }
     }
@@ -361,7 +361,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                     val c = cursor.center()
 
                     // For accessibility injection, show feedback immediately for responsiveness.
-                    // For ADB proxy, show feedback when the proxy responds (to reduce visual/time mismatch).
+                    // For ADB proxy, show feedback when the request is dispatched (don't wait for ADB completion).
                     if (settings.getEmulationMethod() == EmulationMethod.ACCESSIBILITY_SERVICE && settings.isTouchVisualFeedbackEnabled()) {
                         cursor.showTapFeedback(isLongPress = false)
                     }
@@ -476,11 +476,11 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         op: String,
         block: () -> Boolean,
         onCompletedOnMainThread: (ok: Boolean) -> Unit,
-    ) {
+    ): Boolean {
         // Avoid request queues: allow only one in-flight proxy input; drop subsequent inputs.
         if (!proxyInputInFlight.compareAndSet(false, true)) {
             Log.i(tag, "proxy input dropped (busy) op=$op")
-            return
+            return false
         }
 
         proxyExecutor.execute {
@@ -500,6 +500,8 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 }
             }
         }
+
+        return true
     }
 
     private fun toggleMode() {
@@ -639,15 +641,15 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
             EmulationMethod.PROXY -> {
                 Log.i(tag, "tap via proxy at (${x},${y})")
-                dispatchProxyInput(
+                val accepted = dispatchProxyInput(
                     op = "tap",
                     block = { proxy()?.tap(x, y) == true },
-                    onCompletedOnMainThread = { ok ->
-                        if (ok && settings.isTouchVisualFeedbackEnabled()) {
-                            cursor.showTapFeedback(isLongPress = false)
-                        }
-                    },
+                    onCompletedOnMainThread = { _ -> },
                 )
+
+                if (accepted && settings.isTouchVisualFeedbackEnabled()) {
+                    cursor.showTapFeedback(isLongPress = false)
+                }
             }
         }
     }
@@ -661,15 +663,18 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
             EmulationMethod.PROXY -> {
                 Log.i(tag, "doubleTap via proxy at (${x},${y})")
-                dispatchProxyInput(
+                val accepted = dispatchProxyInput(
                     op = "doubleTap",
                     block = { proxy()?.doubleTap(x, y) == true },
-                    onCompletedOnMainThread = { ok ->
-                        if (ok && settings.isTouchVisualFeedbackEnabled()) {
-                            cursor.showTapFeedback(isLongPress = false)
-                        }
-                    },
+                    onCompletedOnMainThread = { _ -> },
                 )
+
+                if (accepted && settings.isTouchVisualFeedbackEnabled()) {
+                    cursor.showTapFeedback(isLongPress = false)
+                    mainHandler.postDelayed({
+                        cursor.showTapFeedback(isLongPress = false)
+                    }, 90L)
+                }
             }
         }
     }
@@ -744,13 +749,12 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                         val y1 = clampY(c.y)
                         val x2 = clampX(c.x)
                         val y2 = clampY(c.y - distance)
-                        dispatchProxyInput(
+                        val accepted = dispatchProxyInput(
                             op = "swipe_up",
                             block = { proxy()?.swipe(x1, y1, x2, y2) == true },
-                            onCompletedOnMainThread = { ok ->
-                                if (ok && visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
-                            },
+                            onCompletedOnMainThread = { _ -> },
                         )
+                        if (accepted && visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
                     }
 
                     mouseKeyScrollDown -> {
@@ -758,13 +762,12 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                         val y1 = clampY(c.y)
                         val x2 = clampX(c.x)
                         val y2 = clampY(c.y + distance)
-                        dispatchProxyInput(
+                        val accepted = dispatchProxyInput(
                             op = "swipe_down",
                             block = { proxy()?.swipe(x1, y1, x2, y2) == true },
-                            onCompletedOnMainThread = { ok ->
-                                if (ok && visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
-                            },
+                            onCompletedOnMainThread = { _ -> },
                         )
+                        if (accepted && visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
                     }
 
                     mouseKeyScrollLeft -> {
@@ -772,13 +775,12 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                         val y1 = clampY(c.y)
                         val x2 = clampX(c.x - distance)
                         val y2 = clampY(c.y)
-                        dispatchProxyInput(
+                        val accepted = dispatchProxyInput(
                             op = "swipe_left",
                             block = { proxy()?.swipe(x1, y1, x2, y2) == true },
-                            onCompletedOnMainThread = { ok ->
-                                if (ok && visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
-                            },
+                            onCompletedOnMainThread = { _ -> },
                         )
+                        if (accepted && visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
                     }
 
                     mouseKeyScrollRight -> {
@@ -786,13 +788,12 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                         val y1 = clampY(c.y)
                         val x2 = clampX(c.x + distance)
                         val y2 = clampY(c.y)
-                        dispatchProxyInput(
+                        val accepted = dispatchProxyInput(
                             op = "swipe_right",
                             block = { proxy()?.swipe(x1, y1, x2, y2) == true },
-                            onCompletedOnMainThread = { ok ->
-                                if (ok && visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
-                            },
+                            onCompletedOnMainThread = { _ -> },
                         )
+                        if (accepted && visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
                     }
                 }
 

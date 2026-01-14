@@ -13,11 +13,16 @@ import android.os.SystemClock
 import android.view.ViewConfiguration
 import android.content.SharedPreferences
 import com.ftvrcm.data.SettingsKeys
+import android.app.AlertDialog
+import android.widget.FrameLayout
+import kotlin.math.max
 
 class TouchTestActivity : AppCompatActivity() {
 
     private lateinit var lastEvent: TextView
     private lateinit var lastGesture: TextView
+
+    private var lastGestureFullText: String = ""
 
     private var gestureListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
 
@@ -48,10 +53,42 @@ class TouchTestActivity : AppCompatActivity() {
             }
 
             // Keep 2-line fixed height; overflow is ellipsized by TextView.
+            lastGestureFullText = text
             lastGesture.text = text
         }
 
         refreshLastGesture()
+
+        lastGesture.setOnClickListener {
+            try {
+                AlertDialog.Builder(this)
+                    .setTitle("最終ジェスチャ")
+                    .setMessage(lastGestureFullText.ifBlank { lastGesture.text?.toString().orEmpty() })
+                    .setPositiveButton("OK", null)
+                    .show()
+            } catch (_: Throwable) {
+            }
+        }
+
+        // Ensure the swipe test area overflows both horizontally and vertically
+        // even on large displays (e.g., 4K), so vertical scrolling is actually testable.
+        try {
+            val container = findViewById<FrameLayout>(R.id.swipePatternContainer)
+            val swipePattern = findViewById<SwipePatternView>(R.id.swipePattern)
+            val dm = resources.displayMetrics
+            val extra = (dm.density * 480f).toInt().coerceAtLeast(320)
+            val target = max(dm.widthPixels, dm.heightPixels) + extra
+
+            container.layoutParams = container.layoutParams.apply {
+                width = target
+                height = target
+            }
+            swipePattern.layoutParams = swipePattern.layoutParams.apply {
+                width = target
+                height = target
+            }
+        } catch (_: Throwable) {
+        }
 
         val prefs = getSharedPreferences(SettingsKeys.PREFS_NAME, MODE_PRIVATE)
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
