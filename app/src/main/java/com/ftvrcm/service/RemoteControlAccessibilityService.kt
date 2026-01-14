@@ -593,19 +593,19 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             EmulationMethod.ACCESSIBILITY_SERVICE -> {
                 when (keyCode) {
                     mouseKeyScrollUp -> {
-                        if (visualFeedback) cursor.showScrollArrow(CursorOverlay.Direction.UP, c.x, c.y)
+                        if (visualFeedback) cursor.showScrollArrow(CursorOverlay.Direction.UP)
                         gestures.scrollUp(c.x, c.y)
                     }
                     mouseKeyScrollDown -> {
-                        if (visualFeedback) cursor.showScrollArrow(CursorOverlay.Direction.DOWN, c.x, c.y)
+                        if (visualFeedback) cursor.showScrollArrow(CursorOverlay.Direction.DOWN)
                         gestures.scrollDown(c.x, c.y)
                     }
                     mouseKeyScrollLeft -> {
-                        if (visualFeedback) cursor.showScrollArrow(CursorOverlay.Direction.LEFT, c.x, c.y)
+                        if (visualFeedback) cursor.showScrollArrow(CursorOverlay.Direction.LEFT)
                         gestures.scrollLeft(c.x, c.y)
                     }
                     mouseKeyScrollRight -> {
-                        if (visualFeedback) cursor.showScrollArrow(CursorOverlay.Direction.RIGHT, c.x, c.y)
+                        if (visualFeedback) cursor.showScrollArrow(CursorOverlay.Direction.RIGHT)
                         gestures.scrollRight(c.x, c.y)
                     }
                 }
