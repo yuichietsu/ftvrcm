@@ -82,8 +82,11 @@ node server.js --debug --log-adb
 
 - `GET /health`
 - `POST /tap` `{ x, y, serial? }`
+- `POST /doubleTap` `{ x, y, serial? }`
 - `POST /swipe` `{ x1, y1, x2, y2, durationMs?, serial? }`
 - `POST /longPress` `{ x, y, durationMs?, serial? }`
+
+入力系（`/tap` `/doubleTap` `/swipe` `/longPress`）は同時に1リクエストのみ処理します。処理中に新しい入力が来た場合は `409 busy` を返します（キューは作りません）。
 
 認証（任意）：`PROXY_TOKEN` を設定した場合、`X-Auth-Token` ヘッダが必要です。
 

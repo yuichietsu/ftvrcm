@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import android.view.ViewConfiguration
 import android.view.KeyEvent
@@ -17,6 +18,7 @@ import com.ftvrcm.mouse.GestureController
 import com.ftvrcm.proxy.ProxyInputClient
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 class RemoteControlAccessibilityService : AccessibilityService() {
 
@@ -39,6 +41,16 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private var tapKeyIsDown: Boolean = false
     private var tapKeyLongPressTriggered: Boolean = false
 
+    private var pendingTapAtMs: Long = 0L
+    private var pendingTapX: Int = 0
+    private var pendingTapY: Int = 0
+    private val commitSingleTapRunnable = Runnable {
+        val x = pendingTapX
+        val y = pendingTapY
+        pendingTapAtMs = 0L
+        dispatchTap(x, y)
+    }
+
     private var scrollSelectKeyIsDown: Boolean = false
     private var scrollSelectKeyCode: Int? = null
     private var scrollSelectKeyLongPressTriggered: Boolean = false
@@ -46,10 +58,15 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private var isDpadMode: Boolean = false
 
     private val proxyExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val proxyInputInFlight = AtomicBoolean(false)
 
     private var enterMouseModeInProgress: Boolean = false
 
     private val tapKeyLongPressRunnable = Runnable {
+        // If long-press was recognized, it should not later become a single-tap.
+        mainHandler.removeCallbacks(commitSingleTapRunnable)
+        pendingTapAtMs = 0L
+
         if (mode != OperationMode.MOUSE) return@Runnable
         if (!tapKeyIsDown) return@Runnable
         if (tapKeyLongPressTriggered) return@Runnable
@@ -58,13 +75,25 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         clearMoveRepeat()
         val c = cursor.center()
 
-        if (settings.isTouchVisualFeedbackEnabled()) {
-            cursor.showTapFeedback(isLongPress = true)
-        }
-
         when (settings.getEmulationMethod()) {
-            EmulationMethod.ACCESSIBILITY_SERVICE -> gestures.longPress(c.x, c.y)
-            EmulationMethod.PROXY -> dispatchProxy("longPress") { proxy()?.longPress(c.x, c.y) }
+            EmulationMethod.ACCESSIBILITY_SERVICE -> {
+                if (settings.isTouchVisualFeedbackEnabled()) {
+                    cursor.showTapFeedback(isLongPress = true)
+                }
+                gestures.longPress(c.x, c.y)
+            }
+
+            EmulationMethod.PROXY -> {
+                dispatchProxyInput(
+                    op = "longPress",
+                    block = { proxy()?.longPress(c.x, c.y) == true },
+                    onCompletedOnMainThread = { ok ->
+                        if (ok && settings.isTouchVisualFeedbackEnabled()) {
+                            cursor.showTapFeedback(isLongPress = true)
+                        }
+                    },
+                )
+            }
         }
     }
 
@@ -331,20 +360,13 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                     clearMoveRepeat()
                     val c = cursor.center()
 
-                    if (settings.isTouchVisualFeedbackEnabled()) {
+                    // For accessibility injection, show feedback immediately for responsiveness.
+                    // For ADB proxy, show feedback when the proxy responds (to reduce visual/time mismatch).
+                    if (settings.getEmulationMethod() == EmulationMethod.ACCESSIBILITY_SERVICE && settings.isTouchVisualFeedbackEnabled()) {
                         cursor.showTapFeedback(isLongPress = false)
                     }
 
-                    when (settings.getEmulationMethod()) {
-                        EmulationMethod.ACCESSIBILITY_SERVICE -> {
-                            Log.i(tag, "tap via accessibility at (${c.x},${c.y})")
-                            gestures.tap(c.x, c.y)
-                        }
-                        EmulationMethod.PROXY -> {
-                            Log.i(tag, "tap via proxy at (${c.x},${c.y})")
-                            dispatchProxy("tap") { proxy()?.tap(c.x, c.y) }
-                        }
-                    }
+                    scheduleTapOrDoubleTap(c.x, c.y)
                     return true
                 }
 
@@ -446,6 +468,36 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 block()
             } catch (t: Throwable) {
                 Log.w(tag, "proxy dispatch failed op=$op (${t.javaClass.simpleName}: ${t.message})")
+            }
+        }
+    }
+
+    private fun dispatchProxyInput(
+        op: String,
+        block: () -> Boolean,
+        onCompletedOnMainThread: (ok: Boolean) -> Unit,
+    ) {
+        // Avoid request queues: allow only one in-flight proxy input; drop subsequent inputs.
+        if (!proxyInputInFlight.compareAndSet(false, true)) {
+            Log.i(tag, "proxy input dropped (busy) op=$op")
+            return
+        }
+
+        proxyExecutor.execute {
+            val ok = try {
+                block()
+            } catch (t: Throwable) {
+                Log.w(tag, "proxy input failed op=$op (${t.javaClass.simpleName}: ${t.message})")
+                false
+            } finally {
+                proxyInputInFlight.set(false)
+            }
+
+            mainHandler.post {
+                try {
+                    onCompletedOnMainThread(ok)
+                } catch (_: Throwable) {
+                }
             }
         }
     }
@@ -572,8 +624,72 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
     private fun clearPendingTapKey() {
         mainHandler.removeCallbacks(tapKeyLongPressRunnable)
+        mainHandler.removeCallbacks(commitSingleTapRunnable)
         tapKeyIsDown = false
         tapKeyLongPressTriggered = false
+        pendingTapAtMs = 0L
+    }
+
+    private fun dispatchTap(x: Int, y: Int) {
+        when (settings.getEmulationMethod()) {
+            EmulationMethod.ACCESSIBILITY_SERVICE -> {
+                Log.i(tag, "tap via accessibility at (${x},${y})")
+                gestures.tap(x, y)
+            }
+
+            EmulationMethod.PROXY -> {
+                Log.i(tag, "tap via proxy at (${x},${y})")
+                dispatchProxyInput(
+                    op = "tap",
+                    block = { proxy()?.tap(x, y) == true },
+                    onCompletedOnMainThread = { ok ->
+                        if (ok && settings.isTouchVisualFeedbackEnabled()) {
+                            cursor.showTapFeedback(isLongPress = false)
+                        }
+                    },
+                )
+            }
+        }
+    }
+
+    private fun dispatchDoubleTap(x: Int, y: Int) {
+        when (settings.getEmulationMethod()) {
+            EmulationMethod.ACCESSIBILITY_SERVICE -> {
+                Log.i(tag, "doubleTap via accessibility at (${x},${y})")
+                gestures.doubleTap(x, y)
+            }
+
+            EmulationMethod.PROXY -> {
+                Log.i(tag, "doubleTap via proxy at (${x},${y})")
+                dispatchProxyInput(
+                    op = "doubleTap",
+                    block = { proxy()?.doubleTap(x, y) == true },
+                    onCompletedOnMainThread = { ok ->
+                        if (ok && settings.isTouchVisualFeedbackEnabled()) {
+                            cursor.showTapFeedback(isLongPress = false)
+                        }
+                    },
+                )
+            }
+        }
+    }
+
+    private fun scheduleTapOrDoubleTap(x: Int, y: Int) {
+        val now = SystemClock.uptimeMillis()
+        val doubleTapTimeoutMs = ViewConfiguration.getDoubleTapTimeout().toLong()
+
+        if (pendingTapAtMs != 0L && now - pendingTapAtMs <= doubleTapTimeoutMs) {
+            // Convert to double tap.
+            mainHandler.removeCallbacks(commitSingleTapRunnable)
+            pendingTapAtMs = 0L
+            dispatchDoubleTap(x, y)
+            return
+        }
+
+        pendingTapAtMs = now
+        pendingTapX = x
+        pendingTapY = y
+        mainHandler.postDelayed(commitSingleTapRunnable, doubleTapTimeoutMs)
     }
 
     private fun clearPendingScrollRepeat() {
@@ -621,43 +737,62 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 fun clampX(x: Int) = x.coerceIn(0, w - 1)
                 fun clampY(y: Int) = y.coerceIn(0, h - 1)
 
-                // Swipe around cursor center.
-                val half = (distance / 2).coerceAtLeast(1)
+                // Swipe starting at the current cursor center.
                 when (keyCode) {
                     mouseKeyScrollUp -> {
                         val x1 = clampX(c.x)
-                        val y1 = clampY(c.y + half)
+                        val y1 = clampY(c.y)
                         val x2 = clampX(c.x)
-                        val y2 = clampY(c.y - half)
-                        if (visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
-                        dispatchProxy("swipe_up") { proxy()?.swipe(x1, y1, x2, y2) }
+                        val y2 = clampY(c.y - distance)
+                        dispatchProxyInput(
+                            op = "swipe_up",
+                            block = { proxy()?.swipe(x1, y1, x2, y2) == true },
+                            onCompletedOnMainThread = { ok ->
+                                if (ok && visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
+                            },
+                        )
                     }
 
                     mouseKeyScrollDown -> {
                         val x1 = clampX(c.x)
-                        val y1 = clampY(c.y - half)
+                        val y1 = clampY(c.y)
                         val x2 = clampX(c.x)
-                        val y2 = clampY(c.y + half)
-                        if (visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
-                        dispatchProxy("swipe_down") { proxy()?.swipe(x1, y1, x2, y2) }
+                        val y2 = clampY(c.y + distance)
+                        dispatchProxyInput(
+                            op = "swipe_down",
+                            block = { proxy()?.swipe(x1, y1, x2, y2) == true },
+                            onCompletedOnMainThread = { ok ->
+                                if (ok && visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
+                            },
+                        )
                     }
 
                     mouseKeyScrollLeft -> {
-                        val x1 = clampX(c.x + half)
+                        val x1 = clampX(c.x)
                         val y1 = clampY(c.y)
-                        val x2 = clampX(c.x - half)
+                        val x2 = clampX(c.x - distance)
                         val y2 = clampY(c.y)
-                        if (visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
-                        dispatchProxy("swipe_left") { proxy()?.swipe(x1, y1, x2, y2) }
+                        dispatchProxyInput(
+                            op = "swipe_left",
+                            block = { proxy()?.swipe(x1, y1, x2, y2) == true },
+                            onCompletedOnMainThread = { ok ->
+                                if (ok && visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
+                            },
+                        )
                     }
 
                     mouseKeyScrollRight -> {
-                        val x1 = clampX(c.x - half)
+                        val x1 = clampX(c.x)
                         val y1 = clampY(c.y)
-                        val x2 = clampX(c.x + half)
+                        val x2 = clampX(c.x + distance)
                         val y2 = clampY(c.y)
-                        if (visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
-                        dispatchProxy("swipe_right") { proxy()?.swipe(x1, y1, x2, y2) }
+                        dispatchProxyInput(
+                            op = "swipe_right",
+                            block = { proxy()?.swipe(x1, y1, x2, y2) == true },
+                            onCompletedOnMainThread = { ok ->
+                                if (ok && visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
+                            },
+                        )
                     }
                 }
 

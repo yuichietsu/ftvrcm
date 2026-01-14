@@ -24,24 +24,32 @@ class ProxyInputClient(
 
     private val tag = "ProxyInputClient"
 
-    fun tap(x: Int, y: Int) {
-        postJson(
+    fun tap(x: Int, y: Int): Boolean {
+        return postJson(
             path = "/tap",
             type = "proxy_tap",
             jsonBody = "{\"x\":$x,\"y\":$y}",
         )
     }
 
-    fun longPress(x: Int, y: Int, durationMs: Int = 600) {
-        postJson(
+    fun doubleTap(x: Int, y: Int): Boolean {
+        return postJson(
+            path = "/doubleTap",
+            type = "proxy_double_tap",
+            jsonBody = "{\"x\":$x,\"y\":$y}",
+        )
+    }
+
+    fun longPress(x: Int, y: Int, durationMs: Int = 600): Boolean {
+        return postJson(
             path = "/longPress",
             type = "proxy_long_press",
             jsonBody = "{\"x\":$x,\"y\":$y,\"durationMs\":$durationMs}",
         )
     }
 
-    fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Int = 200) {
-        postJson(
+    fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Int = 200): Boolean {
+        return postJson(
             path = "/swipe",
             type = "proxy_swipe",
             jsonBody = "{\"x1\":$x1,\"y1\":$y1,\"x2\":$x2,\"y2\":$y2,\"durationMs\":$durationMs}",
@@ -110,13 +118,13 @@ class ProxyInputClient(
         }
     }
 
-    private fun postJson(path: String, type: String, jsonBody: String) {
+    private fun postJson(path: String, type: String, jsonBody: String): Boolean {
         record(type = type, status = "DISPATCHING", detail = "POST $path $jsonBody")
 
         val normalizedHost = host.trim()
         if (normalizedHost.isEmpty()) {
             record(type = type, status = "FAILED", detail = "proxy_host is empty")
-            return
+            return false
         }
 
         val url = URL("http://$normalizedHost:$port$path")
@@ -153,9 +161,11 @@ class ProxyInputClient(
                 status = if (ok) "COMPLETED" else "FAILED",
                 detail = "http=$code url=$url\n${body.take(800)}",
             )
+            return ok
         } catch (t: Throwable) {
             Log.w(tag, "proxy $path failed (${t.javaClass.simpleName}: ${t.message})")
             record(type = type, status = "FAILED", detail = "${t.javaClass.simpleName}: ${t.message}")
+            return false
         }
     }
 }

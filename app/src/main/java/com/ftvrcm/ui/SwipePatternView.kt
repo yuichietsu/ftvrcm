@@ -23,16 +23,22 @@ class SwipePatternView @JvmOverloads constructor(
 
     private val stripePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        color = 0xCC000000.toInt()
+        color = 0xCC00B0FF.toInt()
         strokeWidth = dp(6f)
         strokeCap = Paint.Cap.ROUND
     }
 
     private val stripeHighlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        color = 0xCCFFFFFF.toInt()
+        color = 0xEEFFFFFF.toInt()
         strokeWidth = dp(2.5f)
         strokeCap = Paint.Cap.ROUND
+    }
+
+    private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = 0xFFFFEB3B.toInt()
+        textSize = dp(14f)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -88,6 +94,8 @@ class SwipePatternView @JvmOverloads constructor(
             )
             offset += step
         }
+
+        canvas.drawText("SWIPE", dp(10f), dp(20f), labelPaint)
     }
 
     private fun dp(value: Float): Float =

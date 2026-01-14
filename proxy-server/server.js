@@ -399,6 +399,10 @@ function getSerial(body) {
   return serial || DEFAULT_SERIAL;
 }
 
+// Avoid piling up ADB input commands when the client is spamming keys.
+// We intentionally do NOT queue. If another input is running, we reject new ones.
+let inputInFlight = false;
+
 const server = http.createServer(async (req, res) => {
   const requestId = Math.random().toString(16).slice(2, 10);
   const startedAt = Date.now();
@@ -449,21 +453,68 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (url.pathname === '/tap') {
+      if (inputInFlight) {
+        return respond(409, { ok: false, error: 'busy' });
+      }
+      inputInFlight = true;
+
       const x = Number(body.x);
       const y = Number(body.y);
       if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        inputInFlight = false;
         return respond(400, { ok: false, error: 'invalid x/y' });
       }
-      const result = await runAdb(serial, ['shell', 'input', 'tap', String(Math.round(x)), String(Math.round(y))], requestId);
-      if (DEBUG && LOG_ADB) {
-        log(`${nowIso()} [${requestId}] adb ${result.command}`);
-        if (result.stderr) log(`${nowIso()} [${requestId}] adb stderr=${JSON.stringify(result.stderr)}`);
-        if (result.stdout) log(`${nowIso()} [${requestId}] adb stdout=${JSON.stringify(result.stdout)}`);
+
+      try {
+        const result = await runAdb(serial, ['shell', 'input', 'tap', String(Math.round(x)), String(Math.round(y))], requestId);
+        if (DEBUG && LOG_ADB) {
+          log(`${nowIso()} [${requestId}] adb ${result.command}`);
+          if (result.stderr) log(`${nowIso()} [${requestId}] adb stderr=${JSON.stringify(result.stderr)}`);
+          if (result.stdout) log(`${nowIso()} [${requestId}] adb stdout=${JSON.stringify(result.stdout)}`);
+        }
+        return respond(result.ok ? 200 : 500, result);
+      } finally {
+        inputInFlight = false;
       }
-      return respond(result.ok ? 200 : 500, result);
+    }
+
+    if (url.pathname === '/doubleTap') {
+      if (inputInFlight) {
+        return respond(409, { ok: false, error: 'busy' });
+      }
+      inputInFlight = true;
+
+      const x = Number(body.x);
+      const y = Number(body.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        inputInFlight = false;
+        return respond(400, { ok: false, error: 'invalid x/y' });
+      }
+
+      const rx = String(Math.round(x));
+      const ry = String(Math.round(y));
+      // Run both taps inside a single adb shell invocation to minimize inter-tap latency.
+      const shell = `input tap ${rx} ${ry}; input tap ${rx} ${ry}`;
+
+      try {
+        const result = await runAdb(serial, ['shell', 'sh', '-c', shell], requestId);
+        if (DEBUG && LOG_ADB) {
+          log(`${nowIso()} [${requestId}] adb ${result.command}`);
+          if (result.stderr) log(`${nowIso()} [${requestId}] adb stderr=${JSON.stringify(result.stderr)}`);
+          if (result.stdout) log(`${nowIso()} [${requestId}] adb stdout=${JSON.stringify(result.stdout)}`);
+        }
+        return respond(result.ok ? 200 : 500, result);
+      } finally {
+        inputInFlight = false;
+      }
     }
 
     if (url.pathname === '/swipe') {
+      if (inputInFlight) {
+        return respond(409, { ok: false, error: 'busy' });
+      }
+      inputInFlight = true;
+
       const x1 = Number(body.x1);
       const y1 = Number(body.y1);
       const x2 = Number(body.x2);
@@ -471,53 +522,69 @@ const server = http.createServer(async (req, res) => {
       const durationMs = Number.isFinite(Number(body.durationMs)) ? Math.max(0, Math.round(Number(body.durationMs))) : 200;
 
       if (![x1, y1, x2, y2].every(Number.isFinite)) {
+        inputInFlight = false;
         return respond(400, { ok: false, error: 'invalid x1/y1/x2/y2' });
       }
 
-      const result = await runAdb(serial, [
-        'shell',
-        'input',
-        'swipe',
-        String(Math.round(x1)),
-        String(Math.round(y1)),
-        String(Math.round(x2)),
-        String(Math.round(y2)),
-        String(durationMs),
-      ], requestId);
-      if (DEBUG && LOG_ADB) {
-        log(`${nowIso()} [${requestId}] adb ${result.command}`);
-        if (result.stderr) log(`${nowIso()} [${requestId}] adb stderr=${JSON.stringify(result.stderr)}`);
-        if (result.stdout) log(`${nowIso()} [${requestId}] adb stdout=${JSON.stringify(result.stdout)}`);
+      try {
+        const result = await runAdb(serial, [
+          'shell',
+          'input',
+          'swipe',
+          String(Math.round(x1)),
+          String(Math.round(y1)),
+          String(Math.round(x2)),
+          String(Math.round(y2)),
+          String(durationMs),
+        ], requestId);
+        if (DEBUG && LOG_ADB) {
+          log(`${nowIso()} [${requestId}] adb ${result.command}`);
+          if (result.stderr) log(`${nowIso()} [${requestId}] adb stderr=${JSON.stringify(result.stderr)}`);
+          if (result.stdout) log(`${nowIso()} [${requestId}] adb stdout=${JSON.stringify(result.stdout)}`);
+        }
+        return respond(result.ok ? 200 : 500, result);
+      } finally {
+        inputInFlight = false;
       }
-      return respond(result.ok ? 200 : 500, result);
     }
 
     if (url.pathname === '/longPress') {
+      if (inputInFlight) {
+        return respond(409, { ok: false, error: 'busy' });
+      }
+      inputInFlight = true;
+
       const x = Number(body.x);
       const y = Number(body.y);
       const durationMs = Number.isFinite(Number(body.durationMs)) ? Math.max(0, Math.round(Number(body.durationMs))) : 600;
 
       if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        inputInFlight = false;
         return respond(400, { ok: false, error: 'invalid x/y' });
       }
 
       // long press via swipe-to-self
-      const result = await runAdb(serial, [
-        'shell',
-        'input',
-        'swipe',
-        String(Math.round(x)),
-        String(Math.round(y)),
-        String(Math.round(x)),
-        String(Math.round(y)),
-        String(durationMs),
-      ], requestId);
-      if (DEBUG && LOG_ADB) {
-        log(`${nowIso()} [${requestId}] adb ${result.command}`);
-        if (result.stderr) log(`${nowIso()} [${requestId}] adb stderr=${JSON.stringify(result.stderr)}`);
-        if (result.stdout) log(`${nowIso()} [${requestId}] adb stdout=${JSON.stringify(result.stdout)}`);
+
+      try {
+        const result = await runAdb(serial, [
+          'shell',
+          'input',
+          'swipe',
+          String(Math.round(x)),
+          String(Math.round(y)),
+          String(Math.round(x)),
+          String(Math.round(y)),
+          String(durationMs),
+        ], requestId);
+        if (DEBUG && LOG_ADB) {
+          log(`${nowIso()} [${requestId}] adb ${result.command}`);
+          if (result.stderr) log(`${nowIso()} [${requestId}] adb stderr=${JSON.stringify(result.stderr)}`);
+          if (result.stdout) log(`${nowIso()} [${requestId}] adb stdout=${JSON.stringify(result.stdout)}`);
+        }
+        return respond(result.ok ? 200 : 500, result);
+      } finally {
+        inputInFlight = false;
       }
-      return respond(result.ok ? 200 : 500, result);
     }
 
     return respond(404, { ok: false, error: 'not found' });
