@@ -10,6 +10,8 @@ FireOS 8 でアプリから `adbd` へローカル接続がブロックされる
 - PCから FireTV に接続できること
   - 例: `adb connect 192.168.11.12:5555`
 
+補足：本プロキシは、ADBが未接続の場合に `adb connect <serial>` を自動で試行します（ただし負荷を避けるため、試行間隔にクールダウンがあります）。
+
 ## 起動
 
 ```bash
@@ -20,6 +22,36 @@ export HOST="0.0.0.0"
 export PORT="8787"
 node server.js
 ```
+
+### ADBの自動接続/再認証
+
+- ADBが `device` 状態でない（未接続/オフライン等）場合、リクエスト処理前に `adb connect <serial>` を自動で試行します（`serial` が `ip:port` の場合）。
+- ADBは接続できているが `unauthorized`（認証未承認）等が連続する場合、一定条件を満たしたときだけ「再認証フロー」を実行します。
+  - 再認証フローはベストエフォートで `adb disconnect <serial>` → `adb kill-server` → `adb start-server` → `adb connect <serial>` を行います。
+  - 実際の認証（端末側での「USBデバッグを許可」など）はユーザー操作が必要です。
+  - “できもしない認証”を連打して負荷をかけないよう、クールダウンと時間当たり上限があります。
+
+#### 調整用パラメータ（環境変数）
+
+- `ADB_TIMEOUT_MS`（デフォルト: `8000`）: `adb shell ...` 等の通常コマンドのタイムアウト
+- `ADB_CONNECT_TIMEOUT_MS`（デフォルト: `8000`）: `adb connect` のタイムアウト
+- `ADB_CONNECT_COOLDOWN_MS`（デフォルト: `5000`）: 自動 `adb connect` の最小試行間隔
+- `ADB_AUTH_FAIL_THRESHOLD`（デフォルト: `3`）: 認証失敗がこの回数以上連続したら再認証候補
+- `ADB_AUTH_FAIL_WINDOW_MS`（デフォルト: `60000`）: 連続判定の時間窓
+- `ADB_REAUTH_COOLDOWN_MS`（デフォルト: `600000`）: 再認証フローの最小実行間隔
+- `ADB_REAUTH_MAX_PER_HOUR`（デフォルト: `3`）: 1時間あたりの再認証フロー最大回数（`0`で無効化）
+
+#### 調整用パラメータ（CLI引数）
+
+環境変数の代わりに、起動引数でも指定できます。
+
+- `--adb-timeout-ms`
+- `--adb-connect-timeout-ms`
+- `--adb-connect-cooldown-ms`
+- `--adb-auth-fail-threshold`
+- `--adb-auth-fail-window-ms`
+- `--adb-reauth-cooldown-ms`
+- `--adb-reauth-max-per-hour`
 
 ### デバッグログ
 

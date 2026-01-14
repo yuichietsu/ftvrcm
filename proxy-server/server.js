@@ -17,6 +17,33 @@ function envBool(name) {
   return v === '1' || v.toLowerCase() === 'true' || v.toLowerCase() === 'yes' || v.toLowerCase() === 'on';
 }
 
+function envNum(name, fallback) {
+  const v = process.env[name];
+  if (v == null || v === '') return fallback;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function getArgValue(longName, fallback) {
+  const argv = process.argv.slice(2);
+  const prefix = `${longName}=`;
+  const hit = argv.find((a) => a === longName || a.startsWith(prefix));
+  if (!hit) return fallback;
+  if (hit === longName) {
+    const idx = argv.indexOf(hit);
+    const v = argv[idx + 1];
+    return v == null ? fallback : v;
+  }
+  return hit.slice(prefix.length);
+}
+
+function getArgNum(longName, fallback) {
+  const v = getArgValue(longName, undefined);
+  if (v == null) return fallback;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 const DEBUG = hasFlag('--debug', '-d') || envBool('PROXY_DEBUG');
 const LOG_BODY = hasFlag('--log-body') || envBool('PROXY_LOG_BODY');
 const LOG_ADB = hasFlag('--log-adb') || envBool('PROXY_LOG_ADB');
@@ -27,6 +54,38 @@ const PROXY_TOKEN = process.env.PROXY_TOKEN ?? '';
 // Default target device serial. Example: "192.168.11.12:5555".
 // You can also pass `serial` per-request in JSON body.
 const DEFAULT_SERIAL = process.env.FIRETV_SERIAL ?? '';
+
+// ADB reliability knobs (env and/or CLI args)
+// - env: ADB_TIMEOUT_MS, ADB_CONNECT_TIMEOUT_MS, ADB_CONNECT_COOLDOWN_MS, ADB_AUTH_FAIL_THRESHOLD,
+//        ADB_AUTH_FAIL_WINDOW_MS, ADB_REAUTH_COOLDOWN_MS, ADB_REAUTH_MAX_PER_HOUR
+// - args: --adb-timeout-ms, --adb-connect-timeout-ms, --adb-connect-cooldown-ms, --adb-auth-fail-threshold,
+//         --adb-auth-fail-window-ms, --adb-reauth-cooldown-ms, --adb-reauth-max-per-hour
+const ADB_TIMEOUT_MS = Math.max(1000, Math.round(getArgNum('--adb-timeout-ms', envNum('ADB_TIMEOUT_MS', 8000))));
+const ADB_CONNECT_TIMEOUT_MS = Math.max(
+  1000,
+  Math.round(getArgNum('--adb-connect-timeout-ms', envNum('ADB_CONNECT_TIMEOUT_MS', 8000))),
+);
+const ADB_CONNECT_COOLDOWN_MS = Math.max(
+  0,
+  Math.round(getArgNum('--adb-connect-cooldown-ms', envNum('ADB_CONNECT_COOLDOWN_MS', 5000))),
+);
+
+const ADB_AUTH_FAIL_THRESHOLD = Math.max(
+  1,
+  Math.round(getArgNum('--adb-auth-fail-threshold', envNum('ADB_AUTH_FAIL_THRESHOLD', 3))),
+);
+const ADB_AUTH_FAIL_WINDOW_MS = Math.max(
+  1000,
+  Math.round(getArgNum('--adb-auth-fail-window-ms', envNum('ADB_AUTH_FAIL_WINDOW_MS', 60_000))),
+);
+const ADB_REAUTH_COOLDOWN_MS = Math.max(
+  0,
+  Math.round(getArgNum('--adb-reauth-cooldown-ms', envNum('ADB_REAUTH_COOLDOWN_MS', 10 * 60_000))),
+);
+const ADB_REAUTH_MAX_PER_HOUR = Math.max(
+  0,
+  Math.round(getArgNum('--adb-reauth-max-per-hour', envNum('ADB_REAUTH_MAX_PER_HOUR', 3))),
+);
 
 function json(res, statusCode, body) {
   const payload = JSON.stringify(body);
@@ -82,16 +141,17 @@ function log(...args) {
   console.log(...args);
 }
 
-function runAdb(serial, args) {
-  return new Promise((resolve) => {
-    const adbArgs = [];
-    if (serial) adbArgs.push('-s', serial);
-    adbArgs.push(...args);
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
+function runAdbRaw(adbArgs, timeoutMs) {
+  return new Promise((resolve) => {
     const child = spawn('adb', adbArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
 
     let stdout = '';
     let stderr = '';
+    let killedByTimeout = false;
 
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
@@ -99,26 +159,239 @@ function runAdb(serial, args) {
     child.stdout.on('data', (d) => (stdout += d));
     child.stderr.on('data', (d) => (stderr += d));
 
+    const timer =
+      timeoutMs > 0
+        ? setTimeout(() => {
+            killedByTimeout = true;
+            child.kill('SIGKILL');
+          }, timeoutMs)
+        : null;
+
     child.on('close', (code) => {
+      if (timer) clearTimeout(timer);
+      const out = stdout.trim();
+      const err = stderr.trim();
       resolve({
-        ok: code === 0,
-        exitCode: code ?? -1,
-        stdout: stdout.trim(),
-        stderr: stderr.trim(),
+        ok: code === 0 && !killedByTimeout,
+        exitCode: killedByTimeout ? -9 : code ?? -1,
+        stdout: out,
+        stderr: err,
+        timedOut: killedByTimeout,
         command: ['adb', ...adbArgs].join(' '),
       });
     });
 
     child.on('error', (e) => {
+      if (timer) clearTimeout(timer);
       resolve({
         ok: false,
         exitCode: -1,
         stdout: '',
         stderr: String(e?.message ?? e),
+        timedOut: false,
         command: ['adb', ...adbArgs].join(' '),
       });
     });
   });
+}
+
+function runAdbOnce(serial, args, timeoutMs = ADB_TIMEOUT_MS) {
+  const adbArgs = [];
+  if (serial) adbArgs.push('-s', serial);
+  adbArgs.push(...args);
+  return runAdbRaw(adbArgs, timeoutMs);
+}
+
+function isLikelyTcpSerial(serial) {
+  // Best-effort heuristic: host:port, or IPv4:port.
+  if (!serial) return false;
+  return serial.includes(':');
+}
+
+function classifyAdbError(result) {
+  const text = `${result?.stdout ?? ''}\n${result?.stderr ?? ''}`.toLowerCase();
+
+  if (text.includes('device unauthorized') || text.includes('unauthorized')) return 'unauthorized';
+  if (text.includes('failed to authenticate')) return 'unauthorized';
+
+  if (text.includes('device offline') || text.includes('offline')) return 'offline';
+  if (text.includes('no devices') || text.includes('device not found')) return 'not_found';
+  if (text.includes('cannot connect') || text.includes('unable to connect') || text.includes('connection refused')) return 'connect_failed';
+  if (result?.timedOut) return 'timeout';
+  return '';
+}
+
+// Per-serial state (in-memory). This process is expected to be single-instance for local LAN.
+const deviceState = new Map();
+
+function getDeviceState(serial) {
+  if (!deviceState.has(serial)) {
+    deviceState.set(serial, {
+      lastConnectAttemptAt: 0,
+      connectAttempts: 0,
+      authFailTimes: [],
+      lastReauthAt: 0,
+      reauthTimes: [],
+    });
+  }
+  return deviceState.get(serial);
+}
+
+async function adbGetState(serial) {
+  const r = await runAdbOnce(serial, ['get-state'], 2000);
+  // When unauthorized/offline/notfound, adb tends to print errors to stderr.
+  if (r.ok && r.stdout) return r.stdout.trim();
+  const kind = classifyAdbError(r);
+  if (kind === 'unauthorized') return 'unauthorized';
+  if (kind === 'offline') return 'offline';
+  if (kind === 'not_found') return 'not_found';
+  return 'unknown';
+}
+
+async function adbConnect(serial, requestId) {
+  // Only meaningful for TCP/IP serials (ip:port). For USB serials, connect doesn't apply.
+  if (!isLikelyTcpSerial(serial)) return { ok: true, skipped: true, reason: 'non-tcp-serial' };
+
+  const st = getDeviceState(serial);
+  const now = Date.now();
+  if (ADB_CONNECT_COOLDOWN_MS > 0 && now - st.lastConnectAttemptAt < ADB_CONNECT_COOLDOWN_MS) {
+    return { ok: true, skipped: true, reason: 'connect-cooldown' };
+  }
+
+  st.lastConnectAttemptAt = now;
+  st.connectAttempts += 1;
+
+  if (DEBUG && LOG_ADB) {
+    log(`${nowIso()} [${requestId}] adb connect attempt serial=${serial}`);
+  }
+
+  const r = await runAdbRaw(['connect', serial], ADB_CONNECT_TIMEOUT_MS);
+  if (DEBUG && LOG_ADB) {
+    log(`${nowIso()} [${requestId}] adb ${r.command}`);
+    if (r.stderr) log(`${nowIso()} [${requestId}] adb stderr=${JSON.stringify(r.stderr)}`);
+    if (r.stdout) log(`${nowIso()} [${requestId}] adb stdout=${JSON.stringify(r.stdout)}`);
+  }
+  return r;
+}
+
+function recordAuthFailure(serial) {
+  const st = getDeviceState(serial);
+  const now = Date.now();
+  st.authFailTimes.push(now);
+  // keep within window
+  const cutoff = now - ADB_AUTH_FAIL_WINDOW_MS;
+  while (st.authFailTimes.length && st.authFailTimes[0] < cutoff) st.authFailTimes.shift();
+}
+
+function shouldReauth(serial) {
+  if (ADB_REAUTH_MAX_PER_HOUR === 0) return false;
+
+  const st = getDeviceState(serial);
+  const now = Date.now();
+
+  // Cooldown to avoid hammering
+  if (ADB_REAUTH_COOLDOWN_MS > 0 && now - st.lastReauthAt < ADB_REAUTH_COOLDOWN_MS) return false;
+
+  // Threshold within window
+  const cutoff = now - ADB_AUTH_FAIL_WINDOW_MS;
+  const recentFails = st.authFailTimes.filter((t) => t >= cutoff).length;
+  if (recentFails < ADB_AUTH_FAIL_THRESHOLD) return false;
+
+  // Hourly cap
+  const hourCutoff = now - 60 * 60_000;
+  st.reauthTimes = st.reauthTimes.filter((t) => t >= hourCutoff);
+  if (st.reauthTimes.length >= ADB_REAUTH_MAX_PER_HOUR) return false;
+
+  return true;
+}
+
+async function adbReauth(serial, requestId) {
+  const st = getDeviceState(serial);
+  const now = Date.now();
+  st.lastReauthAt = now;
+  st.reauthTimes.push(now);
+
+  // Best-effort recovery sequence:
+  // 1) disconnect target (TCP)
+  // 2) kill-server/start-server
+  // 3) connect again (TCP)
+  // Note: actual authorization requires user acceptance on the device.
+  const steps = [];
+  if (isLikelyTcpSerial(serial)) {
+    steps.push(() => runAdbRaw(['disconnect', serial], 3000));
+  }
+  steps.push(() => runAdbRaw(['kill-server'], 3000));
+  steps.push(() => runAdbRaw(['start-server'], 5000));
+  if (isLikelyTcpSerial(serial)) {
+    steps.push(() => runAdbRaw(['connect', serial], ADB_CONNECT_TIMEOUT_MS));
+  }
+
+  if (DEBUG) {
+    log(`${nowIso()} [${requestId}] reauth starting serial=${serial}`);
+  }
+
+  const results = [];
+  for (const step of steps) {
+    // Small spacing to avoid immediate hammering when adb is restarting.
+    // This is intentionally tiny to keep UX OK.
+    // eslint-disable-next-line no-await-in-loop
+    const r = await step();
+    results.push(r);
+    if (DEBUG && LOG_ADB) {
+      log(`${nowIso()} [${requestId}] adb ${r.command}`);
+      if (r.stderr) log(`${nowIso()} [${requestId}] adb stderr=${JSON.stringify(r.stderr)}`);
+      if (r.stdout) log(`${nowIso()} [${requestId}] adb stdout=${JSON.stringify(r.stdout)}`);
+    }
+    // eslint-disable-next-line no-await-in-loop
+    await sleep(150);
+  }
+
+  return { ok: results.every((r) => r.ok), steps: results };
+}
+
+async function ensureAdbReady(serial, requestId) {
+  const state = await adbGetState(serial);
+  if (state === 'device') return { ok: true, state };
+
+  if (state === 'unauthorized') {
+    recordAuthFailure(serial);
+    if (shouldReauth(serial)) {
+      await adbReauth(serial, requestId);
+    }
+    return { ok: false, state: 'unauthorized' };
+  }
+
+  if (state === 'offline' || state === 'not_found' || state === 'unknown') {
+    await adbConnect(serial, requestId);
+    const after = await adbGetState(serial);
+    return { ok: after === 'device', state: after };
+  }
+
+  return { ok: false, state };
+}
+
+async function runAdb(serial, args, requestId) {
+  // 1) ensure connected/authorized (best-effort)
+  await ensureAdbReady(serial, requestId);
+
+  // 2) execute command
+  let result = await runAdbOnce(serial, args, ADB_TIMEOUT_MS);
+
+  // 3) on certain errors, try to recover once
+  const kind = classifyAdbError(result);
+  if (kind === 'unauthorized') {
+    recordAuthFailure(serial);
+    if (shouldReauth(serial)) {
+      await adbReauth(serial, requestId);
+    }
+    // retry once (even if not reauthed, device might have been accepted manually)
+    result = await runAdbOnce(serial, args, ADB_TIMEOUT_MS);
+  } else if (kind === 'offline' || kind === 'not_found' || kind === 'connect_failed') {
+    await adbConnect(serial, requestId);
+    result = await runAdbOnce(serial, args, ADB_TIMEOUT_MS);
+  }
+
+  return result;
 }
 
 function getSerial(body) {
@@ -181,7 +454,7 @@ const server = http.createServer(async (req, res) => {
       if (!Number.isFinite(x) || !Number.isFinite(y)) {
         return respond(400, { ok: false, error: 'invalid x/y' });
       }
-      const result = await runAdb(serial, ['shell', 'input', 'tap', String(Math.round(x)), String(Math.round(y))]);
+      const result = await runAdb(serial, ['shell', 'input', 'tap', String(Math.round(x)), String(Math.round(y))], requestId);
       if (DEBUG && LOG_ADB) {
         log(`${nowIso()} [${requestId}] adb ${result.command}`);
         if (result.stderr) log(`${nowIso()} [${requestId}] adb stderr=${JSON.stringify(result.stderr)}`);
@@ -210,7 +483,7 @@ const server = http.createServer(async (req, res) => {
         String(Math.round(x2)),
         String(Math.round(y2)),
         String(durationMs),
-      ]);
+      ], requestId);
       if (DEBUG && LOG_ADB) {
         log(`${nowIso()} [${requestId}] adb ${result.command}`);
         if (result.stderr) log(`${nowIso()} [${requestId}] adb stderr=${JSON.stringify(result.stderr)}`);
@@ -238,7 +511,7 @@ const server = http.createServer(async (req, res) => {
         String(Math.round(x)),
         String(Math.round(y)),
         String(durationMs),
-      ]);
+      ], requestId);
       if (DEBUG && LOG_ADB) {
         log(`${nowIso()} [${requestId}] adb ${result.command}`);
         if (result.stderr) log(`${nowIso()} [${requestId}] adb stderr=${JSON.stringify(result.stderr)}`);
@@ -261,6 +534,11 @@ server.listen(PORT, HOST, () => {
   log(`ftvrcm-proxy-server listening on http://${HOST}:${PORT}`);
   if (DEBUG) {
     log(`debug enabled: LOG_BODY=${LOG_BODY} LOG_ADB=${LOG_ADB}`);
+    log(
+      `adb knobs: TIMEOUT_MS=${ADB_TIMEOUT_MS} CONNECT_TIMEOUT_MS=${ADB_CONNECT_TIMEOUT_MS} CONNECT_COOLDOWN_MS=${ADB_CONNECT_COOLDOWN_MS} ` +
+        `AUTH_FAIL_THRESHOLD=${ADB_AUTH_FAIL_THRESHOLD} AUTH_FAIL_WINDOW_MS=${ADB_AUTH_FAIL_WINDOW_MS} ` +
+        `REAUTH_COOLDOWN_MS=${ADB_REAUTH_COOLDOWN_MS} REAUTH_MAX_PER_HOUR=${ADB_REAUTH_MAX_PER_HOUR}`,
+    );
   }
   if (!DEFAULT_SERIAL) {
     log('WARN: FIRETV_SERIAL is not set; clients must pass serial in request body.');
