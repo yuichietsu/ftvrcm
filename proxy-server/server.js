@@ -494,10 +494,12 @@ const server = http.createServer(async (req, res) => {
       const rx = String(Math.round(x));
       const ry = String(Math.round(y));
       // Run both taps inside a single adb shell invocation to minimize inter-tap latency.
+      // NOTE: Avoid `adb shell sh -c <cmd-with-semicolon>` because some adb/device combinations
+      // may let `;` break argument boundaries, resulting in `sh -c input ...` (i.e. `input` with no args).
       const shell = `input tap ${rx} ${ry}; input tap ${rx} ${ry}`;
 
       try {
-        const result = await runAdb(serial, ['shell', 'sh', '-c', shell], requestId);
+        const result = await runAdb(serial, ['shell', shell], requestId);
         if (DEBUG && LOG_ADB) {
           log(`${nowIso()} [${requestId}] adb ${result.command}`);
           if (result.stderr) log(`${nowIso()} [${requestId}] adb stderr=${JSON.stringify(result.stderr)}`);
