@@ -28,6 +28,11 @@ object SettingsKeys {
     const val MOUSE_KEY_SCROLL_LEFT = "mouse_key_scroll_left"
     const val MOUSE_KEY_SCROLL_RIGHT = "mouse_key_scroll_right"
 
+    // Swipe/scroll tuning
+    const val MOUSE_SWIPE_DISTANCE_PERCENT = "mouse_swipe_distance_percent" // int (SeekBarPreference)
+    const val MOUSE_SCROLL_REPEAT_LONGPRESS = "mouse_scroll_repeat_longpress" // boolean
+    const val MOUSE_SCROLL_REPEAT_INTERVAL_MS = "mouse_scroll_repeat_interval_ms" // int (SeekBarPreference)
+
     const val MOUSE_KEY_CURSOR_DPAD_TOGGLE = "mouse_key_cursor_dpad_toggle" // String/int
 
     const val MOUSE_CURSOR_START_POSITION = "mouse_cursor_start_position" // String

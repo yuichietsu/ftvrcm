@@ -25,6 +25,9 @@ com.ftvrcm_preferences.xml
     ├── mouse_key_scroll_down
     ├── mouse_key_scroll_left
     ├── mouse_key_scroll_right
+    ├── mouse_swipe_distance_percent
+    ├── mouse_scroll_repeat_longpress
+    ├── mouse_scroll_repeat_interval_ms
     ├── mouse_key_cursor_dpad_toggle
     ├── mouse_cursor_start_position
     ├── key_mapping
@@ -102,6 +105,44 @@ com.ftvrcm_preferences.xml
 **例**：
 ```xml
 <int name="mouse_pointer_speed" value="10" />
+```
+
+---
+
+### 3.0 スワイプ距離（mouse_swipe_distance_percent）
+
+`emulation_method=PROXY` の場合に `input swipe` を生成する距離を調整します（画面短辺に対する割合）。
+
+| 項目 | 値 |
+|------|-----|
+| **キー** | `mouse_swipe_distance_percent` |
+| **型** | Integer |
+| **範囲** | 5-95 |
+| **デフォルト** | 28 |
+| **説明** | スワイプ距離の割合（%） |
+
+**例**：
+```xml
+<int name="mouse_swipe_distance_percent" value="28" />
+```
+
+---
+
+### 3.0.1 長押し連続実行（mouse_scroll_repeat_longpress / mouse_scroll_repeat_interval_ms）
+
+上下左右の「スクロール/スワイプ」キーを長押ししたとき、一定間隔で連続実行するための設定です。
+
+| 項目 | 値 |
+|------|-----|
+| **キー** | `mouse_scroll_repeat_longpress` / `mouse_scroll_repeat_interval_ms` |
+| **型** | Boolean / Integer |
+| **デフォルト** | `true` / 120 |
+| **説明** | 長押しで連続実行するか、連続実行の間隔（ms） |
+
+**例**：
+```xml
+<boolean name="mouse_scroll_repeat_longpress" value="true" />
+<int name="mouse_scroll_repeat_interval_ms" value="120" />
 ```
 
 ---

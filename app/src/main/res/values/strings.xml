@@ -45,6 +45,10 @@
     <string name="prefs_mouse_key_scroll_left">左スクロール/スワイプ</string>
     <string name="prefs_mouse_key_scroll_right">右スクロール/スワイプ</string>
 
+    <string name="prefs_mouse_swipe_distance">スワイプ距離（%）</string>
+    <string name="prefs_mouse_scroll_repeat_longpress">長押しで連続実行</string>
+    <string name="prefs_mouse_scroll_repeat_interval_ms">連続実行間隔（ms）</string>
+
     <string name="prefs_mouse_key_cursor_dpad_toggle">カーソル/方向キー切り替え</string>
 
     <string name="prefs_category_tests">テスト</string>

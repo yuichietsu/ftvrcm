@@ -40,6 +40,8 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private var tapKeyLongPressTriggered: Boolean = false
 
     private var scrollSelectKeyIsDown: Boolean = false
+    private var scrollSelectKeyCode: Int? = null
+    private var scrollSelectKeyLongPressTriggered: Boolean = false
 
     private var isDpadMode: Boolean = false
 
@@ -91,6 +93,29 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             lastCursorY = p.y
             mainHandler.postDelayed(this, MOVE_REPEAT_INTERVAL_MS)
         }
+    }
+
+    private val scrollRepeatRunnable = object : Runnable {
+        override fun run() {
+            if (mode != OperationMode.MOUSE) return
+            if (!scrollSelectKeyIsDown) return
+            val keyCode = scrollSelectKeyCode ?: return
+
+            dispatchScrollOrSwipe(keyCode)
+            mainHandler.postDelayed(this, settings.getMouseScrollRepeatIntervalMs().toLong())
+        }
+    }
+
+    private val scrollKeyLongPressRunnable = Runnable {
+        if (mode != OperationMode.MOUSE) return@Runnable
+        if (!scrollSelectKeyIsDown) return@Runnable
+        if (scrollSelectKeyLongPressTriggered) return@Runnable
+        if (!settings.isMouseScrollRepeatLongPress()) return@Runnable
+
+        scrollSelectKeyLongPressTriggered = true
+        val keyCode = scrollSelectKeyCode ?: return@Runnable
+        dispatchScrollOrSwipe(keyCode)
+        mainHandler.postDelayed(scrollRepeatRunnable, settings.getMouseScrollRepeatIntervalMs().toLong())
     }
 
     override fun onServiceConnected() {
@@ -328,72 +353,31 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 KeyEvent.ACTION_DOWN -> {
                     if (event.repeatCount > 0) return true
                     scrollSelectKeyIsDown = true
+                    scrollSelectKeyCode = keyCode
+                    scrollSelectKeyLongPressTriggered = false
+                    clearPendingScrollRepeat()
+
+                    if (settings.isMouseScrollRepeatLongPress()) {
+                        val timeoutMs = ViewConfiguration.getLongPressTimeout().toLong()
+                        mainHandler.postDelayed(scrollKeyLongPressRunnable, timeoutMs)
+                    }
                     return true
                 }
 
                 KeyEvent.ACTION_UP -> {
                     scrollSelectKeyIsDown = false
+                    val wasLongPress = scrollSelectKeyLongPressTriggered
+                    clearPendingScrollRepeat()
+                    scrollSelectKeyCode = null
+                    scrollSelectKeyLongPressTriggered = false
+
+                    if (wasLongPress) {
+                        return true
+                    }
 
                     clearMoveRepeat()
-                    val c = cursor.center()
-                    when (settings.getEmulationMethod()) {
-                        EmulationMethod.ACCESSIBILITY_SERVICE -> {
-                            when (keyCode) {
-                                mouseKeyScrollUp -> gestures.scrollUp(c.x, c.y)
-                                mouseKeyScrollDown -> gestures.scrollDown(c.x, c.y)
-                                mouseKeyScrollLeft -> gestures.scrollLeft(c.x, c.y)
-                                mouseKeyScrollRight -> gestures.scrollRight(c.x, c.y)
-                            }
-                        }
-                        EmulationMethod.PROXY -> {
-                            val dm = resources.displayMetrics
-                            val w = dm.widthPixels
-                            val h = dm.heightPixels
-                            val distance = (minOf(w, h) * 0.28).toInt().coerceAtLeast(120)
 
-                            fun clampX(x: Int) = x.coerceIn(0, w - 1)
-                            fun clampY(y: Int) = y.coerceIn(0, h - 1)
-
-                            // Swipe around cursor center.
-                            val half = distance / 2
-                            when (keyCode) {
-                                mouseKeyScrollUp -> dispatchProxy("swipe_up") {
-                                    proxy()?.swipe(
-                                    clampX(c.x),
-                                    clampY(c.y + half),
-                                    clampX(c.x),
-                                    clampY(c.y - half),
-                                    )
-                                }
-                                mouseKeyScrollDown -> dispatchProxy("swipe_down") {
-                                    proxy()?.swipe(
-                                    clampX(c.x),
-                                    clampY(c.y - half),
-                                    clampX(c.x),
-                                    clampY(c.y + half),
-                                    )
-                                }
-                                mouseKeyScrollLeft -> dispatchProxy("swipe_left") {
-                                    proxy()?.swipe(
-                                    clampX(c.x + half),
-                                    clampY(c.y),
-                                    clampX(c.x - half),
-                                    clampY(c.y),
-                                    )
-                                }
-                                mouseKeyScrollRight -> dispatchProxy("swipe_right") {
-                                    proxy()?.swipe(
-                                    clampX(c.x - half),
-                                    clampY(c.y),
-                                    clampX(c.x + half),
-                                    clampY(c.y),
-                                    )
-                                }
-                            }
-
-                            Log.i(tag, "swipe via proxy keyCode=$keyCode center=(${c.x},${c.y}) distance=$distance")
-                        }
-                    }
+                    dispatchScrollOrSwipe(keyCode)
                     return true
                 }
 
@@ -435,6 +419,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         clearPendingToggle()
         clearPendingTapKey()
+        clearPendingScrollRepeat()
         clearMoveRepeat()
         cursor.hide()
         try {
@@ -579,6 +564,86 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         mainHandler.removeCallbacks(tapKeyLongPressRunnable)
         tapKeyIsDown = false
         tapKeyLongPressTriggered = false
+    }
+
+    private fun clearPendingScrollRepeat() {
+        mainHandler.removeCallbacks(scrollKeyLongPressRunnable)
+        mainHandler.removeCallbacks(scrollRepeatRunnable)
+    }
+
+    private fun dispatchScrollOrSwipe(keyCode: Int) {
+        val mouseKeyScrollUp = settings.getMouseKeyScrollUp()
+        val mouseKeyScrollDown = settings.getMouseKeyScrollDown()
+        val mouseKeyScrollLeft = settings.getMouseKeyScrollLeft()
+        val mouseKeyScrollRight = settings.getMouseKeyScrollRight()
+
+        val c = cursor.center()
+        when (settings.getEmulationMethod()) {
+            EmulationMethod.ACCESSIBILITY_SERVICE -> {
+                when (keyCode) {
+                    mouseKeyScrollUp -> gestures.scrollUp(c.x, c.y)
+                    mouseKeyScrollDown -> gestures.scrollDown(c.x, c.y)
+                    mouseKeyScrollLeft -> gestures.scrollLeft(c.x, c.y)
+                    mouseKeyScrollRight -> gestures.scrollRight(c.x, c.y)
+                }
+            }
+
+            EmulationMethod.PROXY -> {
+                val dm = resources.displayMetrics
+                val w = dm.widthPixels
+                val h = dm.heightPixels
+                val distancePercent = settings.getMouseSwipeDistancePercent()
+                val distance = ((minOf(w, h) * (distancePercent / 100.0))).toInt().coerceIn(40, minOf(w, h) - 1)
+
+                fun clampX(x: Int) = x.coerceIn(0, w - 1)
+                fun clampY(y: Int) = y.coerceIn(0, h - 1)
+
+                // Swipe around cursor center.
+                val half = (distance / 2).coerceAtLeast(1)
+                when (keyCode) {
+                    mouseKeyScrollUp -> dispatchProxy("swipe_up") {
+                        proxy()?.swipe(
+                            clampX(c.x),
+                            clampY(c.y + half),
+                            clampX(c.x),
+                            clampY(c.y - half),
+                        )
+                    }
+
+                    mouseKeyScrollDown -> dispatchProxy("swipe_down") {
+                        proxy()?.swipe(
+                            clampX(c.x),
+                            clampY(c.y - half),
+                            clampX(c.x),
+                            clampY(c.y + half),
+                        )
+                    }
+
+                    mouseKeyScrollLeft -> dispatchProxy("swipe_left") {
+                        proxy()?.swipe(
+                            clampX(c.x + half),
+                            clampY(c.y),
+                            clampX(c.x - half),
+                            clampY(c.y),
+                        )
+                    }
+
+                    mouseKeyScrollRight -> dispatchProxy("swipe_right") {
+                        proxy()?.swipe(
+                            clampX(c.x - half),
+                            clampY(c.y),
+                            clampX(c.x + half),
+                            clampY(c.y),
+                        )
+                    }
+                }
+
+                Log.i(
+                    tag,
+                    "swipe via proxy keyCode=$keyCode center=(${c.x},${c.y}) distance=$distance (${distancePercent}%)",
+                )
+            }
+        }
     }
 
     private fun applyCursorStartPositionIfNeeded() {

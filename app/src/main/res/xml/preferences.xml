@@ -167,6 +167,27 @@
             android:defaultValue="90"
             app:useSimpleSummaryProvider="true" />
 
+        <SeekBarPreference
+            android:key="mouse_swipe_distance_percent"
+            android:title="@string/prefs_mouse_swipe_distance"
+            android:min="5"
+            android:max="95"
+            android:defaultValue="28"
+            app:showSeekBarValue="true" />
+
+        <SwitchPreferenceCompat
+            android:key="mouse_scroll_repeat_longpress"
+            android:title="@string/prefs_mouse_scroll_repeat_longpress"
+            android:defaultValue="true" />
+
+        <SeekBarPreference
+            android:key="mouse_scroll_repeat_interval_ms"
+            android:title="@string/prefs_mouse_scroll_repeat_interval_ms"
+            android:min="30"
+            android:max="500"
+            android:defaultValue="120"
+            app:showSeekBarValue="true" />
+
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/prefs_category_system">

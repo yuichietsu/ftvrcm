@@ -64,6 +64,11 @@ class SettingsStore(context: Context) {
             putString(SettingsKeys.MOUSE_KEY_SCROLL_LEFT, "89")
             putString(SettingsKeys.MOUSE_KEY_SCROLL_RIGHT, "90")
 
+            // Swipe/scroll tuning
+            putInt(SettingsKeys.MOUSE_SWIPE_DISTANCE_PERCENT, 28)
+            putBoolean(SettingsKeys.MOUSE_SCROLL_REPEAT_LONGPRESS, true)
+            putInt(SettingsKeys.MOUSE_SCROLL_REPEAT_INTERVAL_MS, 120)
+
             // Toggle cursor/dpad behavior (default: MENU)
             // NOTE: default uses the same key as mode toggle for convenience.
             putString(SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE, "82")
@@ -140,6 +145,15 @@ class SettingsStore(context: Context) {
     fun getMouseKeyScrollDown(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_DOWN, "167")?.toIntOrNull() ?: 167
     fun getMouseKeyScrollLeft(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_LEFT, "89")?.toIntOrNull() ?: 89
     fun getMouseKeyScrollRight(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_RIGHT, "90")?.toIntOrNull() ?: 90
+
+    fun getMouseSwipeDistancePercent(): Int =
+        prefs.getInt(SettingsKeys.MOUSE_SWIPE_DISTANCE_PERCENT, 28).coerceIn(5, 95)
+
+    fun isMouseScrollRepeatLongPress(): Boolean =
+        prefs.getBoolean(SettingsKeys.MOUSE_SCROLL_REPEAT_LONGPRESS, true)
+
+    fun getMouseScrollRepeatIntervalMs(): Int =
+        prefs.getInt(SettingsKeys.MOUSE_SCROLL_REPEAT_INTERVAL_MS, 120).coerceIn(30, 2000)
 
     fun getMouseKeyCursorDpadToggle(): Int =
         prefs.getString(SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE, "82")?.toIntOrNull() ?: 82
