@@ -12,15 +12,12 @@ import com.ftvrcm.R
 import android.os.SystemClock
 import android.view.ViewConfiguration
 import android.content.SharedPreferences
-import androidx.appcompat.app.AlertDialog
 import com.ftvrcm.data.SettingsKeys
 
 class TouchTestActivity : AppCompatActivity() {
 
     private lateinit var lastEvent: TextView
     private lateinit var lastGesture: TextView
-
-    private var lastGestureFullText: String = "最終ジェスチャ: -"
 
     private var gestureListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
 
@@ -44,26 +41,17 @@ class TouchTestActivity : AppCompatActivity() {
             val type = prefs.getString(SettingsKeys.LAST_GESTURE_TYPE, "-") ?: "-"
             val status = prefs.getString(SettingsKeys.LAST_GESTURE_STATUS, "-") ?: "-"
             val detail = prefs.getString(SettingsKeys.LAST_GESTURE_DETAIL, "") ?: ""
-            lastGestureFullText = if (detail.isBlank()) {
+            val text = if (detail.isBlank()) {
                 "最終ジェスチャ: $type / $status"
             } else {
                 "最終ジェスチャ: $type / $status ($detail)"
             }
 
-            // Keep 1-line fixed height; overflow is ellipsized by TextView.
-            lastGesture.text = lastGestureFullText
+            // Keep 2-line fixed height; overflow is ellipsized by TextView.
+            lastGesture.text = text
         }
 
         refreshLastGesture()
-
-        lastGesture.setOnClickListener {
-            val message = lastGestureFullText
-            AlertDialog.Builder(this)
-                .setTitle("最終ジェスチャ")
-                .setMessage(message)
-                .setPositiveButton(android.R.string.ok) { _, _ -> }
-                .show()
-        }
 
         val prefs = getSharedPreferences(SettingsKeys.PREFS_NAME, MODE_PRIVATE)
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->

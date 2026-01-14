@@ -33,24 +33,23 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:ellipsize="end"
-        android:maxLines="1"
-        android:singleLine="true"
-        android:clickable="true"
-        android:focusable="true"
+        android:maxLines="2"
+        android:minLines="2"
         android:text="最終ジェスチャ: -" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="ボタン（タップ/ロングタップ）"
-        android:textStyle="bold" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_marginEnd="8dp"
+            android:text="ボタン"
+            android:textStyle="bold" />
 
         <Button
             android:id="@+id/btnA"
@@ -76,61 +75,77 @@
             android:text="ボタンC" />
     </LinearLayout>
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="リスト（選択可能・ダブルタップ判定）"
-        android:textStyle="bold" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="スワイプ確認（上下左右）"
-        android:textStyle="bold" />
-
-    <HorizontalScrollView
-        android:id="@+id/swipeTestHScroll"
-        android:layout_width="match_parent"
-        android:layout_height="160dp"
-        android:layout_marginTop="8dp"
-        android:fillViewport="true"
-        android:scrollbars="horizontal">
-
-        <ScrollView
-            android:id="@+id/swipeTestVScroll"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:fillViewport="true"
-            android:scrollbars="vertical">
-
-            <FrameLayout
-                android:layout_width="800dp"
-                android:layout_height="800dp"
-                android:background="#222222">
-
-                <TextView
-                    android:id="@+id/swipeTestContent"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:padding="24dp"
-                    android:text="中央から上下左右にスクロール/スワイプできるか確認します。\n\n↑ 上\n\n← 左\n\n→ 右\n\n↓ 下\n\n（内容物はわざと大きくしてあります）"
-                    android:textColor="#FFFFFF"
-                    android:textSize="16sp" />
-
-            </FrameLayout>
-        </ScrollView>
-    </HorizontalScrollView>
-
-    <ListView
-        android:id="@+id/list"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="12dp"
         android:layout_weight="1"
-        android:choiceMode="singleChoice"
-        android:dividerHeight="1dp"
-        android:scrollbars="vertical" />
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="リスト"
+                android:textStyle="bold" />
+
+            <ListView
+                android:id="@+id/list"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="8dp"
+                android:layout_weight="1"
+                android:choiceMode="singleChoice"
+                android:dividerHeight="1dp"
+                android:scrollbars="vertical" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="スワイプ確認"
+                android:textStyle="bold" />
+
+            <HorizontalScrollView
+                android:id="@+id/swipeTestHScroll"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="8dp"
+                android:layout_weight="1"
+                android:scrollbars="horizontal">
+
+                <ScrollView
+                    android:id="@+id/swipeTestVScroll"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:scrollbars="vertical">
+
+                    <FrameLayout
+                        android:layout_width="1200dp"
+                        android:layout_height="1200dp"
+                        android:background="#222222">
+
+                        <com.ftvrcm.ui.SwipePatternView
+                            android:id="@+id/swipePattern"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent" />
+
+                    </FrameLayout>
+                </ScrollView>
+            </HorizontalScrollView>
+        </LinearLayout>
+    </LinearLayout>
 
 </LinearLayout>

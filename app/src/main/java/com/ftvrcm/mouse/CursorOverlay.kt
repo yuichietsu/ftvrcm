@@ -6,7 +6,6 @@ import android.graphics.Path
 import android.graphics.Paint
 import android.graphics.PixelFormat
 import android.graphics.Point
-import android.graphics.RectF
 import android.os.Build
 import android.os.SystemClock
 import android.util.TypedValue
@@ -393,11 +392,10 @@ class CursorOverlay(private val context: Context) {
                 canvas.drawLine(x1, y1, x2, y2, traceOuterPaint)
                 canvas.drawLine(x1, y1, x2, y2, traceInnerPaint)
 
-                // Animate a pointing icon from start -> end.
+                // Animate a simple dot from start -> end.
                 val px = x1 + (x2 - x1) * t
                 val py = y1 + (y2 - y1) * t
-                val angleRad = atan2(y2 - y1, x2 - x1)
-                drawPointingFinger(canvas, px, py, angleRad, alpha)
+                drawMovingDot(canvas, px, py, alpha)
             }
         }
 
@@ -419,12 +417,12 @@ class CursorOverlay(private val context: Context) {
             strokeWidth = dp(2.2f)
         }
 
-        private val fingerFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        private val dotFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
             color = 0xFF000000.toInt()
         }
 
-        private val fingerStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        private val dotStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
             color = 0xFFFFFFFF.toInt()
             strokeCap = Paint.Cap.ROUND
@@ -472,26 +470,12 @@ class CursorOverlay(private val context: Context) {
         private fun dp(value: Float): Float =
             TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, resources.displayMetrics)
 
-        private fun drawPointingFinger(canvas: Canvas, x: Float, y: Float, angleRad: Float, alpha: Int) {
-            // Simple pointing icon: capsule body with a round tip.
-            val len = dp(22f)
-            val r = dp(6.5f)
-
-            fingerFillPaint.alpha = (alpha * 0.9f).toInt().coerceIn(0, 255)
-            fingerStrokePaint.alpha = alpha
-
-            canvas.withSave {
-                translate(x, y)
-                rotate(angleRad * 180f / Math.PI.toFloat())
-
-                val body = RectF(-len, -r, 0f, r)
-                canvas.drawRoundRect(body, r, r, fingerFillPaint)
-                canvas.drawRoundRect(body, r, r, fingerStrokePaint)
-
-                // Tip highlight
-                canvas.drawCircle(0f, 0f, r * 0.92f, fingerFillPaint)
-                canvas.drawCircle(0f, 0f, r * 0.92f, fingerStrokePaint)
-            }
+        private fun drawMovingDot(canvas: Canvas, x: Float, y: Float, alpha: Int) {
+            val r = dp(7.5f)
+            dotFillPaint.alpha = (alpha * 0.9f).toInt().coerceIn(0, 255)
+            dotStrokePaint.alpha = alpha
+            canvas.drawCircle(x, y, r, dotFillPaint)
+            canvas.drawCircle(x, y, r, dotStrokePaint)
         }
     }
 }
