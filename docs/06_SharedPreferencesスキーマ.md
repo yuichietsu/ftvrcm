@@ -30,6 +30,7 @@ com.ftvrcm_preferences.xml
     ├── mouse_scroll_repeat_interval_ms
     ├── mouse_key_cursor_dpad_toggle
     ├── mouse_cursor_start_position
+    ├── touch_visual_feedback_enabled
     ├── key_mapping
     ├── last_gesture_type
     ├── last_gesture_status
@@ -105,6 +106,24 @@ com.ftvrcm_preferences.xml
 **例**：
 ```xml
 <int name="mouse_pointer_speed" value="10" />
+```
+
+---
+
+### 3.1 タッチ操作フィードバック（touch_visual_feedback_enabled）
+
+タッチ操作時の視覚フィードバック（タップ時の半透明表示、スワイプ軌跡、スクロール方向矢印）を有効化します。
+
+| 項目 | 値 |
+|------|-----|
+| **キー** | `touch_visual_feedback_enabled` |
+| **型** | Boolean |
+| **デフォルト** | `true` |
+| **説明** | タッチ操作のアニメーション/フィードバック表示を有効化 |
+
+**例**：
+```xml
+<boolean name="touch_visual_feedback_enabled" value="true" />
 ```
 
 ---

@@ -39,6 +39,9 @@ object SettingsKeys {
     const val MOUSE_CURSOR_LAST_X = "mouse_cursor_last_x" // int
     const val MOUSE_CURSOR_LAST_Y = "mouse_cursor_last_y" // int
 
+    // Visual feedback (cursor overlay)
+    const val TOUCH_VISUAL_FEEDBACK_ENABLED = "touch_visual_feedback_enabled" // boolean
+
     // docs/06
     const val KEY_MAPPING = "key_mapping" // StringSet: {keyCode}:{actionId}
 

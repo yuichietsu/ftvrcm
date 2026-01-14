@@ -79,6 +79,12 @@
             android:defaultValue="center"
             app:useSimpleSummaryProvider="true" />
 
+        <SwitchPreferenceCompat
+            android:key="touch_visual_feedback_enabled"
+            android:title="@string/prefs_touch_visual_feedback"
+            android:summary="@string/prefs_touch_visual_feedback_summary"
+            android:defaultValue="true" />
+
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/prefs_category_key_mapping_cursor">

@@ -76,6 +76,9 @@ class SettingsStore(context: Context) {
             // Cursor start position in mouse mode
             putString(SettingsKeys.MOUSE_CURSOR_START_POSITION, "center")
 
+            // Visual feedback
+            putBoolean(SettingsKeys.TOUCH_VISUAL_FEEDBACK_ENABLED, true)
+
             putStringSet(
                 SettingsKeys.KEY_MAPPING,
                 setOf(
@@ -157,5 +160,8 @@ class SettingsStore(context: Context) {
 
     fun getMouseKeyCursorDpadToggle(): Int =
         prefs.getString(SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE, "82")?.toIntOrNull() ?: 82
+
+    fun isTouchVisualFeedbackEnabled(): Boolean =
+        prefs.getBoolean(SettingsKeys.TOUCH_VISUAL_FEEDBACK_ENABLED, true)
 
 }

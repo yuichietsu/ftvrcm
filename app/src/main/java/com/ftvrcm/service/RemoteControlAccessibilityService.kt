@@ -57,6 +57,11 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         tapKeyLongPressTriggered = true
         clearMoveRepeat()
         val c = cursor.center()
+
+        if (settings.isTouchVisualFeedbackEnabled()) {
+            cursor.showTapFeedback(isLongPress = true)
+        }
+
         when (settings.getEmulationMethod()) {
             EmulationMethod.ACCESSIBILITY_SERVICE -> gestures.longPress(c.x, c.y)
             EmulationMethod.PROXY -> dispatchProxy("longPress") { proxy()?.longPress(c.x, c.y) }
@@ -325,6 +330,11 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
                     clearMoveRepeat()
                     val c = cursor.center()
+
+                    if (settings.isTouchVisualFeedbackEnabled()) {
+                        cursor.showTapFeedback(isLongPress = false)
+                    }
+
                     when (settings.getEmulationMethod()) {
                         EmulationMethod.ACCESSIBILITY_SERVICE -> {
                             Log.i(tag, "tap via accessibility at (${c.x},${c.y})")
@@ -578,13 +588,26 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         val mouseKeyScrollRight = settings.getMouseKeyScrollRight()
 
         val c = cursor.center()
+        val visualFeedback = settings.isTouchVisualFeedbackEnabled()
         when (settings.getEmulationMethod()) {
             EmulationMethod.ACCESSIBILITY_SERVICE -> {
                 when (keyCode) {
-                    mouseKeyScrollUp -> gestures.scrollUp(c.x, c.y)
-                    mouseKeyScrollDown -> gestures.scrollDown(c.x, c.y)
-                    mouseKeyScrollLeft -> gestures.scrollLeft(c.x, c.y)
-                    mouseKeyScrollRight -> gestures.scrollRight(c.x, c.y)
+                    mouseKeyScrollUp -> {
+                        if (visualFeedback) cursor.showScrollArrow(CursorOverlay.Direction.UP, c.x, c.y)
+                        gestures.scrollUp(c.x, c.y)
+                    }
+                    mouseKeyScrollDown -> {
+                        if (visualFeedback) cursor.showScrollArrow(CursorOverlay.Direction.DOWN, c.x, c.y)
+                        gestures.scrollDown(c.x, c.y)
+                    }
+                    mouseKeyScrollLeft -> {
+                        if (visualFeedback) cursor.showScrollArrow(CursorOverlay.Direction.LEFT, c.x, c.y)
+                        gestures.scrollLeft(c.x, c.y)
+                    }
+                    mouseKeyScrollRight -> {
+                        if (visualFeedback) cursor.showScrollArrow(CursorOverlay.Direction.RIGHT, c.x, c.y)
+                        gestures.scrollRight(c.x, c.y)
+                    }
                 }
             }
 
@@ -601,40 +624,40 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 // Swipe around cursor center.
                 val half = (distance / 2).coerceAtLeast(1)
                 when (keyCode) {
-                    mouseKeyScrollUp -> dispatchProxy("swipe_up") {
-                        proxy()?.swipe(
-                            clampX(c.x),
-                            clampY(c.y + half),
-                            clampX(c.x),
-                            clampY(c.y - half),
-                        )
+                    mouseKeyScrollUp -> {
+                        val x1 = clampX(c.x)
+                        val y1 = clampY(c.y + half)
+                        val x2 = clampX(c.x)
+                        val y2 = clampY(c.y - half)
+                        if (visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
+                        dispatchProxy("swipe_up") { proxy()?.swipe(x1, y1, x2, y2) }
                     }
 
-                    mouseKeyScrollDown -> dispatchProxy("swipe_down") {
-                        proxy()?.swipe(
-                            clampX(c.x),
-                            clampY(c.y - half),
-                            clampX(c.x),
-                            clampY(c.y + half),
-                        )
+                    mouseKeyScrollDown -> {
+                        val x1 = clampX(c.x)
+                        val y1 = clampY(c.y - half)
+                        val x2 = clampX(c.x)
+                        val y2 = clampY(c.y + half)
+                        if (visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
+                        dispatchProxy("swipe_down") { proxy()?.swipe(x1, y1, x2, y2) }
                     }
 
-                    mouseKeyScrollLeft -> dispatchProxy("swipe_left") {
-                        proxy()?.swipe(
-                            clampX(c.x + half),
-                            clampY(c.y),
-                            clampX(c.x - half),
-                            clampY(c.y),
-                        )
+                    mouseKeyScrollLeft -> {
+                        val x1 = clampX(c.x + half)
+                        val y1 = clampY(c.y)
+                        val x2 = clampX(c.x - half)
+                        val y2 = clampY(c.y)
+                        if (visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
+                        dispatchProxy("swipe_left") { proxy()?.swipe(x1, y1, x2, y2) }
                     }
 
-                    mouseKeyScrollRight -> dispatchProxy("swipe_right") {
-                        proxy()?.swipe(
-                            clampX(c.x - half),
-                            clampY(c.y),
-                            clampX(c.x + half),
-                            clampY(c.y),
-                        )
+                    mouseKeyScrollRight -> {
+                        val x1 = clampX(c.x - half)
+                        val y1 = clampY(c.y)
+                        val x2 = clampX(c.x + half)
+                        val y2 = clampY(c.y)
+                        if (visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
+                        dispatchProxy("swipe_right") { proxy()?.swipe(x1, y1, x2, y2) }
                     }
                 }
 

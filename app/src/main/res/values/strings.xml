@@ -19,6 +19,9 @@
 
     <string name="prefs_mouse_cursor_start_position">タッチ操作開始時のカーソル位置</string>
 
+    <string name="prefs_touch_visual_feedback">タッチ操作フィードバック（アニメーション）</string>
+    <string name="prefs_touch_visual_feedback_summary">タップ時の半透明表示、スワイプの軌跡、スクロール方向の矢印を表示します</string>
+
     <string name="prefs_emulation_method">エミュレーション方法</string>
 
     <string name="prefs_proxy_host">プロキシホスト（PC）</string>
