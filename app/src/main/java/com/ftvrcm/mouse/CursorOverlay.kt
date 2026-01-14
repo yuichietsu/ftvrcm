@@ -2,10 +2,12 @@ package com.ftvrcm.mouse
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.LinearGradient
 import android.graphics.Path
 import android.graphics.Paint
 import android.graphics.PixelFormat
 import android.graphics.Point
+import android.graphics.Shader
 import android.os.Build
 import android.os.SystemClock
 import android.util.TypedValue
@@ -111,7 +113,9 @@ class CursorOverlay(private val context: Context) {
     enum class Direction { UP, DOWN, LEFT, RIGHT }
 
     fun showScrollArrow(direction: Direction, x: Int, y: Int) {
-        feedbackView?.addArrow(direction = direction, x = x, y = y)
+        // Keep signature for callers; draw arrow by transforming the cursor itself.
+        // x/y are not needed because the cursor view is already positioned.
+        (view as? CursorView)?.showScrollArrow(direction)
     }
 
     fun showSwipeTrail(x1: Int, y1: Int, x2: Int, y2: Int) {
@@ -170,8 +174,11 @@ class CursorOverlay(private val context: Context) {
 
         private var style: CursorStyle = CursorStyle.POINTER
 
-        private var fillAlpha: Float = 0f
-        private var pressEndAtMs: Long = 0L
+        private var pressHoldUntilMs: Long = 0L
+        private var pressFadeUntilMs: Long = 0L
+
+        private var scrollArrowDirection: Direction? = null
+        private var scrollArrowUntilMs: Long = 0L
 
         fun setStyle(newStyle: CursorStyle) {
             style = newStyle
@@ -180,8 +187,15 @@ class CursorOverlay(private val context: Context) {
 
         fun showPressFeedback(holdMs: Long) {
             val now = SystemClock.uptimeMillis()
-            pressEndAtMs = (now + holdMs).coerceAtLeast(now)
-            fillAlpha = 0.38f
+            pressHoldUntilMs = (now + holdMs).coerceAtLeast(now)
+            pressFadeUntilMs = pressHoldUntilMs + 220L
+            invalidate()
+        }
+
+        fun showScrollArrow(direction: Direction, holdMs: Long = 240L) {
+            val now = SystemClock.uptimeMillis()
+            scrollArrowDirection = direction
+            scrollArrowUntilMs = (now + holdMs).coerceAtLeast(now)
             invalidate()
         }
 
@@ -197,9 +211,37 @@ class CursorOverlay(private val context: Context) {
             strokeWidth = dp(2.5f)
         }
 
-        private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        private val pressFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
+            color = 0xFF000000.toInt()
+        }
+
+        private val invertOuterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
             color = 0xFFFFFFFF.toInt()
+            strokeWidth = dp(5f)
+        }
+
+        private val invertInnerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            color = 0xFF000000.toInt()
+            strokeWidth = dp(2.5f)
+        }
+
+        private val arrowOuterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            color = 0xCC000000.toInt()
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+            strokeWidth = dp(6f)
+        }
+
+        private val arrowInnerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            color = 0xFFFFFFFF.toInt()
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+            strokeWidth = dp(3f)
         }
 
         private val dpadOuterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -222,27 +264,82 @@ class CursorOverlay(private val context: Context) {
             val cy = height / 2f
 
             val now = SystemClock.uptimeMillis()
-            if (fillAlpha > 0f) {
-                if (now <= pressEndAtMs) {
-                    // keep
-                } else {
-                    // fade out quickly
-                    fillAlpha = (fillAlpha - 0.08f).coerceAtLeast(0f)
+
+            val pressAlpha = when {
+                now <= pressHoldUntilMs -> 1f
+                now <= pressFadeUntilMs -> {
+                    val t = (now - pressHoldUntilMs).toFloat() / (pressFadeUntilMs - pressHoldUntilMs).toFloat()
+                    (1f - t).coerceIn(0f, 1f)
                 }
-                if (fillAlpha > 0f) {
-                    postInvalidateOnAnimation()
-                }
+                else -> 0f
+            }
+
+            val scrollArrowActive = now <= scrollArrowUntilMs && scrollArrowDirection != null
+
+            if (pressAlpha > 0f || scrollArrowActive) {
+                postInvalidateOnAnimation()
             }
 
             when (style) {
                 CursorStyle.POINTER -> {
                     val r = (minOf(width, height) / 2f) - dp(2.5f)
-                    if (fillAlpha > 0f) {
-                        fillPaint.alpha = (fillAlpha * 255).toInt().coerceIn(0, 255)
-                        canvas.drawCircle(cx, cy, r - dp(3.5f), fillPaint)
+
+                    if (scrollArrowActive) {
+                        val dir = scrollArrowDirection ?: return
+                        val len = (minOf(width, height) * 0.34f)
+                        val head = (minOf(width, height) * 0.16f)
+
+                        val dx = when (dir) {
+                            Direction.LEFT -> -1f
+                            Direction.RIGHT -> 1f
+                            else -> 0f
+                        }
+                        val dy = when (dir) {
+                            Direction.UP -> -1f
+                            Direction.DOWN -> 1f
+                            else -> 0f
+                        }
+
+                        val x1 = cx - dx * (len * 0.3f)
+                        val y1 = cy - dy * (len * 0.3f)
+                        val x2 = cx + dx * (len * 0.7f)
+                        val y2 = cy + dy * (len * 0.7f)
+
+                        fun drawArrow(p: Paint) {
+                            canvas.drawLine(x1, y1, x2, y2, p)
+                            val path = Path()
+                            path.moveTo(x2, y2)
+                            if (dx != 0f) {
+                                path.lineTo(x2 - dx * head, y2 - head)
+                                path.moveTo(x2, y2)
+                                path.lineTo(x2 - dx * head, y2 + head)
+                            } else {
+                                path.lineTo(x2 - head, y2 - dy * head)
+                                path.moveTo(x2, y2)
+                                path.lineTo(x2 + head, y2 - dy * head)
+                            }
+                            canvas.drawPath(path, p)
+                        }
+
+                        drawArrow(arrowOuterPaint)
+                        drawArrow(arrowInnerPaint)
+                        return
                     }
+
+                    // Base cursor ring
                     canvas.drawCircle(cx, cy, r, outerPaint)
                     canvas.drawCircle(cx, cy, r, innerPaint)
+
+                    // Tap feedback: invert/negative-like overlay inside the ring
+                    if (pressAlpha > 0f) {
+                        pressFillPaint.alpha = (pressAlpha * 140).toInt().coerceIn(0, 255)
+                        canvas.drawCircle(cx, cy, r - dp(3.5f), pressFillPaint)
+
+                        invertOuterPaint.alpha = (pressAlpha * 255).toInt().coerceIn(0, 255)
+                        invertInnerPaint.alpha = (pressAlpha * 255).toInt().coerceIn(0, 255)
+                        canvas.drawCircle(cx, cy, r, invertOuterPaint)
+                        canvas.drawCircle(cx, cy, r, invertInnerPaint)
+                    }
                 }
 
                 CursorStyle.DPAD -> {
@@ -270,7 +367,7 @@ class CursorOverlay(private val context: Context) {
         private sealed interface Effect {
             val startedAtMs: Long
             val durationMs: Long
-            fun draw(canvas: Canvas, paint: Paint, nowMs: Long)
+            fun draw(canvas: Canvas, strokePaint: Paint, fillPaint: Paint, nowMs: Long)
             fun isAlive(nowMs: Long): Boolean = (nowMs - startedAtMs) <= durationMs
         }
 
@@ -282,10 +379,28 @@ class CursorOverlay(private val context: Context) {
             override val startedAtMs: Long,
             override val durationMs: Long,
         ) : Effect {
-            override fun draw(canvas: Canvas, paint: Paint, nowMs: Long) {
+            override fun draw(canvas: Canvas, strokePaint: Paint, fillPaint: Paint, nowMs: Long) {
                 val t = ((nowMs - startedAtMs).toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
-                paint.alpha = ((1f - t) * 200).toInt().coerceIn(0, 255)
-                canvas.drawLine(x1, y1, x2, y2, paint)
+                val fade = (1f - t).coerceIn(0f, 1f)
+
+                // Comet-like trail: transparent tail -> bright head + glowing dot
+                strokePaint.shader = LinearGradient(
+                    x1,
+                    y1,
+                    x2,
+                    y2,
+                    intArrayOf(0x00FFFFFF, 0xFFFFFFFF.toInt()),
+                    floatArrayOf(0f, 1f),
+                    Shader.TileMode.CLAMP,
+                )
+                strokePaint.alpha = (fade * 255).toInt().coerceIn(0, 255)
+                canvas.drawLine(x1, y1, x2, y2, strokePaint)
+
+                strokePaint.shader = null
+
+                fillPaint.alpha = (fade * 220).toInt().coerceIn(0, 255)
+                val headR = strokePaint.strokeWidth * 2.2f
+                canvas.drawCircle(x2, y2, headR, fillPaint)
             }
         }
 
@@ -296,12 +411,12 @@ class CursorOverlay(private val context: Context) {
             override val startedAtMs: Long,
             override val durationMs: Long,
         ) : Effect {
-            override fun draw(canvas: Canvas, paint: Paint, nowMs: Long) {
+            override fun draw(canvas: Canvas, strokePaint: Paint, fillPaint: Paint, nowMs: Long) {
                 val t = ((nowMs - startedAtMs).toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
-                paint.alpha = ((1f - t) * 220).toInt().coerceIn(0, 255)
+                strokePaint.alpha = ((1f - t) * 220).toInt().coerceIn(0, 255)
 
-                val len = paint.strokeWidth * 8f
-                val head = paint.strokeWidth * 3.5f
+                val len = strokePaint.strokeWidth * 8f
+                val head = strokePaint.strokeWidth * 3.5f
 
                 val dx = when (direction) {
                     Direction.LEFT -> -1f
@@ -317,7 +432,7 @@ class CursorOverlay(private val context: Context) {
                 val x2 = x + dx * len
                 val y2 = y + dy * len
 
-                canvas.drawLine(x, y, x2, y2, paint)
+                canvas.drawLine(x, y, x2, y2, strokePaint)
 
                 // Arrow head
                 val path = Path()
@@ -331,18 +446,23 @@ class CursorOverlay(private val context: Context) {
                     path.moveTo(x2, y2)
                     path.lineTo(x2 + head, y2 - dy * head)
                 }
-                canvas.drawPath(path, paint)
+                canvas.drawPath(path, strokePaint)
             }
         }
 
         private val effects = ArrayDeque<Effect>()
 
-        private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
             color = 0xFFFFFFFF.toInt()
             strokeCap = Paint.Cap.ROUND
             strokeJoin = Paint.Join.ROUND
             strokeWidth = dp(3f)
+        }
+
+        private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            color = 0xFFFFFFFF.toInt()
         }
 
         fun addSwipeTrail(x1: Int, y1: Int, x2: Int, y2: Int) {
@@ -387,7 +507,7 @@ class CursorOverlay(private val context: Context) {
                         it.remove()
                         continue
                     }
-                    e.draw(canvas, paint, now)
+                    e.draw(canvas, strokePaint, fillPaint, now)
                 }
             }
 
