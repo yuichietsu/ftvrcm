@@ -12,26 +12,33 @@ class SwipePatternView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
 ) : View(context, attrs) {
 
-    private val basePaintA = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF2A2A2A.toInt() }
-    private val basePaintB = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF3A3A3A.toInt() }
+    private val basePaintA = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF1C1C1C.toInt() }
+    private val basePaintB = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF5A5A5A.toInt() }
 
     private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        color = 0x66FFFFFF
-        strokeWidth = dp(1f)
+        color = 0x99FFFFFF.toInt()
+        strokeWidth = dp(1.5f)
     }
 
     private val stripePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        color = 0x33FFFFFF
-        strokeWidth = dp(3f)
+        color = 0xCC000000.toInt()
+        strokeWidth = dp(6f)
+        strokeCap = Paint.Cap.ROUND
+    }
+
+    private val stripeHighlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        color = 0xCCFFFFFF.toInt()
+        strokeWidth = dp(2.5f)
         strokeCap = Paint.Cap.ROUND
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        val tile = dp(48f).toInt().coerceAtLeast(16)
+        val tile = dp(72f).toInt().coerceAtLeast(24)
 
         // Checkerboard base
         var y = 0
@@ -68,10 +75,17 @@ class SwipePatternView @JvmOverloads constructor(
         }
 
         // Diagonal stripes to make direction obvious
-        val step = dp(72f)
+        val step = dp(96f)
         var offset = -height.toFloat()
         while (offset < width.toFloat() + height.toFloat()) {
             canvas.drawLine(offset, 0f, offset + height.toFloat(), height.toFloat(), stripePaint)
+            canvas.drawLine(
+                offset + dp(8f),
+                0f,
+                offset + height.toFloat() + dp(8f),
+                height.toFloat(),
+                stripeHighlightPaint,
+            )
             offset += step
         }
     }

@@ -7,7 +7,8 @@
         <Preference
             android:key="operation_mode_current"
             android:title="@string/prefs_mode_current"
-            android:summary="@string/prefs_mode_current_summary" />
+            android:summary="@string/prefs_mode_current_summary"
+            android:selectable="false" />
 
         <ListPreference
             android:key="toggle_keycode"

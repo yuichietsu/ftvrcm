@@ -19,8 +19,8 @@
 
     <string name="prefs_mouse_cursor_start_position">タッチ操作開始時のカーソル位置</string>
 
-    <string name="prefs_touch_visual_feedback">タッチ操作フィードバック（アニメーション）</string>
-    <string name="prefs_touch_visual_feedback_summary">タップ時の半透明表示、スワイプの軌跡、スクロール方向の矢印を表示します</string>
+    <string name="prefs_touch_visual_feedback">タッチ操作フィードバック</string>
+    <string name="prefs_touch_visual_feedback_summary">タップ、スワイプ、スクロールが発生したことを視覚的にお知らせします</string>
 
     <string name="prefs_emulation_method">エミュレーション方法</string>
 
@@ -65,7 +65,7 @@
 
     <string name="prefs_category_system">システム</string>
 
-    <string name="prefs_status_accessibility_service">必要状態：アクセシビリティサービス</string>
+    <string name="prefs_status_accessibility_service">アクセシビリティサービス</string>
     <string name="prefs_status_unknown">未確認</string>
     <string name="prefs_status_accessibility_service_on">ON（有効）</string>
     <string name="prefs_status_accessibility_service_off">OFF（無効：アクセシビリティ設定で本サービスをONにしてください）</string>
