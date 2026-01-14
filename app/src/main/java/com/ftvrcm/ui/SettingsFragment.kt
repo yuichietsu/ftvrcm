@@ -31,6 +31,7 @@ private const val TAG = "SettingsFragment"
 class SettingsFragment : PreferenceFragmentCompat() {
 
     private var listener: SharedPreferences.OnSharedPreferenceChangeListener? = null
+    @Volatile private var proxyHealthCheckRunning: Boolean = false
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         preferenceManager.sharedPreferencesName = SettingsKeys.PREFS_NAME
@@ -150,6 +151,13 @@ class SettingsFragment : PreferenceFragmentCompat() {
     private fun runProxyHealthCheck() {
         val context = requireContext()
         val pref = findPreference<Preference>("proxy_health_check")
+
+        if (proxyHealthCheckRunning) {
+            Toast.makeText(context, getString(R.string.prefs_proxy_health_check_running), Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        proxyHealthCheckRunning = true
         pref?.isEnabled = false
         pref?.summary = getString(R.string.prefs_proxy_health_check_running)
 
@@ -168,19 +176,35 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
             activity?.runOnUiThread {
                 if (!isAdded) return@runOnUiThread
+                proxyHealthCheckRunning = false
                 refreshProxyPreferences()
 
                 if (result.ok) {
                     Toast.makeText(context, "プロキシ疎通OK", Toast.LENGTH_LONG).show()
+                    restorePreferenceFocusSoon()
                 } else {
-                    AlertDialog.Builder(context)
+                    val dialog = AlertDialog.Builder(context)
                         .setTitle("プロキシ疎通NG")
                         .setMessage(result.detail.trim().take(2000))
                         .setPositiveButton(getString(android.R.string.ok)) { _, _ -> }
-                        .show()
+                        .create()
+
+                    dialog.setOnDismissListener {
+                        restorePreferenceFocusSoon()
+                    }
+                    dialog.show()
                 }
             }
         }.start()
+    }
+
+    private fun restorePreferenceFocusSoon() {
+        try {
+            // On TV devices, dialogs/toasts can steal focus from Preference's RecyclerView.
+            // Restore focus so DPAD key navigation works without restarting the activity.
+            listView?.post { listView?.requestFocus() }
+        } catch (_: Throwable) {
+        }
     }
 
     override fun onDestroy() {
