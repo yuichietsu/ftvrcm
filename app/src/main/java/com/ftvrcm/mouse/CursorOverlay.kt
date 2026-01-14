@@ -419,24 +419,20 @@ class CursorOverlay(private val context: Context) {
                     else -> (1f - ((t - 0.7f) / 0.3f)).coerceIn(0f, 1f)
                 }
 
-                val startOffset = dp(18f)
-                val endOffset = dp(64f)
-                val offset = if (isZoomOut) {
-                    startOffset + (endOffset - startOffset) * t
+                val startRadius = dp(18f)
+                val endRadius = dp(64f)
+                val radius = if (isZoomOut) {
+                    startRadius - (startRadius - dp(10f)) * t
                 } else {
-                    endOffset - (endOffset - startOffset) * t
+                    startRadius + (endRadius - startRadius) * t
                 }
 
                 val alpha = (fade * 255).toInt().coerceIn(0, 255)
-                pinchOuterPaint.alpha = alpha
-                pinchInnerPaint.alpha = alpha
+                pinchRingOuterPaint.alpha = alpha
+                pinchRingInnerPaint.alpha = alpha
 
-                val leftX = cx - offset
-                val rightX = cx + offset
-                canvas.drawCircle(leftX, cy, dp(7f), pinchOuterPaint)
-                canvas.drawCircle(leftX, cy, dp(4f), pinchInnerPaint)
-                canvas.drawCircle(rightX, cy, dp(7f), pinchOuterPaint)
-                canvas.drawCircle(rightX, cy, dp(4f), pinchInnerPaint)
+                canvas.drawCircle(cx, cy, radius, pinchRingOuterPaint)
+                canvas.drawCircle(cx, cy, radius, pinchRingInnerPaint)
             }
         }
 
@@ -471,14 +467,16 @@ class CursorOverlay(private val context: Context) {
             strokeWidth = dp(2.2f)
         }
 
-        private val pinchOuterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.FILL
+        private val pinchRingOuterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
             color = 0xFFFFFFFF.toInt()
+            strokeWidth = dp(4.2f)
         }
 
-        private val pinchInnerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.FILL
+        private val pinchRingInnerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
             color = 0xFF000000.toInt()
+            strokeWidth = dp(2.2f)
         }
 
         fun addSwipeTrail(x1: Int, y1: Int, x2: Int, y2: Int) {

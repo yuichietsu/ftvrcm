@@ -13,17 +13,17 @@
     <string name="prefs_key_capture_summary">現在: %1$s
 クリックしてキーを割り当て</string>
     <string name="prefs_key_capture_dialog_message">割り当てたいリモコンのキーを押してください
-BACKをダブルタップで割り当てなし、5秒でキャンセル</string>
+BACKダブルタップで割り当てなし、5秒でキャンセル（BACK単押しはBACKに割り当て）</string>
     <string name="prefs_key_capture_clear">割り当てなし</string>
     <string name="prefs_key_capture_unassigned">未割り当て</string>
 
     <string name="prefs_category_mouse">タッチ操作</string>
     <string name="prefs_category_proxy">ADBプロキシ</string>
     <string name="prefs_category_cursor">カーソル</string>
-    <string name="prefs_category_gestures">スワイプ/ピンチ</string>
+    <string name="prefs_category_gestures">スワイプ/ズーム</string>
     <string name="prefs_category_key_mapping_cursor">カーソル操作</string>
     <string name="prefs_category_key_mapping_swipe">スワイプ/スクロール</string>
-    <string name="prefs_category_key_mapping_pinch">ピンチ操作</string>
+    <string name="prefs_category_key_mapping_pinch">ズーム操作</string>
     <string name="prefs_mouse_speed">移動量</string>
     <string name="prefs_mouse_speed_summary">%1$d</string>
 
@@ -54,15 +54,15 @@ BACKをダブルタップで割り当てなし、5秒でキャンセル</string>
     <string name="prefs_mouse_key_scroll_left">左スクロール/スワイプ</string>
     <string name="prefs_mouse_key_scroll_right">右スクロール/スワイプ</string>
 
-    <string name="prefs_mouse_key_pinch_in">ピンチイン</string>
-    <string name="prefs_mouse_key_pinch_out">ピンチアウト</string>
+    <string name="prefs_mouse_key_pinch_in">ズームイン</string>
+    <string name="prefs_mouse_key_pinch_out">ズームアウト</string>
 
     <string name="prefs_mouse_swipe_distance">スワイプ距離（%）</string>
     <string name="prefs_mouse_swipe_distance_summary">画面の短辺を100%としたときの移動割合</string>
     <string name="prefs_mouse_swipe_double_scale">スワイプダブルクリック倍率</string>
-    <string name="prefs_mouse_pinch_distance">ピンチ量（%）</string>
-    <string name="prefs_mouse_pinch_distance_summary">画面の短辺を100%としたときの指の開き幅</string>
-    <string name="prefs_mouse_pinch_double_scale">ピンチダブルクリック倍率</string>
+    <string name="prefs_mouse_pinch_distance">ズーム量（%）</string>
+    <string name="prefs_mouse_pinch_distance_summary">画面の短辺を100%としたときのズーム量</string>
+    <string name="prefs_mouse_pinch_double_scale">ズームダブルクリック倍率</string>
     <string name="prefs_mouse_scroll_repeat_longpress">長押しで連続実行</string>
     <string name="prefs_mouse_scroll_repeat_interval_ms">連続実行間隔（ms）</string>
 

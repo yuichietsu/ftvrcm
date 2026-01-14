@@ -55,13 +55,29 @@ class KeyCapturePreference @JvmOverloads constructor(
         val doubleTapTimeoutMs = android.view.ViewConfiguration.getDoubleTapTimeout().toLong()
         var lastBackAtMs = 0L
 
+        val assignBackRunnable = Runnable {
+            val storedValue = KeyEvent.KEYCODE_BACK.toString()
+            if (callChangeListener(storedValue)) {
+                persistString(storedValue)
+                currentValue = storedValue
+                updateSummary(storedValue)
+            }
+            dialog.dismiss()
+        }
+
         val timeoutRunnable = Runnable {
+            messageView.removeCallbacks(assignBackRunnable)
             dialog.dismiss()
         }
 
         dialog.setOnShowListener {
             messageView.requestFocus()
             messageView.postDelayed(timeoutRunnable, timeoutMs)
+        }
+
+        dialog.setOnDismissListener {
+            messageView.removeCallbacks(timeoutRunnable)
+            messageView.removeCallbacks(assignBackRunnable)
         }
 
         dialog.setOnKeyListener { _, keyCode, event ->
@@ -71,6 +87,7 @@ class KeyCapturePreference @JvmOverloads constructor(
                 val now = android.os.SystemClock.uptimeMillis()
                 if (now - lastBackAtMs <= doubleTapTimeoutMs) {
                     messageView.removeCallbacks(timeoutRunnable)
+                    messageView.removeCallbacks(assignBackRunnable)
                     val storedValue = "0"
                     if (callChangeListener(storedValue)) {
                         persistString(storedValue)
@@ -80,9 +97,13 @@ class KeyCapturePreference @JvmOverloads constructor(
                     dialog.dismiss()
                 } else {
                     lastBackAtMs = now
+                    messageView.removeCallbacks(assignBackRunnable)
+                    messageView.postDelayed(assignBackRunnable, doubleTapTimeoutMs)
                 }
                 return@setOnKeyListener true
             }
+
+            messageView.removeCallbacks(assignBackRunnable)
 
             val storedValue = if (keyCode == KeyEvent.KEYCODE_UNKNOWN && event.scanCode > 0) {
                 (-event.scanCode).toString()

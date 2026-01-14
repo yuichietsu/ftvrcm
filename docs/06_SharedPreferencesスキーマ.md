@@ -174,9 +174,9 @@ com.ftvrcm_preferences.xml
 
 ---
 
-### 3.0.2 ピンチ量（mouse_pinch_distance_percent）
+### 3.0.2 ズーム量（mouse_pinch_distance_percent）
 
-ピンチ操作の指の開き幅を画面短辺の割合で指定します。
+ズーム操作の量を画面短辺の割合で指定します。
 
 | 項目 | 値 |
 |------|-----|
@@ -184,7 +184,7 @@ com.ftvrcm_preferences.xml
 | **型** | Integer |
 | **範囲** | 5-95 |
 | **デフォルト** | 28 |
-| **説明** | ピンチ開始/終了時の指の開き幅（%） |
+| **説明** | ズーム操作の量（%） |
 
 **例**：
 ```xml
@@ -193,9 +193,9 @@ com.ftvrcm_preferences.xml
 
 ---
 
-### 3.0.3 ピンチダブルクリック倍率（mouse_pinch_double_scale）
+### 3.0.3 ズームダブルクリック倍率（mouse_pinch_double_scale）
 
-ピンチキーをダブルクリックした際のピンチ量倍率を指定します。
+ズームキーをダブルクリックした際のズーム量倍率を指定します。
 
 | 項目 | 値 |
 |------|-----|
@@ -203,7 +203,7 @@ com.ftvrcm_preferences.xml
 | **型** | String（Float） |
 | **範囲** | 0.3-3.0 |
 | **デフォルト** | 2.0 |
-| **説明** | ダブルクリック時のピンチ量倍率（2倍/0.5倍など） |
+| **説明** | ダブルクリック時のズーム量倍率（2倍/0.5倍など） |
 
 **例**：
 ```xml
@@ -326,8 +326,8 @@ com.ftvrcm_preferences.xml
 | `mouse_scroll_down` | 下スクロール（`ACCESSIBILITY_SERVICE`）/ 下スワイプ（`PROXY`） |
 | `mouse_scroll_left` | 左スクロール（`ACCESSIBILITY_SERVICE`）/ 左スワイプ（`PROXY`） |
 | `mouse_scroll_right` | 右スクロール（`ACCESSIBILITY_SERVICE`）/ 右スワイプ（`PROXY`） |
-| `mouse_pinch_in` | ピンチイン |
-| `mouse_pinch_out` | ピンチアウト |
+| `mouse_pinch_in` | ズームイン |
+| `mouse_pinch_out` | ズームアウト |
 
 補足：`mouse_key_cursor_dpad_toggle` はキー割り当てに含まれず、個別設定として保持されます。
 ### 5. 最終ジェスチャ記録（last_gesture_*）
