@@ -56,6 +56,44 @@ class ProxyInputClient(
         )
     }
 
+    fun pinchIn(
+        x1Start: Int,
+        y1Start: Int,
+        x1End: Int,
+        y1End: Int,
+        x2Start: Int,
+        y2Start: Int,
+        x2End: Int,
+        y2End: Int,
+        durationMs: Int = 240,
+    ): Boolean {
+        return postJson(
+            path = "/pinchIn",
+            type = "proxy_pinch_in",
+            jsonBody = "{\"x1Start\":$x1Start,\"y1Start\":$y1Start,\"x1End\":$x1End,\"y1End\":$y1End," +
+                "\"x2Start\":$x2Start,\"y2Start\":$y2Start,\"x2End\":$x2End,\"y2End\":$y2End,\"durationMs\":$durationMs}",
+        )
+    }
+
+    fun pinchOut(
+        x1Start: Int,
+        y1Start: Int,
+        x1End: Int,
+        y1End: Int,
+        x2Start: Int,
+        y2Start: Int,
+        x2End: Int,
+        y2End: Int,
+        durationMs: Int = 240,
+    ): Boolean {
+        return postJson(
+            path = "/pinchOut",
+            type = "proxy_pinch_out",
+            jsonBody = "{\"x1Start\":$x1Start,\"y1Start\":$y1Start,\"x1End\":$x1End,\"y1End\":$y1End," +
+                "\"x2Start\":$x2Start,\"y2Start\":$y2Start,\"x2End\":$x2End,\"y2End\":$y2End,\"durationMs\":$durationMs}",
+        )
+    }
+
     fun healthCheck(): HealthCheckResult {
         val type = "proxy_health"
         record(type = type, status = "DISPATCHING", detail = "GET /health")

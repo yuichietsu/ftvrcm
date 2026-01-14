@@ -982,23 +982,62 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         val x2End = clampX(c.x + endOffset)
         val y2End = clampY(c.y)
 
-        val useAccessibility = settings.getEmulationMethod() == EmulationMethod.ACCESSIBILITY_SERVICE ||
-            canPerformGesturesViaAccessibility()
+        when (settings.getEmulationMethod()) {
+            EmulationMethod.ACCESSIBILITY_SERVICE -> {
+                if (!canPerformGesturesViaAccessibility()) {
+                    showToast("ピンチ操作はアクセシビリティで実行できません")
+                    return
+                }
 
-        if (!useAccessibility) {
-            showToast("ピンチ操作は現在のエミュレーション方法では利用できません")
-            return
+                when (action) {
+                    PinchAction.IN -> gestures.pinchIn(x1Start, y1Start, x1End, y1End, x2Start, y2Start, x2End, y2End)
+                    PinchAction.OUT -> gestures.pinchOut(x1Start, y1Start, x1End, y1End, x2Start, y2Start, x2End, y2End)
+                }
+
+                Log.i(
+                    tag,
+                    "pinch via accessibility action=$action center=(${c.x},${c.y}) distance=$distance (${distancePercent}%)",
+                )
+            }
+
+            EmulationMethod.PROXY -> {
+                val accepted = dispatchProxyInput(
+                    op = if (action == PinchAction.IN) "pinch_in" else "pinch_out",
+                    block = {
+                        when (action) {
+                            PinchAction.IN -> proxy()?.pinchIn(
+                                x1Start,
+                                y1Start,
+                                x1End,
+                                y1End,
+                                x2Start,
+                                y2Start,
+                                x2End,
+                                y2End,
+                            ) == true
+                            PinchAction.OUT -> proxy()?.pinchOut(
+                                x1Start,
+                                y1Start,
+                                x1End,
+                                y1End,
+                                x2Start,
+                                y2Start,
+                                x2End,
+                                y2End,
+                            ) == true
+                        }
+                    },
+                    onCompletedOnMainThread = { _ -> },
+                )
+
+                if (!accepted) return
+
+                Log.i(
+                    tag,
+                    "pinch via proxy action=$action center=(${c.x},${c.y}) distance=$distance (${distancePercent}%)",
+                )
+            }
         }
-
-        when (action) {
-            PinchAction.IN -> gestures.pinchIn(x1Start, y1Start, x1End, y1End, x2Start, y2Start, x2End, y2End)
-            PinchAction.OUT -> gestures.pinchOut(x1Start, y1Start, x1End, y1End, x2Start, y2Start, x2End, y2End)
-        }
-
-        Log.i(
-            tag,
-            "pinch via accessibility action=$action center=(${c.x},${c.y}) distance=$distance (${distancePercent}%)",
-        )
     }
 
     private fun applyCursorStartPositionIfNeeded() {

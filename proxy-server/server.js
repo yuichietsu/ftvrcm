@@ -547,6 +547,44 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    if (url.pathname === '/pinchIn' || url.pathname === '/pinchOut') {
+      if (inputInFlight) {
+        return respond(409, { ok: false, error: 'busy' });
+      }
+      inputInFlight = true;
+
+      const x1Start = Number(body.x1Start);
+      const y1Start = Number(body.y1Start);
+      const x1End = Number(body.x1End);
+      const y1End = Number(body.y1End);
+      const x2Start = Number(body.x2Start);
+      const y2Start = Number(body.y2Start);
+      const x2End = Number(body.x2End);
+      const y2End = Number(body.y2End);
+      const durationMs = Number.isFinite(Number(body.durationMs)) ? Math.max(0, Math.round(Number(body.durationMs))) : 240;
+
+      if (![x1Start, y1Start, x1End, y1End, x2Start, y2Start, x2End, y2End].every(Number.isFinite)) {
+        inputInFlight = false;
+        return respond(400, { ok: false, error: 'invalid pinch coordinates' });
+      }
+
+      const shell =
+        `input swipe ${Math.round(x1Start)} ${Math.round(y1Start)} ${Math.round(x1End)} ${Math.round(y1End)} ${durationMs} & ` +
+        `input swipe ${Math.round(x2Start)} ${Math.round(y2Start)} ${Math.round(x2End)} ${Math.round(y2End)} ${durationMs}; wait`;
+
+      try {
+        const result = await runAdb(serial, ['shell', shell], requestId);
+        if (DEBUG && LOG_ADB) {
+          log(`${nowIso()} [${requestId}] adb ${result.command}`);
+          if (result.stderr) log(`${nowIso()} [${requestId}] adb stderr=${JSON.stringify(result.stderr)}`);
+          if (result.stdout) log(`${nowIso()} [${requestId}] adb stdout=${JSON.stringify(result.stdout)}`);
+        }
+        return respond(result.ok ? 200 : 500, result);
+      } finally {
+        inputInFlight = false;
+      }
+    }
+
     if (url.pathname === '/longPress') {
       if (inputInFlight) {
         return respond(409, { ok: false, error: 'busy' });

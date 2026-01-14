@@ -130,13 +130,13 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="スワイプ確認（上下左右）"
+                android:text="スワイプ/ピンチ確認"
                 android:textStyle="bold" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="確認: 縦/横スクロールが成立するか"
+                android:text="確認: 縦/横スワイプとピンチが成立するか"
                 android:textColor="#B0B0B0"
                 android:textSize="12sp" />
 
