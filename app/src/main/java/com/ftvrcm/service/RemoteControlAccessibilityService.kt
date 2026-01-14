@@ -8,6 +8,7 @@ import android.util.Log
 import android.view.ViewConfiguration
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
+import android.widget.Toast
 import com.ftvrcm.data.SettingsStore
 import com.ftvrcm.domain.EmulationMethod
 import com.ftvrcm.domain.OperationMode
@@ -43,6 +44,8 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private var isDpadMode: Boolean = false
 
     private val proxyExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+
+    private var enterMouseModeInProgress: Boolean = false
 
     private val tapKeyLongPressRunnable = Runnable {
         if (mode != OperationMode.MOUSE) return@Runnable
@@ -455,7 +458,61 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private fun toggleMode() {
         clearMoveRepeat()
         clearPendingTapKey()
-        mode = mode.toggle()
+        val target = mode.toggle()
+
+        if (target == OperationMode.MOUSE) {
+            if (enterMouseModeInProgress) {
+                showToast("切り替え処理中です…")
+                return
+            }
+
+            when (settings.getEmulationMethod()) {
+                EmulationMethod.ACCESSIBILITY_SERVICE -> {
+                    if (!canPerformGesturesViaAccessibility()) {
+                        showToast("タッチ操作へ切り替えできません（アクセシビリティサービスがジェスチャを実行できません）")
+                        return
+                    }
+
+                    applyMode(target)
+                    return
+                }
+
+                EmulationMethod.PROXY -> {
+                    enterMouseModeInProgress = true
+                    showToast("ADBプロキシ接続確認中…")
+
+                    // Run health check off the main thread; apply mode only if it succeeds.
+                    proxyExecutor.execute {
+                        val result = try {
+                            proxy()?.healthCheck()
+                        } catch (t: Throwable) {
+                            ProxyInputClient.HealthCheckResult(
+                                ok = false,
+                                detail = "${t.javaClass.simpleName}: ${t.message}",
+                            )
+                        }
+
+                        mainHandler.post {
+                            enterMouseModeInProgress = false
+                            if (result?.ok == true) {
+                                applyMode(target)
+                            } else {
+                                val detail = (result?.detail ?: "unknown error").trim().take(200)
+                                showToast("タッチ操作へ切り替えできません（ADBプロキシに接続できません）: $detail")
+                            }
+                        }
+                    }
+
+                    return
+                }
+            }
+        }
+
+        applyMode(target)
+    }
+
+    private fun applyMode(newMode: OperationMode) {
+        mode = newMode
         settings.setOperationMode(mode)
 
         Log.i(tag, "toggle mode -> $mode")
@@ -471,6 +528,22 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             // Remember last cursor position for "previous" start.
             settings.setLastCursorPosition(lastCursorX, lastCursorY)
             cursor.hide()
+        }
+    }
+
+    private fun canPerformGesturesViaAccessibility(): Boolean {
+        return try {
+            val info = serviceInfo
+            (info.capabilities and AccessibilityServiceInfo.CAPABILITY_CAN_PERFORM_GESTURES) != 0
+        } catch (_: Throwable) {
+            false
+        }
+    }
+
+    private fun showToast(message: String) {
+        try {
+            Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
+        } catch (_: Throwable) {
         }
     }
 

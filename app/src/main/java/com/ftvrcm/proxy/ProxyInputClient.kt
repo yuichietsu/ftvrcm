@@ -17,6 +17,11 @@ class ProxyInputClient(
     private val token: String,
 ) {
 
+    data class HealthCheckResult(
+        val ok: Boolean,
+        val detail: String,
+    )
+
     private val tag = "ProxyInputClient"
 
     fun tap(x: Int, y: Int) {
@@ -43,14 +48,15 @@ class ProxyInputClient(
         )
     }
 
-    fun healthCheck(): Boolean {
+    fun healthCheck(): HealthCheckResult {
         val type = "proxy_health"
         record(type = type, status = "DISPATCHING", detail = "GET /health")
 
         val normalizedHost = host.trim()
         if (normalizedHost.isEmpty()) {
-            record(type = type, status = "FAILED", detail = "proxy_host is empty")
-            return false
+            val detail = "proxy_host is empty"
+            record(type = type, status = "FAILED", detail = detail)
+            return HealthCheckResult(ok = false, detail = detail)
         }
 
         val url = URL("http://$normalizedHost:$port/health")
@@ -76,16 +82,18 @@ class ProxyInputClient(
 
             val ok = code in 200..299
             Log.i(tag, "proxy /health http=$code")
+            val detail = "http=$code url=$url\n${body.take(800)}"
             record(
                 type = type,
                 status = if (ok) "COMPLETED" else "FAILED",
-                detail = "http=$code url=$url\n${body.take(800)}",
+                detail = detail,
             )
-            return ok
+            return HealthCheckResult(ok = ok, detail = detail)
         } catch (t: Throwable) {
             Log.w(tag, "proxy /health failed (${t.javaClass.simpleName}: ${t.message})")
-            record(type = type, status = "FAILED", detail = "${t.javaClass.simpleName}: ${t.message}")
-            return false
+            val detail = "${t.javaClass.simpleName}: ${t.message}"
+            record(type = type, status = "FAILED", detail = detail)
+            return HealthCheckResult(ok = false, detail = detail)
         }
     }
 

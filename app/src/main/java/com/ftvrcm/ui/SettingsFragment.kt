@@ -159,7 +159,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
             val port = store.getProxyPort()
             val token = store.getProxyToken()
 
-            val ok = ProxyInputClient(
+            val result = ProxyInputClient(
                 context.applicationContext,
                 host = host,
                 port = port,
@@ -170,11 +170,15 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 if (!isAdded) return@runOnUiThread
                 refreshProxyPreferences()
 
-                Toast.makeText(
-                    context,
-                    if (ok) "プロキシ疎通OK" else "プロキシ疎通NG（詳細は last_gesture_* を確認）",
-                    Toast.LENGTH_LONG,
-                ).show()
+                if (result.ok) {
+                    Toast.makeText(context, "プロキシ疎通OK", Toast.LENGTH_LONG).show()
+                } else {
+                    AlertDialog.Builder(context)
+                        .setTitle("プロキシ疎通NG")
+                        .setMessage(result.detail.trim().take(2000))
+                        .setPositiveButton(getString(android.R.string.ok)) { _, _ -> }
+                        .show()
+                }
             }
         }.start()
     }
