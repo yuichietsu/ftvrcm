@@ -73,7 +73,7 @@ class SwipePatternView @JvmOverloads constructor(
         super.onDraw(canvas)
 
         val tile = dp(72f).toInt().coerceAtLeast(24)
-        val contentSize = max(width, height).coerceAtLeast(tile) * 3
+        val contentSize = max(width, height).coerceAtLeast(tile) * 6
         val startX = -contentSize / 2
         val startY = -contentSize / 2
         val endX = startX + contentSize

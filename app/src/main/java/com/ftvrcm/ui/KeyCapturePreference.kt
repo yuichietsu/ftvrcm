@@ -33,7 +33,26 @@ class KeyCapturePreference @JvmOverloads constructor(
 
     override fun onClick() {
         super.onClick()
-        showKeyCaptureDialog()
+        showActionDialog()
+    }
+
+    private fun showActionDialog() {
+        AlertDialog.Builder(context)
+            .setTitle(title)
+            .setMessage(R.string.prefs_key_capture_action_message)
+            .setPositiveButton(R.string.prefs_key_capture_assign) { _, _ ->
+                showKeyCaptureDialog()
+            }
+            .setNeutralButton(R.string.prefs_key_capture_clear) { _, _ ->
+                val storedValue = "0"
+                if (callChangeListener(storedValue)) {
+                    persistString(storedValue)
+                    currentValue = storedValue
+                    updateSummary(storedValue)
+                }
+            }
+            .setNegativeButton(R.string.prefs_common_cancel, null)
+            .show()
     }
 
     private fun showKeyCaptureDialog() {
@@ -49,14 +68,6 @@ class KeyCapturePreference @JvmOverloads constructor(
             .setTitle(title)
             .setView(messageView)
             .setNegativeButton(R.string.prefs_common_cancel) { _, _ -> }
-            .setNeutralButton(R.string.prefs_key_capture_clear) { _, _ ->
-                val storedValue = "0"
-                if (callChangeListener(storedValue)) {
-                    persistString(storedValue)
-                    currentValue = storedValue
-                    updateSummary(storedValue)
-                }
-            }
             .create()
 
         dialog.setOnShowListener {

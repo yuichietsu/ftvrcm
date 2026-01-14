@@ -568,9 +568,15 @@ const server = http.createServer(async (req, res) => {
         return respond(400, { ok: false, error: 'invalid pinch coordinates' });
       }
 
+      const centerX = Math.round((x1Start + x2Start) / 2);
+      const centerY = Math.round((y1Start + y2Start) / 2);
+      const span = Math.max(40, Math.round(Math.abs(x1Start - x2Start) * 0.5));
+      const delta = url.pathname === '/pinchOut' ? -span : span;
+      const targetY = Math.round(centerY + delta);
+
       const shell =
-        `input swipe ${Math.round(x1Start)} ${Math.round(y1Start)} ${Math.round(x1End)} ${Math.round(y1End)} ${durationMs} & ` +
-        `input swipe ${Math.round(x2Start)} ${Math.round(y2Start)} ${Math.round(x2End)} ${Math.round(y2End)} ${durationMs}; wait`;
+        `input tap ${centerX} ${centerY} & sleep 0.1; ` +
+        `input swipe ${centerX} ${centerY} ${centerX} ${targetY} ${durationMs};`;
 
       try {
         const result = await runAdb(serial, ['shell', shell], requestId);
