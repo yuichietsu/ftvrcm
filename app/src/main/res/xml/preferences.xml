@@ -10,17 +10,18 @@
             android:summary="@string/prefs_mode_current_summary"
             android:selectable="false" />
 
-        <ListPreference
+        <com.ftvrcm.ui.KeyCapturePreference
             android:key="toggle_keycode"
             android:title="@string/prefs_toggle_key"
-            android:entries="@array/key_entries"
-            android:entryValues="@array/key_values"
             android:defaultValue="82" />
 
-        <SwitchPreferenceCompat
-            android:key="toggle_longpress"
-            android:title="@string/prefs_toggle_longpress"
-            android:defaultValue="true" />
+        <ListPreference
+            android:key="toggle_trigger"
+            android:title="@string/prefs_toggle_trigger"
+            android:entries="@array/toggle_trigger_entries"
+            android:entryValues="@array/toggle_trigger_values"
+            android:defaultValue="LONG_PRESS"
+            app:useSimpleSummaryProvider="true" />
 
     </PreferenceCategory>
 
@@ -90,89 +91,77 @@
 
     <PreferenceCategory android:title="@string/prefs_category_key_mapping_cursor">
 
-        <ListPreference
+        <com.ftvrcm.ui.KeyCapturePreference
             android:key="mouse_key_up"
             android:title="@string/prefs_mouse_key_up"
-            android:entries="@array/key_entries"
-            android:entryValues="@array/key_values"
-            android:defaultValue="19"
-            app:useSimpleSummaryProvider="true" />
+            android:defaultValue="19" />
 
-        <ListPreference
+        <com.ftvrcm.ui.KeyCapturePreference
             android:key="mouse_key_down"
             android:title="@string/prefs_mouse_key_down"
-            android:entries="@array/key_entries"
-            android:entryValues="@array/key_values"
-            android:defaultValue="20"
-            app:useSimpleSummaryProvider="true" />
+            android:defaultValue="20" />
 
-        <ListPreference
+        <com.ftvrcm.ui.KeyCapturePreference
             android:key="mouse_key_left"
             android:title="@string/prefs_mouse_key_left"
-            android:entries="@array/key_entries"
-            android:entryValues="@array/key_values"
-            android:defaultValue="21"
-            app:useSimpleSummaryProvider="true" />
+            android:defaultValue="21" />
 
-        <ListPreference
+        <com.ftvrcm.ui.KeyCapturePreference
             android:key="mouse_key_right"
             android:title="@string/prefs_mouse_key_right"
-            android:entries="@array/key_entries"
-            android:entryValues="@array/key_values"
-            android:defaultValue="22"
-            app:useSimpleSummaryProvider="true" />
+            android:defaultValue="22" />
 
-        <ListPreference
+        <com.ftvrcm.ui.KeyCapturePreference
             android:key="mouse_key_click"
             android:title="@string/prefs_mouse_key_click"
-            android:entries="@array/key_entries"
-            android:entryValues="@array/key_values"
-            android:defaultValue="23"
-            app:useSimpleSummaryProvider="true" />
+            android:defaultValue="23" />
 
-        <ListPreference
+        <com.ftvrcm.ui.KeyCapturePreference
             android:key="mouse_key_cursor_dpad_toggle"
             android:title="@string/prefs_mouse_key_cursor_dpad_toggle"
-            android:entries="@array/key_entries"
-            android:entryValues="@array/key_values"
-            android:defaultValue="82"
-            app:useSimpleSummaryProvider="true" />
+            android:defaultValue="82" />
 
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/prefs_category_key_mapping_swipe">
 
-        <ListPreference
+        <com.ftvrcm.ui.KeyCapturePreference
             android:key="mouse_key_scroll_up"
             android:title="@string/prefs_mouse_key_scroll_up"
-            android:entries="@array/key_entries"
-            android:entryValues="@array/key_values"
-            android:defaultValue="166"
-            app:useSimpleSummaryProvider="true" />
+            android:defaultValue="166" />
 
-        <ListPreference
+        <com.ftvrcm.ui.KeyCapturePreference
             android:key="mouse_key_scroll_down"
             android:title="@string/prefs_mouse_key_scroll_down"
-            android:entries="@array/key_entries"
-            android:entryValues="@array/key_values"
-            android:defaultValue="167"
-            app:useSimpleSummaryProvider="true" />
+            android:defaultValue="167" />
 
-        <ListPreference
+        <com.ftvrcm.ui.KeyCapturePreference
             android:key="mouse_key_scroll_left"
             android:title="@string/prefs_mouse_key_scroll_left"
-            android:entries="@array/key_entries"
-            android:entryValues="@array/key_values"
-            android:defaultValue="89"
-            app:useSimpleSummaryProvider="true" />
+            android:defaultValue="89" />
 
-        <ListPreference
+        <com.ftvrcm.ui.KeyCapturePreference
             android:key="mouse_key_scroll_right"
             android:title="@string/prefs_mouse_key_scroll_right"
-            android:entries="@array/key_entries"
-            android:entryValues="@array/key_values"
-            android:defaultValue="90"
-            app:useSimpleSummaryProvider="true" />
+            android:defaultValue="90" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/prefs_category_key_mapping_pinch">
+
+        <com.ftvrcm.ui.KeyCapturePreference
+            android:key="mouse_key_pinch_in"
+            android:title="@string/prefs_mouse_key_pinch_in"
+            android:defaultValue="168" />
+
+        <com.ftvrcm.ui.KeyCapturePreference
+            android:key="mouse_key_pinch_out"
+            android:title="@string/prefs_mouse_key_pinch_out"
+            android:defaultValue="169" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/prefs_category_gestures">
 
         <SeekBarPreference
             android:key="mouse_swipe_distance_percent"
@@ -180,7 +169,33 @@
             android:min="5"
             android:max="95"
             android:defaultValue="28"
+            android:summary="@string/prefs_mouse_swipe_distance_summary"
             app:showSeekBarValue="true" />
+
+        <ListPreference
+            android:key="mouse_swipe_double_scale"
+            android:title="@string/prefs_mouse_swipe_double_scale"
+            android:entries="@array/distance_double_scale_entries"
+            android:entryValues="@array/distance_double_scale_values"
+            android:defaultValue="2.0"
+            app:useSimpleSummaryProvider="true" />
+
+        <SeekBarPreference
+            android:key="mouse_pinch_distance_percent"
+            android:title="@string/prefs_mouse_pinch_distance"
+            android:min="5"
+            android:max="95"
+            android:defaultValue="28"
+            android:summary="@string/prefs_mouse_pinch_distance_summary"
+            app:showSeekBarValue="true" />
+
+        <ListPreference
+            android:key="mouse_pinch_double_scale"
+            android:title="@string/prefs_mouse_pinch_double_scale"
+            android:entries="@array/distance_double_scale_entries"
+            android:entryValues="@array/distance_double_scale_values"
+            android:defaultValue="2.0"
+            app:useSimpleSummaryProvider="true" />
 
         <SwitchPreferenceCompat
             android:key="mouse_scroll_repeat_longpress"

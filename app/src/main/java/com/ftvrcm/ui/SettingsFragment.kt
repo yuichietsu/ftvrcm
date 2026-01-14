@@ -14,7 +14,6 @@ import android.view.accessibility.AccessibilityManager
 import android.widget.Toast
 import androidx.core.content.getSystemService
 import androidx.appcompat.app.AlertDialog
-import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceGroup
@@ -23,6 +22,7 @@ import com.ftvrcm.data.SettingsKeys
 import com.ftvrcm.data.SettingsStore
 import com.ftvrcm.domain.EmulationMethod
 import com.ftvrcm.domain.OperationMode
+import com.ftvrcm.domain.ToggleTrigger
 import com.ftvrcm.proxy.ProxyInputClient
 import com.ftvrcm.service.RemoteControlAccessibilityService
 
@@ -78,6 +78,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 SettingsKeys.OPERATION_MODE,
                 SettingsKeys.TOGGLE_KEYCODE,
                 SettingsKeys.TOGGLE_LONGPRESS,
+                SettingsKeys.TOGGLE_TRIGGER,
                 SettingsKeys.MOUSE_POINTER_SPEED,
                 SettingsKeys.EMULATION_METHOD,
                 SettingsKeys.PROXY_HOST,
@@ -100,6 +101,8 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 SettingsKeys.MOUSE_KEY_SCROLL_DOWN,
                 SettingsKeys.MOUSE_KEY_SCROLL_LEFT,
                 SettingsKeys.MOUSE_KEY_SCROLL_RIGHT,
+                SettingsKeys.MOUSE_KEY_PINCH_IN,
+                SettingsKeys.MOUSE_KEY_PINCH_OUT,
                 SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE,
                 -> SettingsStore(requireContext()).upsertMouseKeyMapping()
             }
@@ -228,17 +231,16 @@ class SettingsFragment : PreferenceFragmentCompat() {
     }
 
     private fun refreshToggleKeySummary() {
-        val toggleKeyPref = findPreference<ListPreference>(SettingsKeys.TOGGLE_KEYCODE) ?: return
-
-        val keyCode = toggleKeyPref.value?.toIntOrNull()
-        val label = toggleKeyPref.entry?.toString() ?: toggleKeyPref.value ?: ""
-
-        val prefs = preferenceManager.sharedPreferences
-        val longPressEnabled = prefs?.getBoolean(SettingsKeys.TOGGLE_LONGPRESS, true) ?: true
+        val toggleKeyPref = findPreference<KeyCapturePreference>(SettingsKeys.TOGGLE_KEYCODE) ?: return
+        val prefs = preferenceManager.sharedPreferences ?: return
+        val rawValue = prefs.getString(SettingsKeys.TOGGLE_KEYCODE, "82")
+        val label = KeyCapturePreference.formatKeyLabel(rawValue)
+        val trigger = SettingsStore(requireContext()).getToggleTrigger()
+        val keyCode = rawValue?.toIntOrNull()
 
         val warning = if (
             isAmazonDevice() &&
-            longPressEnabled &&
+            trigger == ToggleTrigger.LONG_PRESS &&
             keyCode == KeyEvent.KEYCODE_BACK
         ) {
             getString(R.string.prefs_toggle_key_warning_back_longpress)
@@ -246,7 +248,8 @@ class SettingsFragment : PreferenceFragmentCompat() {
             null
         }
 
-        toggleKeyPref.summary = if (warning == null) label else "$label\n$warning"
+        val base = getString(R.string.prefs_key_capture_summary, label)
+        toggleKeyPref.summary = if (warning == null) base else "$base\n$warning"
     }
 
     private fun isAmazonDevice(): Boolean {

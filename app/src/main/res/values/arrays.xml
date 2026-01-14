@@ -9,6 +9,28 @@
         <item>PROXY</item>
     </string-array>
 
+    <string-array name="toggle_trigger_entries">
+        <item>長押し</item>
+        <item>ダブルタップ</item>
+        <item>シングルタップ</item>
+    </string-array>
+
+    <string-array name="toggle_trigger_values">
+        <item>LONG_PRESS</item>
+        <item>DOUBLE_TAP</item>
+        <item>SINGLE_TAP</item>
+    </string-array>
+
+    <string-array name="distance_double_scale_entries">
+        <item>2倍</item>
+        <item>0.5倍</item>
+    </string-array>
+
+    <string-array name="distance_double_scale_values">
+        <item>2.0</item>
+        <item>0.5</item>
+    </string-array>
+
     <string-array name="key_entries">
         <item>DPAD_UP</item>
         <item>DPAD_DOWN</item>

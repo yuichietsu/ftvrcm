@@ -13,6 +13,7 @@ import android.widget.Toast
 import com.ftvrcm.data.SettingsStore
 import com.ftvrcm.domain.EmulationMethod
 import com.ftvrcm.domain.OperationMode
+import com.ftvrcm.domain.ToggleTrigger
 import com.ftvrcm.mouse.CursorOverlay
 import com.ftvrcm.mouse.GestureController
 import com.ftvrcm.proxy.ProxyInputClient
@@ -23,6 +24,18 @@ import java.util.concurrent.atomic.AtomicBoolean
 class RemoteControlAccessibilityService : AccessibilityService() {
 
     private val tag = "RCAccessibilityService"
+
+    private enum class SwipeAction {
+        UP,
+        DOWN,
+        LEFT,
+        RIGHT,
+    }
+
+    private enum class PinchAction {
+        IN,
+        OUT,
+    }
 
     private lateinit var settings: SettingsStore
     private lateinit var cursor: CursorOverlay
@@ -52,7 +65,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     }
 
     private var scrollSelectKeyIsDown: Boolean = false
-    private var scrollSelectKeyCode: Int? = null
+    private var scrollSelectAction: SwipeAction? = null
     private var scrollSelectKeyLongPressTriggered: Boolean = false
 
     private var isDpadMode: Boolean = false
@@ -107,6 +120,32 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         }
     }
 
+    private var pendingToggleTapAtMs: Long = 0L
+    private var pendingToggleTapKeyCode: Int? = null
+    private val commitToggleTapRunnable = Runnable {
+        pendingToggleTapAtMs = 0L
+        pendingToggleTapKeyCode = null
+        toggleMode()
+    }
+
+    private var pendingSwipeAtMs: Long = 0L
+    private var pendingSwipeAction: SwipeAction? = null
+    private val commitSwipeRunnable = Runnable {
+        val action = pendingSwipeAction ?: return@Runnable
+        pendingSwipeAtMs = 0L
+        pendingSwipeAction = null
+        dispatchScrollOrSwipe(action, distanceScale = 1.0f)
+    }
+
+    private var pendingPinchAtMs: Long = 0L
+    private var pendingPinchAction: PinchAction? = null
+    private val commitPinchRunnable = Runnable {
+        val action = pendingPinchAction ?: return@Runnable
+        pendingPinchAtMs = 0L
+        pendingPinchAction = null
+        dispatchPinch(action, distanceScale = 1.0f)
+    }
+
     private var moveKeyCode: Int? = null
     private var moveDx: Int = 0
     private var moveDy: Int = 0
@@ -133,9 +172,9 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         override fun run() {
             if (mode != OperationMode.MOUSE) return
             if (!scrollSelectKeyIsDown) return
-            val keyCode = scrollSelectKeyCode ?: return
+            val action = scrollSelectAction ?: return
 
-            dispatchScrollOrSwipe(keyCode)
+            dispatchScrollOrSwipe(action, distanceScale = 1.0f)
             mainHandler.postDelayed(this, settings.getMouseScrollRepeatIntervalMs().toLong())
         }
     }
@@ -147,8 +186,9 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         if (!settings.isMouseScrollRepeatLongPress()) return@Runnable
 
         scrollSelectKeyLongPressTriggered = true
-        val keyCode = scrollSelectKeyCode ?: return@Runnable
-        dispatchScrollOrSwipe(keyCode)
+        clearPendingSwipe()
+        val action = scrollSelectAction ?: return@Runnable
+        dispatchScrollOrSwipe(action, distanceScale = 1.0f)
         mainHandler.postDelayed(scrollRepeatRunnable, settings.getMouseScrollRepeatIntervalMs().toLong())
     }
 
@@ -221,64 +261,83 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
         // 1) Toggle mode (always available)
         val toggleKey = settings.getToggleKeyCode()
-        val toggleLongPress = settings.isToggleLongPress()
-        val isToggleKey = keyCode == toggleKey
+        val toggleTrigger = settings.getToggleTrigger()
+        val isToggleKey = matchesAssignedKey(toggleKey, event)
+        val allowTogglePassThrough = event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER && toggleTrigger != ToggleTrigger.SINGLE_TAP
         if (isToggleKey) {
-            if (!toggleLongPress) {
-                if (event.action == KeyEvent.ACTION_DOWN) {
-                    Log.i(tag, "toggle key DOWN (no-longpress mode)")
-                    toggleMode()
-                    return true
-                }
-                return false
-            }
-
-            when (event.action) {
-                KeyEvent.ACTION_DOWN -> {
-                    Log.i(tag, "toggle key DOWN (longpress enabled)")
-                    // If platform reports long-press/repeat, toggle immediately.
-                    if (event.isLongPress || event.repeatCount > 0) {
-                        Log.i(tag, "toggle key reported longpress/repeat -> toggle now")
-                        clearPendingToggle()
+            when (toggleTrigger) {
+                ToggleTrigger.SINGLE_TAP -> {
+                    if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                        Log.i(tag, "toggle key DOWN (single-tap)")
                         toggleMode()
                         return true
                     }
-
-                    // Fallback: schedule our own long-press detection.
-                    if (pendingToggleKeyCode == null) {
-                        pendingToggleKeyCode = keyCode
-                        pendingToggleTriggered = false
-                        val timeoutMs = ViewConfiguration.getLongPressTimeout().toLong()
-                        mainHandler.postDelayed(pendingToggleRunnable, timeoutMs)
-                        Log.i(tag, "toggle key schedule longpress timeoutMs=$timeoutMs")
-                    }
-
-                    // Consume DOWN to avoid delivering only DOWN when long-press toggles.
                     return true
                 }
 
-                KeyEvent.ACTION_UP -> {
-                    Log.i(tag, "toggle key UP")
-                    val wasTriggered = pendingToggleTriggered
-                    clearPendingToggle()
-
-                    // Short press: when the toggle key is also used as cursor/DPAD toggle,
-                    // switch input mode in MOUSE mode.
-                    val cursorDpadToggleKey = settings.getMouseKeyCursorDpadToggle()
-                    if (!wasTriggered && mode == OperationMode.MOUSE && keyCode == cursorDpadToggleKey) {
-                        isDpadMode = !isDpadMode
-                        clearMoveRepeat()
-                        clearPendingTapKey()
-                        updateCursorStyleForInputMode()
-                        return true
+                ToggleTrigger.DOUBLE_TAP -> {
+                    when (event.action) {
+                        KeyEvent.ACTION_DOWN -> return !allowTogglePassThrough
+                        KeyEvent.ACTION_UP -> {
+                            Log.i(tag, "toggle key UP (double-tap)")
+                            scheduleToggleTap(toggleKey)
+                            return !allowTogglePassThrough
+                        }
+                        else -> return !allowTogglePassThrough
                     }
+                }
 
-                    // Short press: preserve BACK behavior via accessibility global action.
-                    if (!wasTriggered && keyCode == KeyEvent.KEYCODE_BACK) {
-                        performGlobalAction(GLOBAL_ACTION_BACK)
+                ToggleTrigger.LONG_PRESS -> {
+                    when (event.action) {
+                        KeyEvent.ACTION_DOWN -> {
+                            Log.i(tag, "toggle key DOWN (longpress enabled)")
+                            // If platform reports long-press/repeat, toggle immediately.
+                            if (event.isLongPress || event.repeatCount > 0) {
+                                Log.i(tag, "toggle key reported longpress/repeat -> toggle now")
+                                clearPendingToggle()
+                                toggleMode()
+                                return true
+                            }
+
+                            // Fallback: schedule our own long-press detection.
+                            if (pendingToggleKeyCode == null) {
+                                pendingToggleKeyCode = toggleKey
+                                pendingToggleTriggered = false
+                                val timeoutMs = ViewConfiguration.getLongPressTimeout().toLong()
+                                mainHandler.postDelayed(pendingToggleRunnable, timeoutMs)
+                                Log.i(tag, "toggle key schedule longpress timeoutMs=$timeoutMs")
+                            }
+
+                            return !allowTogglePassThrough
+                        }
+
+                        KeyEvent.ACTION_UP -> {
+                            Log.i(tag, "toggle key UP")
+                            val wasTriggered = pendingToggleTriggered
+                            clearPendingToggle()
+
+                            // Short press: when the toggle key is also used as cursor/DPAD toggle,
+                            // switch input mode in MOUSE mode.
+                            val cursorDpadToggleKey = settings.getMouseKeyCursorDpadToggle()
+                            if (!wasTriggered && mode == OperationMode.MOUSE && matchesAssignedKey(cursorDpadToggleKey, event)) {
+                                isDpadMode = !isDpadMode
+                                clearMoveRepeat()
+                                clearPendingTapKey()
+                                updateCursorStyleForInputMode()
+                                return true
+                            }
+
+                            // Short press: preserve BACK behavior via accessibility global action.
+                            if (!wasTriggered && event.keyCode == KeyEvent.KEYCODE_BACK && !allowTogglePassThrough) {
+                                performGlobalAction(GLOBAL_ACTION_BACK)
+                                return true
+                            }
+
+                            return !allowTogglePassThrough
+                        }
+
+                        else -> return !allowTogglePassThrough
                     }
-
-                    return true
                 }
             }
         }
@@ -295,21 +354,25 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         val mouseKeyScrollDown = settings.getMouseKeyScrollDown()
         val mouseKeyScrollLeft = settings.getMouseKeyScrollLeft()
         val mouseKeyScrollRight = settings.getMouseKeyScrollRight()
+        val mouseKeyPinchIn = settings.getMouseKeyPinchIn()
+        val mouseKeyPinchOut = settings.getMouseKeyPinchOut()
         val mouseKeyCursorDpadToggle = settings.getMouseKeyCursorDpadToggle()
 
-        val isHandledMouseKey = keyCode == mouseKeyUp ||
-            keyCode == mouseKeyDown ||
-            keyCode == mouseKeyLeft ||
-            keyCode == mouseKeyRight ||
-            keyCode == mouseKeyClick ||
-            keyCode == mouseKeyScrollUp ||
-            keyCode == mouseKeyScrollDown ||
-            keyCode == mouseKeyScrollLeft ||
-            keyCode == mouseKeyScrollRight ||
-            keyCode == mouseKeyCursorDpadToggle
+        val isHandledMouseKey = matchesAssignedKey(mouseKeyUp, event) ||
+            matchesAssignedKey(mouseKeyDown, event) ||
+            matchesAssignedKey(mouseKeyLeft, event) ||
+            matchesAssignedKey(mouseKeyRight, event) ||
+            matchesAssignedKey(mouseKeyClick, event) ||
+            matchesAssignedKey(mouseKeyScrollUp, event) ||
+            matchesAssignedKey(mouseKeyScrollDown, event) ||
+            matchesAssignedKey(mouseKeyScrollLeft, event) ||
+            matchesAssignedKey(mouseKeyScrollRight, event) ||
+            matchesAssignedKey(mouseKeyPinchIn, event) ||
+            matchesAssignedKey(mouseKeyPinchOut, event) ||
+            matchesAssignedKey(mouseKeyCursorDpadToggle, event)
 
         // Toggle cursor/dpad mode.
-        if (keyCode == mouseKeyCursorDpadToggle) {
+        if (matchesAssignedKey(mouseKeyCursorDpadToggle, event)) {
             when (event.action) {
                 KeyEvent.ACTION_DOWN -> {
                     if (event.repeatCount > 0) return true
@@ -334,7 +397,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         }
 
         // Tap key handling (single tap / long tap)
-        if (keyCode == mouseKeyClick) {
+        if (matchesAssignedKey(mouseKeyClick, event)) {
             when (event.action) {
                 KeyEvent.ACTION_DOWN -> {
                     if (event.repeatCount > 0) return true
@@ -375,17 +438,20 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         }
 
         // Scroll keys (always): ACTION_SCROLL_(UP/DOWN/LEFT/RIGHT)
-        val isScrollSelectKey = keyCode == mouseKeyScrollUp ||
-            keyCode == mouseKeyScrollDown ||
-            keyCode == mouseKeyScrollLeft ||
-            keyCode == mouseKeyScrollRight
+        val scrollAction = when {
+            matchesAssignedKey(mouseKeyScrollUp, event) -> SwipeAction.UP
+            matchesAssignedKey(mouseKeyScrollDown, event) -> SwipeAction.DOWN
+            matchesAssignedKey(mouseKeyScrollLeft, event) -> SwipeAction.LEFT
+            matchesAssignedKey(mouseKeyScrollRight, event) -> SwipeAction.RIGHT
+            else -> null
+        }
 
-        if (isScrollSelectKey) {
+        if (scrollAction != null) {
             when (event.action) {
                 KeyEvent.ACTION_DOWN -> {
                     if (event.repeatCount > 0) return true
                     scrollSelectKeyIsDown = true
-                    scrollSelectKeyCode = keyCode
+                    scrollSelectAction = scrollAction
                     scrollSelectKeyLongPressTriggered = false
                     clearPendingScrollRepeat()
 
@@ -400,7 +466,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                     scrollSelectKeyIsDown = false
                     val wasLongPress = scrollSelectKeyLongPressTriggered
                     clearPendingScrollRepeat()
-                    scrollSelectKeyCode = null
+                    scrollSelectAction = null
                     scrollSelectKeyLongPressTriggered = false
 
                     if (wasLongPress) {
@@ -409,7 +475,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
                     clearMoveRepeat()
 
-                    dispatchScrollOrSwipe(keyCode)
+                    scheduleSwipeOrDoubleSwipe(scrollAction)
                     return true
                 }
 
@@ -417,30 +483,50 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             }
         }
 
+        val pinchAction = when {
+            matchesAssignedKey(mouseKeyPinchIn, event) -> PinchAction.IN
+            matchesAssignedKey(mouseKeyPinchOut, event) -> PinchAction.OUT
+            else -> null
+        }
+
+        if (pinchAction != null) {
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> {
+                    if (event.repeatCount > 0) return true
+                    return true
+                }
+                KeyEvent.ACTION_UP -> {
+                    schedulePinchOrDoublePinch(pinchAction)
+                    return true
+                }
+                else -> return true
+            }
+        }
+
         // Stop continuous movement on key up.
         if (event.action == KeyEvent.ACTION_UP) {
-            val wasMovingKey = moveKeyCode == keyCode
-            stopMoveRepeat(keyCode)
+            val wasMovingKey = moveKeyCode?.let { matchesAssignedKey(it, event) } == true
+            stopMoveRepeat(event)
             return isHandledMouseKey || wasMovingKey
         }
 
         if (event.action != KeyEvent.ACTION_DOWN) return isHandledMouseKey
 
-        return when (keyCode) {
-            mouseKeyUp -> {
-                startMoveRepeat(keyCode, dx = 0, dy = -1)
+        return when {
+            matchesAssignedKey(mouseKeyUp, event) -> {
+                startMoveRepeat(mouseKeyUp, dx = 0, dy = -1)
                 true
             }
-            mouseKeyDown -> {
-                startMoveRepeat(keyCode, dx = 0, dy = 1)
+            matchesAssignedKey(mouseKeyDown, event) -> {
+                startMoveRepeat(mouseKeyDown, dx = 0, dy = 1)
                 true
             }
-            mouseKeyLeft -> {
-                startMoveRepeat(keyCode, dx = -1, dy = 0)
+            matchesAssignedKey(mouseKeyLeft, event) -> {
+                startMoveRepeat(mouseKeyLeft, dx = -1, dy = 0)
                 true
             }
-            mouseKeyRight -> {
-                startMoveRepeat(keyCode, dx = 1, dy = 0)
+            matchesAssignedKey(mouseKeyRight, event) -> {
+                startMoveRepeat(mouseKeyRight, dx = 1, dy = 0)
                 true
             }
             // mouseKeyClick is handled above.
@@ -450,8 +536,11 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         clearPendingToggle()
+        clearPendingToggleTap()
         clearPendingTapKey()
         clearPendingScrollRepeat()
+        clearPendingSwipe()
+        clearPendingPinch()
         clearMoveRepeat()
         cursor.hide()
         try {
@@ -507,6 +596,9 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private fun toggleMode() {
         clearMoveRepeat()
         clearPendingTapKey()
+        clearPendingSwipe()
+        clearPendingPinch()
+        clearPendingToggleTap()
         val target = mode.toggle()
 
         if (target == OperationMode.MOUSE) {
@@ -603,6 +695,9 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         clearMoveRepeat()
         clearPendingTapKey()
         clearPendingToggle()
+        clearPendingToggleTap()
+        clearPendingSwipe()
+        clearPendingPinch()
 
         mode = current
         Log.i(tag, "mode synced from prefs -> $mode")
@@ -622,6 +717,61 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
     private fun updateCursorStyleForInputMode() {
         cursor.setStyle(if (isDpadMode) CursorOverlay.CursorStyle.DPAD else CursorOverlay.CursorStyle.POINTER)
+    }
+
+    private fun matchesAssignedKey(assigned: Int, event: KeyEvent): Boolean {
+        return if (assigned < 0) event.scanCode == -assigned else event.keyCode == assigned
+    }
+
+    private fun scheduleToggleTap(triggerKeyCode: Int) {
+        val now = SystemClock.uptimeMillis()
+        val doubleTapTimeoutMs = ViewConfiguration.getDoubleTapTimeout().toLong()
+
+        if (pendingToggleTapAtMs != 0L && pendingToggleTapKeyCode == triggerKeyCode && now - pendingToggleTapAtMs <= doubleTapTimeoutMs) {
+            mainHandler.removeCallbacks(commitToggleTapRunnable)
+            pendingToggleTapAtMs = 0L
+            pendingToggleTapKeyCode = null
+            toggleMode()
+            return
+        }
+
+        pendingToggleTapAtMs = now
+        pendingToggleTapKeyCode = triggerKeyCode
+        mainHandler.postDelayed(commitToggleTapRunnable, doubleTapTimeoutMs)
+    }
+
+    private fun scheduleSwipeOrDoubleSwipe(action: SwipeAction) {
+        val now = SystemClock.uptimeMillis()
+        val doubleTapTimeoutMs = ViewConfiguration.getDoubleTapTimeout().toLong()
+
+        if (pendingSwipeAtMs != 0L && pendingSwipeAction == action && now - pendingSwipeAtMs <= doubleTapTimeoutMs) {
+            mainHandler.removeCallbacks(commitSwipeRunnable)
+            pendingSwipeAtMs = 0L
+            pendingSwipeAction = null
+            dispatchScrollOrSwipe(action, distanceScale = settings.getMouseSwipeDoubleScale())
+            return
+        }
+
+        pendingSwipeAtMs = now
+        pendingSwipeAction = action
+        mainHandler.postDelayed(commitSwipeRunnable, doubleTapTimeoutMs)
+    }
+
+    private fun schedulePinchOrDoublePinch(action: PinchAction) {
+        val now = SystemClock.uptimeMillis()
+        val doubleTapTimeoutMs = ViewConfiguration.getDoubleTapTimeout().toLong()
+
+        if (pendingPinchAtMs != 0L && pendingPinchAction == action && now - pendingPinchAtMs <= doubleTapTimeoutMs) {
+            mainHandler.removeCallbacks(commitPinchRunnable)
+            pendingPinchAtMs = 0L
+            pendingPinchAction = null
+            dispatchPinch(action, distanceScale = settings.getMousePinchDoubleScale())
+            return
+        }
+
+        pendingPinchAtMs = now
+        pendingPinchAction = action
+        mainHandler.postDelayed(commitPinchRunnable, doubleTapTimeoutMs)
     }
 
     private fun clearPendingTapKey() {
@@ -702,30 +852,25 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         mainHandler.removeCallbacks(scrollRepeatRunnable)
     }
 
-    private fun dispatchScrollOrSwipe(keyCode: Int) {
-        val mouseKeyScrollUp = settings.getMouseKeyScrollUp()
-        val mouseKeyScrollDown = settings.getMouseKeyScrollDown()
-        val mouseKeyScrollLeft = settings.getMouseKeyScrollLeft()
-        val mouseKeyScrollRight = settings.getMouseKeyScrollRight()
-
+    private fun dispatchScrollOrSwipe(action: SwipeAction, distanceScale: Float) {
         val c = cursor.center()
         val visualFeedback = settings.isTouchVisualFeedbackEnabled()
         when (settings.getEmulationMethod()) {
             EmulationMethod.ACCESSIBILITY_SERVICE -> {
-                when (keyCode) {
-                    mouseKeyScrollUp -> {
+                when (action) {
+                    SwipeAction.UP -> {
                         if (visualFeedback) cursor.showScrollArrow(CursorOverlay.Direction.UP)
                         gestures.scrollUp(c.x, c.y)
                     }
-                    mouseKeyScrollDown -> {
+                    SwipeAction.DOWN -> {
                         if (visualFeedback) cursor.showScrollArrow(CursorOverlay.Direction.DOWN)
                         gestures.scrollDown(c.x, c.y)
                     }
-                    mouseKeyScrollLeft -> {
+                    SwipeAction.LEFT -> {
                         if (visualFeedback) cursor.showScrollArrow(CursorOverlay.Direction.LEFT)
                         gestures.scrollLeft(c.x, c.y)
                     }
-                    mouseKeyScrollRight -> {
+                    SwipeAction.RIGHT -> {
                         if (visualFeedback) cursor.showScrollArrow(CursorOverlay.Direction.RIGHT)
                         gestures.scrollRight(c.x, c.y)
                     }
@@ -737,14 +882,15 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 val w = dm.widthPixels
                 val h = dm.heightPixels
                 val distancePercent = settings.getMouseSwipeDistancePercent()
-                val distance = ((minOf(w, h) * (distancePercent / 100.0))).toInt().coerceIn(40, minOf(w, h) - 1)
+                val baseDistance = ((minOf(w, h) * (distancePercent / 100.0))).toInt().coerceIn(40, minOf(w, h) - 1)
+                val distance = (baseDistance * distanceScale).toInt().coerceIn(40, minOf(w, h) - 1)
 
                 fun clampX(x: Int) = x.coerceIn(0, w - 1)
                 fun clampY(y: Int) = y.coerceIn(0, h - 1)
 
                 // Swipe starting at the current cursor center.
-                when (keyCode) {
-                    mouseKeyScrollUp -> {
+                when (action) {
+                    SwipeAction.UP -> {
                         val x1 = clampX(c.x)
                         val y1 = clampY(c.y)
                         val x2 = clampX(c.x)
@@ -757,7 +903,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                         if (accepted && visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
                     }
 
-                    mouseKeyScrollDown -> {
+                    SwipeAction.DOWN -> {
                         val x1 = clampX(c.x)
                         val y1 = clampY(c.y)
                         val x2 = clampX(c.x)
@@ -770,7 +916,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                         if (accepted && visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
                     }
 
-                    mouseKeyScrollLeft -> {
+                    SwipeAction.LEFT -> {
                         val x1 = clampX(c.x)
                         val y1 = clampY(c.y)
                         val x2 = clampX(c.x - distance)
@@ -783,7 +929,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                         if (accepted && visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
                     }
 
-                    mouseKeyScrollRight -> {
+                    SwipeAction.RIGHT -> {
                         val x1 = clampX(c.x)
                         val y1 = clampY(c.y)
                         val x2 = clampX(c.x + distance)
@@ -799,10 +945,60 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
                 Log.i(
                     tag,
-                    "swipe via proxy keyCode=$keyCode center=(${c.x},${c.y}) distance=$distance (${distancePercent}%)",
+                    "swipe via proxy action=$action center=(${c.x},${c.y}) distance=$distance (${distancePercent}%)",
                 )
             }
         }
+    }
+
+    private fun dispatchPinch(action: PinchAction, distanceScale: Float) {
+        val dm = resources.displayMetrics
+        val w = dm.widthPixels
+        val h = dm.heightPixels
+        val minSide = minOf(w, h)
+        val distancePercent = settings.getMousePinchDistancePercent()
+        val baseDistance = ((minSide * (distancePercent / 100.0))).toInt().coerceIn(40, minSide - 1)
+        val distance = (baseDistance * distanceScale).toInt().coerceIn(40, minSide - 1)
+        val minGap = (distance * 0.35f).toInt().coerceAtLeast(24)
+        val half = (distance / 2).coerceAtLeast(minGap + 1)
+
+        val c = cursor.center()
+        fun clampX(x: Int) = x.coerceIn(0, w - 1)
+        fun clampY(y: Int) = y.coerceIn(0, h - 1)
+
+        val (startOffset, endOffset) = if (action == PinchAction.IN) {
+            half to minGap
+        } else {
+            minGap to half
+        }
+
+        val x1Start = clampX(c.x - startOffset)
+        val y1Start = clampY(c.y)
+        val x1End = clampX(c.x - endOffset)
+        val y1End = clampY(c.y)
+
+        val x2Start = clampX(c.x + startOffset)
+        val y2Start = clampY(c.y)
+        val x2End = clampX(c.x + endOffset)
+        val y2End = clampY(c.y)
+
+        val useAccessibility = settings.getEmulationMethod() == EmulationMethod.ACCESSIBILITY_SERVICE ||
+            canPerformGesturesViaAccessibility()
+
+        if (!useAccessibility) {
+            showToast("ピンチ操作は現在のエミュレーション方法では利用できません")
+            return
+        }
+
+        when (action) {
+            PinchAction.IN -> gestures.pinchIn(x1Start, y1Start, x1End, y1End, x2Start, y2Start, x2End, y2End)
+            PinchAction.OUT -> gestures.pinchOut(x1Start, y1Start, x1End, y1End, x2Start, y2Start, x2End, y2End)
+        }
+
+        Log.i(
+            tag,
+            "pinch via accessibility action=$action center=(${c.x},${c.y}) distance=$distance (${distancePercent}%)",
+        )
     }
 
     private fun applyCursorStartPositionIfNeeded() {
@@ -837,6 +1033,24 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         pendingToggleTriggered = false
     }
 
+    private fun clearPendingToggleTap() {
+        mainHandler.removeCallbacks(commitToggleTapRunnable)
+        pendingToggleTapAtMs = 0L
+        pendingToggleTapKeyCode = null
+    }
+
+    private fun clearPendingSwipe() {
+        mainHandler.removeCallbacks(commitSwipeRunnable)
+        pendingSwipeAtMs = 0L
+        pendingSwipeAction = null
+    }
+
+    private fun clearPendingPinch() {
+        mainHandler.removeCallbacks(commitPinchRunnable)
+        pendingPinchAtMs = 0L
+        pendingPinchAction = null
+    }
+
     private fun startMoveRepeat(keyCode: Int, dx: Int, dy: Int) {
         if (moveKeyCode == keyCode) return
         clearMoveRepeat()
@@ -856,8 +1070,9 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         mainHandler.postDelayed(moveRepeatRunnable, MOVE_REPEAT_INITIAL_DELAY_MS)
     }
 
-    private fun stopMoveRepeat(keyCode: Int) {
-        if (moveKeyCode == keyCode) {
+    private fun stopMoveRepeat(event: KeyEvent) {
+        val current = moveKeyCode
+        if (current != null && matchesAssignedKey(current, event)) {
             clearMoveRepeat()
         }
     }

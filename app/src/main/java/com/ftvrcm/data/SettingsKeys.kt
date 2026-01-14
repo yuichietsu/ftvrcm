@@ -5,8 +5,9 @@ object SettingsKeys {
 
     const val OPERATION_MODE = "operation_mode" // String: NORMAL|MOUSE
 
-    const val TOGGLE_KEYCODE = "toggle_keycode" // String (ListPreference) / store as Int
-    const val TOGGLE_LONGPRESS = "toggle_longpress" // boolean
+    const val TOGGLE_KEYCODE = "toggle_keycode" // String / store as Int or -scanCode
+    const val TOGGLE_LONGPRESS = "toggle_longpress" // boolean (legacy)
+    const val TOGGLE_TRIGGER = "toggle_trigger" // String: LONG_PRESS|DOUBLE_TAP|SINGLE_TAP
 
     const val MOUSE_POINTER_SPEED = "mouse_pointer_speed" // int
 
@@ -28,8 +29,14 @@ object SettingsKeys {
     const val MOUSE_KEY_SCROLL_LEFT = "mouse_key_scroll_left"
     const val MOUSE_KEY_SCROLL_RIGHT = "mouse_key_scroll_right"
 
+    const val MOUSE_KEY_PINCH_IN = "mouse_key_pinch_in"
+    const val MOUSE_KEY_PINCH_OUT = "mouse_key_pinch_out"
+
     // Swipe/scroll tuning
     const val MOUSE_SWIPE_DISTANCE_PERCENT = "mouse_swipe_distance_percent" // int (SeekBarPreference)
+    const val MOUSE_SWIPE_DOUBLE_SCALE = "mouse_swipe_double_scale" // String (ListPreference) / Float
+    const val MOUSE_PINCH_DISTANCE_PERCENT = "mouse_pinch_distance_percent" // int (SeekBarPreference)
+    const val MOUSE_PINCH_DOUBLE_SCALE = "mouse_pinch_double_scale" // String (ListPreference) / Float
     const val MOUSE_SCROLL_REPEAT_LONGPRESS = "mouse_scroll_repeat_longpress" // boolean
     const val MOUSE_SCROLL_REPEAT_INTERVAL_MS = "mouse_scroll_repeat_interval_ms" // int (SeekBarPreference)
 

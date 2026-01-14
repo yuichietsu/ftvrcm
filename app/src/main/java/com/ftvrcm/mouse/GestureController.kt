@@ -1,8 +1,10 @@
 package com.ftvrcm.mouse
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.GestureDescription
 import android.os.Handler
 import android.os.Looper
+import android.graphics.Path
 import android.graphics.Rect
 import android.view.View
 import android.view.accessibility.AccessibilityNodeInfo
@@ -186,6 +188,91 @@ class GestureController(
             detail = if (ok == true) "via=SCROLL_RIGHT ok" else "via=SCROLL_RIGHT failed",
         )
         return ok == true
+    }
+
+    fun pinchIn(
+        x1Start: Int,
+        y1Start: Int,
+        x1End: Int,
+        y1End: Int,
+        x2Start: Int,
+        y2Start: Int,
+        x2End: Int,
+        y2End: Int,
+        durationMs: Long = 240,
+    ): Boolean {
+        val detail = "x1=$x1Start,$y1Start->$x1End,$y1End x2=$x2Start,$y2Start->$x2End,$y2End"
+        return dispatchPinchGesture(type = "pinch_in", detail = detail) {
+            addStroke(x1Start, y1Start, x1End, y1End, durationMs)
+            addStroke(x2Start, y2Start, x2End, y2End, durationMs)
+        }
+    }
+
+    fun pinchOut(
+        x1Start: Int,
+        y1Start: Int,
+        x1End: Int,
+        y1End: Int,
+        x2Start: Int,
+        y2Start: Int,
+        x2End: Int,
+        y2End: Int,
+        durationMs: Long = 240,
+    ): Boolean {
+        val detail = "x1=$x1Start,$y1Start->$x1End,$y1End x2=$x2Start,$y2Start->$x2End,$y2End"
+        return dispatchPinchGesture(type = "pinch_out", detail = detail) {
+            addStroke(x1Start, y1Start, x1End, y1End, durationMs)
+            addStroke(x2Start, y2Start, x2End, y2End, durationMs)
+        }
+    }
+
+    private fun dispatchPinchGesture(
+        type: String,
+        detail: String,
+        buildStrokes: GestureDescription.Builder.() -> Unit,
+    ): Boolean {
+        recordGesture(type = type, status = "DISPATCHING", detail = detail)
+
+        val builder = GestureDescription.Builder().apply(buildStrokes)
+        val gesture = builder.build()
+
+        val ok = try {
+            service.dispatchGesture(
+                gesture,
+                object : AccessibilityService.GestureResultCallback() {
+                    override fun onCompleted(gestureDescription: GestureDescription?) {
+                        recordGesture(type = type, status = "COMPLETED", detail = detail)
+                    }
+
+                    override fun onCancelled(gestureDescription: GestureDescription?) {
+                        recordGesture(type = type, status = "CANCELLED", detail = detail)
+                    }
+                },
+                null,
+            )
+        } catch (_: Exception) {
+            false
+        }
+
+        if (!ok) {
+            recordGesture(type = type, status = "REJECTED", detail = "dispatchGesture=false $detail")
+        }
+
+        return ok
+    }
+
+    private fun GestureDescription.Builder.addStroke(
+        x1: Int,
+        y1: Int,
+        x2: Int,
+        y2: Int,
+        durationMs: Long,
+    ) {
+        val path = Path().apply {
+            moveTo(x1.toFloat(), y1.toFloat())
+            lineTo(x2.toFloat(), y2.toFloat())
+        }
+        addStroke(GestureDescription.StrokeDescription(path, 0, durationMs.coerceAtLeast(80)))
     }
 
     fun dpadUp(): Boolean {

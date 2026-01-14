@@ -9,6 +9,7 @@ ftvrcm の設定データは SharedPreferences で保存されます。本ドキ
 com.ftvrcm_preferences.xml
 └── ftvrcm_settings
     ├── toggle_keycode
+    ├── toggle_trigger
     ├── toggle_longpress
     ├── operation_mode
     ├── mouse_pointer_speed
@@ -25,7 +26,12 @@ com.ftvrcm_preferences.xml
     ├── mouse_key_scroll_down
     ├── mouse_key_scroll_left
     ├── mouse_key_scroll_right
+    ├── mouse_key_pinch_in
+    ├── mouse_key_pinch_out
     ├── mouse_swipe_distance_percent
+    ├── mouse_swipe_double_scale
+    ├── mouse_pinch_distance_percent
+    ├── mouse_pinch_double_scale
     ├── mouse_scroll_repeat_longpress
     ├── mouse_scroll_repeat_interval_ms
     ├── mouse_key_cursor_dpad_toggle
@@ -58,22 +64,23 @@ com.ftvrcm_preferences.xml
 
 ---
 
-### 1.1 モード切り替えキー（toggle_keycode / toggle_longpress）
+### 1.1 モード切り替えキー（toggle_keycode / toggle_trigger / toggle_longpress）
 
 | 項目 | 値 |
 |------|-----|
-| **キー** | `toggle_keycode` / `toggle_longpress` |
-| **型** | String / Boolean |
-| **デフォルト** | `82`（`KEYCODE_MENU`） / `true` |
-| **説明** | 操作モード（通常/タッチ操作）を切り替えるキーと、切り替えを長押しにするかどうか |
+| **キー** | `toggle_keycode` / `toggle_trigger` / `toggle_longpress` |
+| **型** | String / String / Boolean |
+| **デフォルト** | `82`（`KEYCODE_MENU`） / `LONG_PRESS` / `true`（レガシー） |
+| **説明** | 操作モード（通常/タッチ操作）を切り替えるキーと、切り替え操作（長押し/ダブルタップ/シングルタップ）を指定します。`toggle_longpress` は旧設定の互換用です。 |
 
 **例**：
 ```xml
 <string name="toggle_keycode">82</string>
-<boolean name="toggle_longpress" value="true" />
+<string name="toggle_trigger">LONG_PRESS</string>
 ```
 
 補足：Fire TV（Fire OS）では `KEYCODE_BACK`（4）長押しがシステム動作と競合し、アクセシビリティが無効化される場合があります。
+補足：未知のキーは `KEYCODE_UNKNOWN` を検出した場合、スキャンコードを負数で保存します（例：`-168`）。
 
 ---
 
@@ -147,7 +154,64 @@ com.ftvrcm_preferences.xml
 
 ---
 
-### 3.0.1 長押し連続実行（mouse_scroll_repeat_longpress / mouse_scroll_repeat_interval_ms）
+### 3.0.1 スワイプダブルクリック倍率（mouse_swipe_double_scale）
+
+スワイプキーをダブルクリックした際の距離倍率を指定します。
+
+| 項目 | 値 |
+|------|-----|
+| **キー** | `mouse_swipe_double_scale` |
+| **型** | String（Float） |
+| **範囲** | 0.3-3.0 |
+| **デフォルト** | 2.0 |
+| **説明** | ダブルクリック時のスワイプ距離倍率（2倍/0.5倍など） |
+
+**例**：
+```xml
+<string name="mouse_swipe_double_scale">2.0</string>
+```
+
+---
+
+### 3.0.2 ピンチ量（mouse_pinch_distance_percent）
+
+ピンチ操作の指の開き幅を画面短辺の割合で指定します。
+
+| 項目 | 値 |
+|------|-----|
+| **キー** | `mouse_pinch_distance_percent` |
+| **型** | Integer |
+| **範囲** | 5-95 |
+| **デフォルト** | 28 |
+| **説明** | ピンチ開始/終了時の指の開き幅（%） |
+
+**例**：
+```xml
+<int name="mouse_pinch_distance_percent" value="28" />
+```
+
+---
+
+### 3.0.3 ピンチダブルクリック倍率（mouse_pinch_double_scale）
+
+ピンチキーをダブルクリックした際のピンチ量倍率を指定します。
+
+| 項目 | 値 |
+|------|-----|
+| **キー** | `mouse_pinch_double_scale` |
+| **型** | String（Float） |
+| **範囲** | 0.3-3.0 |
+| **デフォルト** | 2.0 |
+| **説明** | ダブルクリック時のピンチ量倍率（2倍/0.5倍など） |
+
+**例**：
+```xml
+<string name="mouse_pinch_double_scale">2.0</string>
+```
+
+---
+
+### 3.0.4 長押し連続実行（mouse_scroll_repeat_longpress / mouse_scroll_repeat_interval_ms）
 
 上下左右の「スクロール/スワイプ」キーを長押ししたとき、一定間隔で連続実行するための設定です。
 
@@ -224,10 +288,12 @@ com.ftvrcm_preferences.xml
   <string>21:mouse_left</string>
   <string>22:mouse_right</string>
   <string>23:mouse_click</string>
-        <string>166:mouse_scroll_up</string>
-        <string>167:mouse_scroll_down</string>
-                <string>89:mouse_scroll_left</string>
-                <string>90:mouse_scroll_right</string>
+    <string>166:mouse_scroll_up</string>
+    <string>167:mouse_scroll_down</string>
+    <string>89:mouse_scroll_left</string>
+    <string>90:mouse_scroll_right</string>
+    <string>168:mouse_pinch_in</string>
+    <string>169:mouse_pinch_out</string>
 </set>
 ```
 
@@ -259,7 +325,10 @@ com.ftvrcm_preferences.xml
 | `mouse_scroll_down` | 下スクロール（`ACCESSIBILITY_SERVICE`）/ 下スワイプ（`PROXY`） |
 | `mouse_scroll_left` | 左スクロール（`ACCESSIBILITY_SERVICE`）/ 左スワイプ（`PROXY`） |
 | `mouse_scroll_right` | 右スクロール（`ACCESSIBILITY_SERVICE`）/ 右スワイプ（`PROXY`） |
-| `mouse_key_cursor_dpad_toggle` | 入力モード（カーソル/方向キー）切り替えキー（デフォルト: `MENU`） |
+| `mouse_pinch_in` | ピンチイン |
+| `mouse_pinch_out` | ピンチアウト |
+
+補足：`mouse_key_cursor_dpad_toggle` はキー割り当てに含まれず、個別設定として保持されます。
 ### 5. 最終ジェスチャ記録（last_gesture_*）
 
 TouchTestActivity（動作確認画面）で「最後に注入したジェスチャがどう処理されたか（成功/キャンセル/フォールバック等）」を確認するためのデバッグ用途の記録です。
@@ -295,7 +364,30 @@ class SettingsStore(context: Context) {
 
         prefs.edit().apply {
             putString("operation_mode", "NORMAL")
+            putString("toggle_keycode", "82")
+            putString("toggle_trigger", "LONG_PRESS")
             putInt("mouse_pointer_speed", 10)
+            putString("emulation_method", "ACCESSIBILITY_SERVICE")
+
+            putString("mouse_key_up", "19")
+            putString("mouse_key_down", "20")
+            putString("mouse_key_left", "21")
+            putString("mouse_key_right", "22")
+            putString("mouse_key_click", "23")
+            putString("mouse_key_scroll_up", "166")
+            putString("mouse_key_scroll_down", "167")
+            putString("mouse_key_scroll_left", "89")
+            putString("mouse_key_scroll_right", "90")
+            putString("mouse_key_pinch_in", "168")
+            putString("mouse_key_pinch_out", "169")
+
+            putInt("mouse_swipe_distance_percent", 28)
+            putString("mouse_swipe_double_scale", "2.0")
+            putInt("mouse_pinch_distance_percent", 28)
+            putString("mouse_pinch_double_scale", "2.0")
+            putBoolean("mouse_scroll_repeat_longpress", true)
+            putInt("mouse_scroll_repeat_interval_ms", 120)
+
             putStringSet(
                 "key_mapping",
                 setOf(
@@ -308,6 +400,8 @@ class SettingsStore(context: Context) {
                     "167:mouse_scroll_down",
                     "89:mouse_scroll_left",
                     "90:mouse_scroll_right",
+                    "168:mouse_pinch_in",
+                    "169:mouse_pinch_out",
                 ),
             )
             apply()

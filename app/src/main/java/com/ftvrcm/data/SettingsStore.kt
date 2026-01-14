@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.ftvrcm.domain.EmulationMethod
 import com.ftvrcm.domain.OperationMode
+import com.ftvrcm.domain.ToggleTrigger
 
 class SettingsStore(context: Context) {
     private val prefs: SharedPreferences =
@@ -42,6 +43,7 @@ class SettingsStore(context: Context) {
 
             putString(SettingsKeys.TOGGLE_KEYCODE, "82") // MENU (Avoid Fire TV BACK long-press conflicts)
             putBoolean(SettingsKeys.TOGGLE_LONGPRESS, true)
+            putString(SettingsKeys.TOGGLE_TRIGGER, ToggleTrigger.LONG_PRESS.name)
 
             putInt(SettingsKeys.MOUSE_POINTER_SPEED, 10)
 
@@ -64,8 +66,15 @@ class SettingsStore(context: Context) {
             putString(SettingsKeys.MOUSE_KEY_SCROLL_LEFT, "89")
             putString(SettingsKeys.MOUSE_KEY_SCROLL_RIGHT, "90")
 
+            // Pinch keys (default: ZOOM_IN/ZOOM_OUT)
+            putString(SettingsKeys.MOUSE_KEY_PINCH_IN, "168")
+            putString(SettingsKeys.MOUSE_KEY_PINCH_OUT, "169")
+
             // Swipe/scroll tuning
             putInt(SettingsKeys.MOUSE_SWIPE_DISTANCE_PERCENT, 28)
+            putString(SettingsKeys.MOUSE_SWIPE_DOUBLE_SCALE, "2.0")
+            putInt(SettingsKeys.MOUSE_PINCH_DISTANCE_PERCENT, 28)
+            putString(SettingsKeys.MOUSE_PINCH_DOUBLE_SCALE, "2.0")
             putBoolean(SettingsKeys.MOUSE_SCROLL_REPEAT_LONGPRESS, true)
             putInt(SettingsKeys.MOUSE_SCROLL_REPEAT_INTERVAL_MS, 120)
 
@@ -91,6 +100,8 @@ class SettingsStore(context: Context) {
                     "167:mouse_scroll_down",
                     "89:mouse_scroll_left",
                     "90:mouse_scroll_right",
+                    "168:mouse_pinch_in",
+                    "169:mouse_pinch_out",
                 ),
             )
         }
@@ -109,6 +120,8 @@ class SettingsStore(context: Context) {
         set += "${getMouseKeyScrollDown()}:mouse_scroll_down"
         set += "${getMouseKeyScrollLeft()}:mouse_scroll_left"
         set += "${getMouseKeyScrollRight()}:mouse_scroll_right"
+        set += "${getMouseKeyPinchIn()}:mouse_pinch_in"
+        set += "${getMouseKeyPinchOut()}:mouse_pinch_out"
         prefs.edit { putStringSet(SettingsKeys.KEY_MAPPING, set) }
     }
 
@@ -122,7 +135,17 @@ class SettingsStore(context: Context) {
     }
 
     fun getToggleKeyCode(): Int = prefs.getString(SettingsKeys.TOGGLE_KEYCODE, "82")?.toIntOrNull() ?: 82
-    fun isToggleLongPress(): Boolean = prefs.getBoolean(SettingsKeys.TOGGLE_LONGPRESS, true)
+
+    fun getToggleTrigger(): ToggleTrigger {
+        val raw = prefs.getString(SettingsKeys.TOGGLE_TRIGGER, null)
+        if (raw != null) {
+            return runCatching { ToggleTrigger.valueOf(raw) }.getOrDefault(ToggleTrigger.LONG_PRESS)
+        }
+
+        // Legacy fallback: toggle_longpress
+        val legacyLongPress = prefs.getBoolean(SettingsKeys.TOGGLE_LONGPRESS, true)
+        return if (legacyLongPress) ToggleTrigger.LONG_PRESS else ToggleTrigger.SINGLE_TAP
+    }
 
     fun getMousePointerSpeedPx(): Int = prefs.getInt(SettingsKeys.MOUSE_POINTER_SPEED, 10).coerceIn(1, 200)
 
@@ -149,8 +172,22 @@ class SettingsStore(context: Context) {
     fun getMouseKeyScrollLeft(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_LEFT, "89")?.toIntOrNull() ?: 89
     fun getMouseKeyScrollRight(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_RIGHT, "90")?.toIntOrNull() ?: 90
 
+    fun getMouseKeyPinchIn(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_PINCH_IN, "168")?.toIntOrNull() ?: 168
+    fun getMouseKeyPinchOut(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_PINCH_OUT, "169")?.toIntOrNull() ?: 169
+
     fun getMouseSwipeDistancePercent(): Int =
         prefs.getInt(SettingsKeys.MOUSE_SWIPE_DISTANCE_PERCENT, 28).coerceIn(5, 95)
+
+    fun getMouseSwipeDoubleScale(): Float =
+        (prefs.getString(SettingsKeys.MOUSE_SWIPE_DOUBLE_SCALE, "2.0")?.toFloatOrNull() ?: 2.0f)
+            .coerceIn(0.3f, 3.0f)
+
+    fun getMousePinchDistancePercent(): Int =
+        prefs.getInt(SettingsKeys.MOUSE_PINCH_DISTANCE_PERCENT, 28).coerceIn(5, 95)
+
+    fun getMousePinchDoubleScale(): Float =
+        (prefs.getString(SettingsKeys.MOUSE_PINCH_DOUBLE_SCALE, "2.0")?.toFloatOrNull() ?: 2.0f)
+            .coerceIn(0.3f, 3.0f)
 
     fun isMouseScrollRepeatLongPress(): Boolean =
         prefs.getBoolean(SettingsKeys.MOUSE_SCROLL_REPEAT_LONGPRESS, true)
