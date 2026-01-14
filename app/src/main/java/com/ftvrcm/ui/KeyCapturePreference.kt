@@ -49,6 +49,14 @@ class KeyCapturePreference @JvmOverloads constructor(
             .setTitle(title)
             .setView(messageView)
             .setNegativeButton(R.string.prefs_common_cancel) { _, _ -> }
+            .setNeutralButton(R.string.prefs_key_capture_clear) { _, _ ->
+                val storedValue = "0"
+                if (callChangeListener(storedValue)) {
+                    persistString(storedValue)
+                    currentValue = storedValue
+                    updateSummary(storedValue)
+                }
+            }
             .create()
 
         dialog.setOnShowListener {
@@ -78,13 +86,14 @@ class KeyCapturePreference @JvmOverloads constructor(
     }
 
     private fun updateSummary(value: String?) {
-        val label = formatKeyLabel(value)
+        val label = formatKeyLabel(context, value)
         summary = context.getString(R.string.prefs_key_capture_summary, label)
     }
 
     companion object {
-        fun formatKeyLabel(value: String?): String {
+        fun formatKeyLabel(context: Context, value: String?): String {
             val code = value?.toIntOrNull() ?: return "-"
+            if (code == 0) return context.getString(R.string.prefs_key_capture_unassigned)
             return if (code < 0) {
                 "SCANCODE_${-code}"
             } else {

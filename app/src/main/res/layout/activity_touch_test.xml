@@ -140,36 +140,21 @@
                 android:textColor="#B0B0B0"
                 android:textSize="12sp" />
 
-            <HorizontalScrollView
-                android:id="@+id/swipeTestHScroll"
+            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_marginTop="8dp"
                 android:layout_weight="1"
-                android:fillViewport="true"
-                android:scrollbars="horizontal">
+                android:background="#222222">
 
-                <ScrollView
-                    android:id="@+id/swipeTestVScroll"
-                    android:layout_width="wrap_content"
+                <com.ftvrcm.ui.SwipePatternView
+                    android:id="@+id/swipePattern"
+                    android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:fillViewport="true"
-                    android:scrollbars="vertical">
+                    android:clickable="true"
+                    android:focusable="true" />
 
-                    <FrameLayout
-                        android:id="@+id/swipePatternContainer"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:background="#222222">
-
-                        <com.ftvrcm.ui.SwipePatternView
-                            android:id="@+id/swipePattern"
-                            android:layout_width="1600dp"
-                            android:layout_height="1600dp" />
-
-                    </FrameLayout>
-                </ScrollView>
-            </HorizontalScrollView>
+            </FrameLayout>
         </LinearLayout>
     </LinearLayout>
 

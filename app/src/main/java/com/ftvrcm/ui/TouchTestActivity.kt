@@ -13,8 +13,6 @@ import android.os.SystemClock
 import android.view.ViewConfiguration
 import android.content.SharedPreferences
 import com.ftvrcm.data.SettingsKeys
-import android.widget.FrameLayout
-import kotlin.math.max
 
 class TouchTestActivity : AppCompatActivity() {
 
@@ -55,25 +53,7 @@ class TouchTestActivity : AppCompatActivity() {
 
         refreshLastGesture()
 
-        // Ensure the swipe test area overflows both horizontally and vertically
-        // even on large displays (e.g., 4K), so vertical scrolling is actually testable.
-        try {
-            val container = findViewById<FrameLayout>(R.id.swipePatternContainer)
-            val swipePattern = findViewById<SwipePatternView>(R.id.swipePattern)
-            val dm = resources.displayMetrics
-            val extra = (dm.density * 480f).toInt().coerceAtLeast(320)
-            val target = max(dm.widthPixels, dm.heightPixels) + extra
-
-            container.layoutParams = container.layoutParams.apply {
-                width = target
-                height = target
-            }
-            swipePattern.layoutParams = swipePattern.layoutParams.apply {
-                width = target
-                height = target
-            }
-        } catch (_: Throwable) {
-        }
+        // SwipePatternView handles pinch/drag internally.
 
         val prefs = getSharedPreferences(SettingsKeys.PREFS_NAME, MODE_PRIVATE)
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->

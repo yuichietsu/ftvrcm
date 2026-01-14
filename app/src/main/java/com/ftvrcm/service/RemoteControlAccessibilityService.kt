@@ -720,6 +720,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     }
 
     private fun matchesAssignedKey(assigned: Int, event: KeyEvent): Boolean {
+        if (assigned == 0) return false
         return if (assigned < 0) event.scanCode == -assigned else event.keyCode == assigned
     }
 

@@ -234,7 +234,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         val toggleKeyPref = findPreference<KeyCapturePreference>(SettingsKeys.TOGGLE_KEYCODE) ?: return
         val prefs = preferenceManager.sharedPreferences ?: return
         val rawValue = prefs.getString(SettingsKeys.TOGGLE_KEYCODE, "82")
-        val label = KeyCapturePreference.formatKeyLabel(rawValue)
+        val label = KeyCapturePreference.formatKeyLabel(requireContext(), rawValue)
         val trigger = SettingsStore(requireContext()).getToggleTrigger()
         val keyCode = rawValue?.toIntOrNull()
 
