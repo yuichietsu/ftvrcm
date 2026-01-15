@@ -17,6 +17,7 @@ import com.ftvrcm.domain.ToggleTrigger
 import com.ftvrcm.mouse.CursorOverlay
 import com.ftvrcm.mouse.GestureController
 import com.ftvrcm.proxy.ProxyInputClient
+import com.ftvrcm.util.KeyCaptureState
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -253,6 +254,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
+        if (KeyCaptureState.isCapturing) return false
         val keyCode = event.keyCode
 
         // Keep mode in sync with preferences even if they were changed externally (e.g. via ADB).

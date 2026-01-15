@@ -379,8 +379,8 @@ class SettingsStore(context: Context) {
             putString("mouse_key_scroll_down", "167")
             putString("mouse_key_scroll_left", "89")
             putString("mouse_key_scroll_right", "90")
-            putString("mouse_key_pinch_in", "168")
-            putString("mouse_key_pinch_out", "169")
+            putString("mouse_key_pinch_in", "0")
+            putString("mouse_key_pinch_out", "0")
 
             putInt("mouse_swipe_distance_percent", 28)
             putString("mouse_swipe_double_scale", "2.0")
@@ -401,8 +401,6 @@ class SettingsStore(context: Context) {
                     "167:mouse_scroll_down",
                     "89:mouse_scroll_left",
                     "90:mouse_scroll_right",
-                    "168:mouse_pinch_in",
-                    "169:mouse_pinch_out",
                 ),
             )
             apply()

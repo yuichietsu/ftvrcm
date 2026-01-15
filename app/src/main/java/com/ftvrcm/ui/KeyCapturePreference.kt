@@ -7,6 +7,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.preference.Preference
 import androidx.preference.PreferenceViewHolder
 import com.ftvrcm.R
+import com.ftvrcm.util.KeyCaptureState
 
 class KeyCapturePreference @JvmOverloads constructor(
     context: Context,
@@ -71,11 +72,13 @@ class KeyCapturePreference @JvmOverloads constructor(
         }
 
         dialog.setOnShowListener {
+            KeyCaptureState.isCapturing = true
             messageView.requestFocus()
             messageView.postDelayed(timeoutRunnable, timeoutMs)
         }
 
         dialog.setOnDismissListener {
+            KeyCaptureState.isCapturing = false
             messageView.removeCallbacks(timeoutRunnable)
             messageView.removeCallbacks(assignBackRunnable)
         }

@@ -66,9 +66,9 @@ class SettingsStore(context: Context) {
             putString(SettingsKeys.MOUSE_KEY_SCROLL_LEFT, "89")
             putString(SettingsKeys.MOUSE_KEY_SCROLL_RIGHT, "90")
 
-            // Pinch keys (default: ZOOM_IN/ZOOM_OUT)
-            putString(SettingsKeys.MOUSE_KEY_PINCH_IN, "168")
-            putString(SettingsKeys.MOUSE_KEY_PINCH_OUT, "169")
+            // Pinch keys (default: unassigned)
+            putString(SettingsKeys.MOUSE_KEY_PINCH_IN, "0")
+            putString(SettingsKeys.MOUSE_KEY_PINCH_OUT, "0")
 
             // Swipe/scroll tuning
             putInt(SettingsKeys.MOUSE_SWIPE_DISTANCE_PERCENT, 28)
@@ -100,8 +100,6 @@ class SettingsStore(context: Context) {
                     "167:mouse_scroll_down",
                     "89:mouse_scroll_left",
                     "90:mouse_scroll_right",
-                    "168:mouse_pinch_in",
-                    "169:mouse_pinch_out",
                 ),
             )
         }
@@ -111,17 +109,21 @@ class SettingsStore(context: Context) {
 
     fun upsertMouseKeyMapping() {
         val set = mutableSetOf<String>()
-        set += "${getMouseKeyUp()}:mouse_up"
-        set += "${getMouseKeyDown()}:mouse_down"
-        set += "${getMouseKeyLeft()}:mouse_left"
-        set += "${getMouseKeyRight()}:mouse_right"
-        set += "${getMouseKeyClick()}:mouse_click"
-        set += "${getMouseKeyScrollUp()}:mouse_scroll_up"
-        set += "${getMouseKeyScrollDown()}:mouse_scroll_down"
-        set += "${getMouseKeyScrollLeft()}:mouse_scroll_left"
-        set += "${getMouseKeyScrollRight()}:mouse_scroll_right"
-        set += "${getMouseKeyPinchIn()}:mouse_pinch_in"
-        set += "${getMouseKeyPinchOut()}:mouse_pinch_out"
+        fun addIfAssigned(keyCode: Int, actionId: String) {
+            if (keyCode != 0) set += "$keyCode:$actionId"
+        }
+
+        addIfAssigned(getMouseKeyUp(), "mouse_up")
+        addIfAssigned(getMouseKeyDown(), "mouse_down")
+        addIfAssigned(getMouseKeyLeft(), "mouse_left")
+        addIfAssigned(getMouseKeyRight(), "mouse_right")
+        addIfAssigned(getMouseKeyClick(), "mouse_click")
+        addIfAssigned(getMouseKeyScrollUp(), "mouse_scroll_up")
+        addIfAssigned(getMouseKeyScrollDown(), "mouse_scroll_down")
+        addIfAssigned(getMouseKeyScrollLeft(), "mouse_scroll_left")
+        addIfAssigned(getMouseKeyScrollRight(), "mouse_scroll_right")
+        addIfAssigned(getMouseKeyPinchIn(), "mouse_pinch_in")
+        addIfAssigned(getMouseKeyPinchOut(), "mouse_pinch_out")
         prefs.edit { putStringSet(SettingsKeys.KEY_MAPPING, set) }
     }
 
@@ -172,8 +174,8 @@ class SettingsStore(context: Context) {
     fun getMouseKeyScrollLeft(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_LEFT, "89")?.toIntOrNull() ?: 89
     fun getMouseKeyScrollRight(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_RIGHT, "90")?.toIntOrNull() ?: 90
 
-    fun getMouseKeyPinchIn(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_PINCH_IN, "168")?.toIntOrNull() ?: 168
-    fun getMouseKeyPinchOut(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_PINCH_OUT, "169")?.toIntOrNull() ?: 169
+    fun getMouseKeyPinchIn(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_PINCH_IN, "0")?.toIntOrNull() ?: 0
+    fun getMouseKeyPinchOut(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_PINCH_OUT, "0")?.toIntOrNull() ?: 0
 
     fun getMouseSwipeDistancePercent(): Int =
         prefs.getInt(SettingsKeys.MOUSE_SWIPE_DISTANCE_PERCENT, 28).coerceIn(5, 95)
