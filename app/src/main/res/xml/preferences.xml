@@ -119,6 +119,7 @@
         <com.ftvrcm.ui.KeyCapturePreference
             android:key="mouse_key_cursor_dpad_toggle"
             android:title="@string/prefs_mouse_key_cursor_dpad_toggle"
+            android:summary="@string/prefs_mouse_key_cursor_dpad_toggle_summary"
             android:defaultValue="82" />
 
     </PreferenceCategory>
