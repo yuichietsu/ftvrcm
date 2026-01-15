@@ -27,19 +27,6 @@ class SwipePatternView @JvmOverloads constructor(
         strokeWidth = dp(1.2f)
     }
 
-    private val stripePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        color = 0x885FA7B2.toInt() // muted teal
-        strokeWidth = dp(5f)
-        strokeCap = Paint.Cap.ROUND
-    }
-
-    private val stripeHighlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        color = 0x44FFFFFF.toInt()
-        strokeWidth = dp(2.2f)
-        strokeCap = Paint.Cap.ROUND
-    }
 
     private var scaleFactor = 1.0f
     private var translateX = 0f
@@ -131,23 +118,6 @@ class SwipePatternView @JvmOverloads constructor(
             gy += tile
         }
 
-        // Diagonal stripes to make direction obvious
-        val step = dp(96f)
-        val spanX = (endX - startX).toFloat()
-        val spanY = (endY - startY).toFloat()
-        val span = spanX + spanY
-        var offset = startX.toFloat() - spanY
-        while (offset < endX.toFloat() + spanY) {
-            canvas.drawLine(offset, startY.toFloat(), offset + span, endY.toFloat(), stripePaint)
-            canvas.drawLine(
-                offset + dp(8f),
-                startY.toFloat(),
-                offset + span + dp(8f),
-                endY.toFloat(),
-                stripeHighlightPaint,
-            )
-            offset += step
-        }
         canvas.restore()
     }
 

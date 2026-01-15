@@ -125,7 +125,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private val commitToggleTapRunnable = Runnable {
         pendingToggleTapAtMs = 0L
         pendingToggleTapKeyCode = null
-        toggleMode()
     }
 
     private var pendingSwipeAtMs: Long = 0L

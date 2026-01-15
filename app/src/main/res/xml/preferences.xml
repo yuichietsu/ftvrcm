@@ -71,7 +71,9 @@
             android:title="@string/prefs_mouse_speed"
             android:min="1"
             android:max="50"
-            android:defaultValue="10" />
+            android:defaultValue="10"
+            android:summary="@string/prefs_mouse_speed_summary"
+            app:showSeekBarValue="true" />
 
         <ListPreference
             android:key="mouse_cursor_start_position"
