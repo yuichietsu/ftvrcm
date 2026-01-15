@@ -40,6 +40,7 @@ node server.js
 - `ADB_AUTH_FAIL_WINDOW_MS`（デフォルト: `60000`）: 連続判定の時間窓
 - `ADB_REAUTH_COOLDOWN_MS`（デフォルト: `600000`）: 再認証フローの最小実行間隔
 - `ADB_REAUTH_MAX_PER_HOUR`（デフォルト: `3`）: 1時間あたりの再認証フロー最大回数（`0`で無効化）
+- `ADB_READY_CACHE_MS`（デフォルト: `1500`）: 直近で `device` を確認できている場合、一定時間 `adb get-state` を省略して入力レイテンシを下げます
 
 #### 調整用パラメータ（CLI引数）
 
@@ -52,6 +53,7 @@ node server.js
 - `--adb-auth-fail-window-ms`
 - `--adb-reauth-cooldown-ms`
 - `--adb-reauth-max-per-hour`
+- `--adb-ready-cache-ms`
 
 ### デバッグログ
 

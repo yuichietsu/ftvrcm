@@ -78,6 +78,10 @@ const ADB_AUTH_FAIL_WINDOW_MS = Math.max(
   1000,
   Math.round(getArgNum('--adb-auth-fail-window-ms', envNum('ADB_AUTH_FAIL_WINDOW_MS', 60_000))),
 );
+const ADB_READY_CACHE_MS = Math.max(
+  0,
+  Math.round(getArgNum('--adb-ready-cache-ms', envNum('ADB_READY_CACHE_MS', 1500))),
+);
 const ADB_REAUTH_COOLDOWN_MS = Math.max(
   0,
   Math.round(getArgNum('--adb-reauth-cooldown-ms', envNum('ADB_REAUTH_COOLDOWN_MS', 10 * 60_000))),
@@ -232,19 +236,45 @@ function getDeviceState(serial) {
       authFailTimes: [],
       lastReauthAt: 0,
       reauthTimes: [],
+      lastState: '',
+      lastStateAt: 0,
+      lastOkAt: 0,
     });
   }
   return deviceState.get(serial);
 }
 
+function rememberAdbState(serial, state) {
+  const st = getDeviceState(serial);
+  st.lastState = state;
+  st.lastStateAt = Date.now();
+  if (state === 'device') {
+    st.lastOkAt = st.lastStateAt;
+  }
+}
+
 async function adbGetState(serial) {
   const r = await runAdbOnce(serial, ['get-state'], 2000);
   // When unauthorized/offline/notfound, adb tends to print errors to stderr.
-  if (r.ok && r.stdout) return r.stdout.trim();
+  if (r.ok && r.stdout) {
+    const state = r.stdout.trim();
+    rememberAdbState(serial, state);
+    return state;
+  }
   const kind = classifyAdbError(r);
-  if (kind === 'unauthorized') return 'unauthorized';
-  if (kind === 'offline') return 'offline';
-  if (kind === 'not_found') return 'not_found';
+  if (kind === 'unauthorized') {
+    rememberAdbState(serial, 'unauthorized');
+    return 'unauthorized';
+  }
+  if (kind === 'offline') {
+    rememberAdbState(serial, 'offline');
+    return 'offline';
+  }
+  if (kind === 'not_found') {
+    rememberAdbState(serial, 'not_found');
+    return 'not_found';
+  }
+  rememberAdbState(serial, 'unknown');
   return 'unknown';
 }
 
@@ -350,6 +380,12 @@ async function adbReauth(serial, requestId) {
 }
 
 async function ensureAdbReady(serial, requestId) {
+  const st = getDeviceState(serial);
+  const now = Date.now();
+  if (ADB_READY_CACHE_MS > 0 && st.lastState === 'device' && now - st.lastStateAt <= ADB_READY_CACHE_MS) {
+    return { ok: true, state: 'device', cached: true };
+  }
+
   const state = await adbGetState(serial);
   if (state === 'device') return { ok: true, state };
 
@@ -377,6 +413,15 @@ async function runAdb(serial, args, requestId) {
   // 2) execute command
   let result = await runAdbOnce(serial, args, ADB_TIMEOUT_MS);
 
+  if (result.ok) {
+    rememberAdbState(serial, 'device');
+  } else {
+    const primaryKind = classifyAdbError(result);
+    if (primaryKind === 'unauthorized') rememberAdbState(serial, 'unauthorized');
+    if (primaryKind === 'offline') rememberAdbState(serial, 'offline');
+    if (primaryKind === 'not_found') rememberAdbState(serial, 'not_found');
+  }
+
   // 3) on certain errors, try to recover once
   const kind = classifyAdbError(result);
   if (kind === 'unauthorized') {
@@ -386,9 +431,11 @@ async function runAdb(serial, args, requestId) {
     }
     // retry once (even if not reauthed, device might have been accepted manually)
     result = await runAdbOnce(serial, args, ADB_TIMEOUT_MS);
+    if (result.ok) rememberAdbState(serial, 'device');
   } else if (kind === 'offline' || kind === 'not_found' || kind === 'connect_failed') {
     await adbConnect(serial, requestId);
     result = await runAdbOnce(serial, args, ADB_TIMEOUT_MS);
+    if (result.ok) rememberAdbState(serial, 'device');
   }
 
   return result;
@@ -640,6 +687,14 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+server.on('connection', (socket) => {
+  try {
+    socket.setNoDelay(true);
+  } catch (_e) {
+    // ignore
+  }
+});
+
 server.listen(PORT, HOST, () => {
   log(`ftvrcm-proxy-server listening on http://${HOST}:${PORT}`);
   if (DEBUG) {
@@ -647,7 +702,7 @@ server.listen(PORT, HOST, () => {
     log(
       `adb knobs: TIMEOUT_MS=${ADB_TIMEOUT_MS} CONNECT_TIMEOUT_MS=${ADB_CONNECT_TIMEOUT_MS} CONNECT_COOLDOWN_MS=${ADB_CONNECT_COOLDOWN_MS} ` +
         `AUTH_FAIL_THRESHOLD=${ADB_AUTH_FAIL_THRESHOLD} AUTH_FAIL_WINDOW_MS=${ADB_AUTH_FAIL_WINDOW_MS} ` +
-        `REAUTH_COOLDOWN_MS=${ADB_REAUTH_COOLDOWN_MS} REAUTH_MAX_PER_HOUR=${ADB_REAUTH_MAX_PER_HOUR}`,
+        `REAUTH_COOLDOWN_MS=${ADB_REAUTH_COOLDOWN_MS} REAUTH_MAX_PER_HOUR=${ADB_REAUTH_MAX_PER_HOUR} READY_CACHE_MS=${ADB_READY_CACHE_MS}`,
     );
   }
   if (!DEFAULT_SERIAL) {
