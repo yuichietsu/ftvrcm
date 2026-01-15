@@ -390,7 +390,8 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
                 keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
                 keyCode == KeyEvent.KEYCODE_DPAD_RIGHT ||
-                keyCode == KeyEvent.KEYCODE_DPAD_CENTER)) {
+                keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                keyCode == KeyEvent.KEYCODE_BACK)) {
             clearMoveRepeat()
             clearPendingTapKey()
             return false

@@ -8,7 +8,10 @@ import android.view.ScaleGestureDetector
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.max
+import kotlin.math.min
 
 class SwipePatternView @JvmOverloads constructor(
     context: Context,
@@ -73,11 +76,22 @@ class SwipePatternView @JvmOverloads constructor(
         super.onDraw(canvas)
 
         val tile = dp(72f).toInt().coerceAtLeast(24)
-        val contentSize = max(width, height).coerceAtLeast(tile) * 6
-        val startX = -contentSize / 2
-        val startY = -contentSize / 2
-        val endX = startX + contentSize
-        val endY = startY + contentSize
+        val invScale = if (scaleFactor == 0f) 1f else 1f / scaleFactor
+        val viewLeft = (0f - translateX) * invScale
+        val viewTop = (0f - translateY) * invScale
+        val viewRight = (width.toFloat() - translateX) * invScale
+        val viewBottom = (height.toFloat() - translateY) * invScale
+
+        val pad = dp(160f)
+        val minX = min(viewLeft, viewRight) - pad
+        val maxX = max(viewLeft, viewRight) + pad
+        val minY = min(viewTop, viewBottom) - pad
+        val maxY = max(viewTop, viewBottom) + pad
+
+        val startX = (floor(minX / tile) * tile).toInt()
+        val endX = (ceil(maxX / tile) * tile).toInt()
+        val startY = (floor(minY / tile) * tile).toInt()
+        val endY = (ceil(maxY / tile) * tile).toInt()
 
         canvas.save()
         canvas.translate(translateX, translateY)
@@ -119,9 +133,11 @@ class SwipePatternView @JvmOverloads constructor(
 
         // Diagonal stripes to make direction obvious
         val step = dp(96f)
-        var offset = startX.toFloat() - contentSize.toFloat()
-        val span = (contentSize * 2).toFloat()
-        while (offset < endX.toFloat() + span) {
+        val spanX = (endX - startX).toFloat()
+        val spanY = (endY - startY).toFloat()
+        val span = spanX + spanY
+        var offset = startX.toFloat() - spanY
+        while (offset < endX.toFloat() + spanY) {
             canvas.drawLine(offset, startY.toFloat(), offset + span, endY.toFloat(), stripePaint)
             canvas.drawLine(
                 offset + dp(8f),
