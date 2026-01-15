@@ -54,7 +54,7 @@ class SwipePatternView @JvmOverloads constructor(
 
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             val prev = scaleFactor
-            scaleFactor = (scaleFactor * detector.scaleFactor).coerceIn(0.6f, 3.0f)
+            scaleFactor = (scaleFactor * detector.scaleFactor).coerceIn(0.3f, 6.0f)
             val focusX = detector.focusX
             val focusY = detector.focusY
             val factor = scaleFactor / prev

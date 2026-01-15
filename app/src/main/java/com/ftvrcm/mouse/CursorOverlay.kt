@@ -422,7 +422,7 @@ class CursorOverlay(private val context: Context) {
                 val startRadius = dp(18f)
                 val endRadius = dp(64f)
                 val radius = if (isZoomOut) {
-                    startRadius - (startRadius - dp(10f)) * t
+                    endRadius - (endRadius - startRadius) * t
                 } else {
                     startRadius + (endRadius - startRadius) * t
                 }
