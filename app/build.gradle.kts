@@ -1,6 +1,23 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+}
+
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("local.properties")
+val hasKeystoreProperties = if (keystorePropertiesFile.exists()) {
+    FileInputStream(keystorePropertiesFile).use { keystoreProperties.load(it) }
+    listOf(
+        "release.storeFile",
+        "release.storePassword",
+        "release.keyAlias",
+        "release.keyPassword",
+    ).all { keystoreProperties.getProperty(it)?.isNotBlank() == true }
+} else {
+    false
 }
 
 android {
@@ -15,6 +32,17 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        create("release") {
+            if (hasKeystoreProperties) {
+                storeFile = rootProject.file(keystoreProperties.getProperty("release.storeFile"))
+                storePassword = keystoreProperties.getProperty("release.storePassword")
+                keyAlias = keystoreProperties.getProperty("release.keyAlias")
+                keyPassword = keystoreProperties.getProperty("release.keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -22,6 +50,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            if (hasKeystoreProperties) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         debug {
             isMinifyEnabled = false
