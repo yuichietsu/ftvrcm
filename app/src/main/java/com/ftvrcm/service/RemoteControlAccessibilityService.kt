@@ -263,8 +263,11 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         // 1) Toggle mode (always available)
         val toggleKey = settings.getToggleKeyCode()
         val toggleTrigger = settings.getToggleTrigger()
+        val mouseKeyCursorDpadToggle = settings.getMouseKeyCursorDpadToggle()
         val isToggleKey = matchesAssignedKey(toggleKey, event)
-        val allowTogglePassThrough = event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER && toggleTrigger != ToggleTrigger.SINGLE_TAP
+        val allowMouseToggleFallthrough = mode == OperationMode.MOUSE && matchesAssignedKey(mouseKeyCursorDpadToggle, event)
+        val allowTogglePassThrough = toggleTrigger != ToggleTrigger.SINGLE_TAP &&
+            (event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || mode != OperationMode.MOUSE)
         if (isToggleKey) {
             when (toggleTrigger) {
                 ToggleTrigger.SINGLE_TAP -> {
@@ -278,13 +281,13 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
                 ToggleTrigger.DOUBLE_TAP -> {
                     when (event.action) {
-                        KeyEvent.ACTION_DOWN -> return !allowTogglePassThrough
+                        KeyEvent.ACTION_DOWN -> if (!allowMouseToggleFallthrough) return !allowTogglePassThrough
                         KeyEvent.ACTION_UP -> {
                             Log.i(tag, "toggle key UP (double-tap)")
                             scheduleToggleTap(toggleKey)
-                            return !allowTogglePassThrough
+                            if (!allowMouseToggleFallthrough) return !allowTogglePassThrough
                         }
-                        else -> return !allowTogglePassThrough
+                        else -> if (!allowMouseToggleFallthrough) return !allowTogglePassThrough
                     }
                 }
 
@@ -357,7 +360,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         val mouseKeyScrollRight = settings.getMouseKeyScrollRight()
         val mouseKeyPinchIn = settings.getMouseKeyPinchIn()
         val mouseKeyPinchOut = settings.getMouseKeyPinchOut()
-        val mouseKeyCursorDpadToggle = settings.getMouseKeyCursorDpadToggle()
 
         val isHandledMouseKey = matchesAssignedKey(mouseKeyUp, event) ||
             matchesAssignedKey(mouseKeyDown, event) ||
