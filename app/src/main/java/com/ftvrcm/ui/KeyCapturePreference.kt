@@ -29,7 +29,7 @@ class KeyCapturePreference @JvmOverloads constructor(
 
     override fun onBindViewHolder(holder: PreferenceViewHolder) {
         super.onBindViewHolder(holder)
-        updateSummary(currentValue)
+        updateSummaryInBind(holder, currentValue)
     }
 
     override fun onClick() {
@@ -132,6 +132,17 @@ class KeyCapturePreference @JvmOverloads constructor(
     private fun updateSummary(value: String?) {
         val label = formatKeyLabel(context, value)
         summary = context.getString(R.string.prefs_key_capture_summary, label)
+    }
+
+    private fun updateSummaryInBind(holder: PreferenceViewHolder, value: String?) {
+        val label = formatKeyLabel(context, value)
+        val summaryText = context.getString(R.string.prefs_key_capture_summary, label)
+        val summaryView = holder.findViewById(android.R.id.summary) as? TextView
+        if (summaryView != null) {
+            summaryView.text = summaryText
+        } else {
+            holder.itemView.post { summary = summaryText }
+        }
     }
 
     companion object {
