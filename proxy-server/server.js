@@ -89,7 +89,7 @@ const ADB_AUTH_FAIL_WINDOW_MS = Math.max(
 );
 const ADB_READY_CACHE_MS = Math.max(
   0,
-  Math.round(getArgNum('--adb-ready-cache-ms', envNum('ADB_READY_CACHE_MS', 1500))),
+  Math.round(getArgNum('--adb-ready-cache-ms', envNum('ADB_READY_CACHE_MS', 0))),
 );
 const ADB_STATE_POLL_MS = Math.max(
   0,
@@ -532,14 +532,22 @@ async function ensureAdbReady(serial, requestId) {
   st.lastUsedAt = now;
 
   const cachedState = st.lastState || 'unknown';
-  const fresh = st.lastStateAt > 0 && (ADB_READY_CACHE_MS <= 0 || now - st.lastStateAt <= ADB_READY_CACHE_MS);
+  const useCache = ADB_READY_CACHE_MS > 0;
+  const fresh = useCache && st.lastStateAt > 0 && now - st.lastStateAt <= ADB_READY_CACHE_MS;
   const ok = cachedState === 'device';
 
-  if (!fresh && DEBUG) {
-    log(`${nowIso()} [${requestId}] adb cache stale state=${cachedState} serial=${serial}`);
+  if (fresh) {
+    return { ok, state: cachedState, cached: true, fresh: true };
   }
 
-  return { ok, state: cachedState, cached: true, fresh };
+  if (DEBUG) {
+    log(
+      `${nowIso()} [${requestId}] adb cache ${useCache ? 'stale' : 'disabled'} state=${cachedState} serial=${serial}`,
+    );
+  }
+
+  const state = await adbGetState(serial);
+  return { ok: state === 'device', state, cached: false, fresh: false };
 }
 
 async function runAdb(serial, args, requestId) {
@@ -648,7 +656,18 @@ const server = http.createServer(async (req, res) => {
       if (DEBUG) {
         log(`${nowIso()} [${requestId}] health from=${req.socket.remoteAddress}`);
       }
-      return respond(200, { ok: true });
+      const serial = url.searchParams.get('serial') || DEFAULT_SERIAL;
+      if (!serial) {
+        return respond(500, { ok: false, error: 'missing serial' });
+      }
+
+      const state = await ensureAdbReady(serial, requestId);
+      return respond(state.ok ? 200 : 500, {
+        ok: state.ok,
+        state: state.state,
+        cached: state.cached,
+        fresh: state.fresh,
+      });
     }
 
     if (req.method !== 'POST') {
