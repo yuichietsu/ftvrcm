@@ -107,7 +107,7 @@ class CursorOverlay(private val context: Context) {
     }
 
     fun showTapFeedback(isLongPress: Boolean) {
-        val holdMs = if (isLongPress) 420L else 120L
+        val holdMs = if (isLongPress) 320L else 90L
         (view as? CursorView)?.showPressFeedback(holdMs = holdMs)
     }
 
@@ -192,11 +192,11 @@ class CursorOverlay(private val context: Context) {
         fun showPressFeedback(holdMs: Long) {
             val now = SystemClock.uptimeMillis()
             pressHoldUntilMs = (now + holdMs).coerceAtLeast(now)
-            pressFadeUntilMs = pressHoldUntilMs + 220L
+            pressFadeUntilMs = pressHoldUntilMs + 150L
             invalidate()
         }
 
-        fun showScrollArrow(direction: Direction, holdMs: Long = 240L) {
+        fun showScrollArrow(direction: Direction, holdMs: Long = 160L) {
             val now = SystemClock.uptimeMillis()
             scrollArrowDirection = direction
             scrollArrowUntilMs = (now + holdMs).coerceAtLeast(now)
@@ -490,7 +490,7 @@ class CursorOverlay(private val context: Context) {
                     x2 = x2.toFloat(),
                     y2 = y2.toFloat(),
                     startedAtMs = now,
-                    durationMs = 360L,
+                    durationMs = 220L,
                 ),
             )
             invalidate()
@@ -504,7 +504,7 @@ class CursorOverlay(private val context: Context) {
                     cy = centerY.toFloat(),
                     isZoomOut = isZoomOut,
                     startedAtMs = now,
-                    durationMs = 420L,
+                    durationMs = 260L,
                 ),
             )
             invalidate()
