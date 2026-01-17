@@ -546,7 +546,11 @@ async function ensureAdbReady(serial, requestId) {
     );
   }
 
-  const state = await adbGetState(serial);
+  let state = await adbGetState(serial);
+  if (state !== 'device' && isLikelyTcpSerial(serial)) {
+    await adbConnect(serial, requestId);
+    state = await adbGetState(serial);
+  }
   return { ok: state === 'device', state, cached: false, fresh: false };
 }
 
