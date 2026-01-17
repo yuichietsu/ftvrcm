@@ -222,11 +222,6 @@
 
     <PreferenceCategory android:title="@string/prefs_category_system">
 
-        <com.ftvrcm.ui.KeyCapturePreference
-            android:key="screen_rotate_key"
-            android:title="@string/prefs_screen_rotate_key"
-            android:defaultValue="0" />
-
         <Preference
             android:key="status_accessibility_service"
             android:title="@string/prefs_status_accessibility_service"
@@ -256,6 +251,15 @@
             android:key="open_touch_test"
             android:title="@string/prefs_open_touch_test"
             android:summary="@string/prefs_open_touch_test_summary" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/prefs_category_other_actions">
+
+        <com.ftvrcm.ui.KeyCapturePreference
+            android:key="screen_rotate_key"
+            android:title="@string/prefs_screen_rotate_key"
+            android:defaultValue="0" />
 
     </PreferenceCategory>
 

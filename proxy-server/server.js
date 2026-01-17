@@ -600,7 +600,9 @@ const server = http.createServer(async (req, res) => {
       const current = await runAdb(serial, ['shell', 'settings', 'get', 'system', 'user_rotation'], requestId);
       const raw = String(current.ok ? current.stdout : '').trim();
       const currentRotation = Number.isFinite(Number(raw)) ? Number(raw) : 0;
-      const nextRotation = (currentRotation + 1) % 4;
+      const allowed = [0, 2];
+      const idx = allowed.indexOf(currentRotation);
+      const nextRotation = idx >= 0 ? allowed[(idx + 1) % allowed.length] : allowed[0];
 
       const disableAuto = await runAdb(
         serial,

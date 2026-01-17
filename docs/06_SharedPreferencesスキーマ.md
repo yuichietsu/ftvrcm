@@ -93,7 +93,7 @@ com.ftvrcm_preferences.xml
 | **キー** | `screen_rotate_key` |
 | **型** | String |
 | **デフォルト** | `0`（未割り当て） |
-| **説明** | 画面の向きを切り替えるキーを指定します。`emulation_method=PROXY` の場合はADB経由で回転を切り替えます。 |
+| **説明** | タッチ操作モード時のみ有効。画面の向きを切り替えるキーを指定します。`emulation_method=PROXY` の場合はADB経由で回転を切り替えます。Fire TVでは横向きで画面が崩れる場合があるため、縦向き（0/180度）のみ切り替えます。 |
 
 **例**：
 ```xml

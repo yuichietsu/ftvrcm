@@ -347,7 +347,10 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             }
         }
 
-        // 1.5) Screen rotation toggle (always available)
+        // 2) Mouse mode key mapping
+        if (mode != OperationMode.MOUSE) return false
+
+        // 2.1) Screen rotation toggle (mouse mode only)
         val screenRotateKey = settings.getScreenRotateKey()
         if (matchesAssignedKey(screenRotateKey, event)) {
             return when (event.action) {
@@ -360,9 +363,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 else -> true
             }
         }
-
-        // 2) Mouse mode key mapping
-        if (mode != OperationMode.MOUSE) return false
 
         val mouseKeyUp = settings.getMouseKeyUp()
         val mouseKeyDown = settings.getMouseKeyDown()
@@ -772,13 +772,20 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             if (!Settings.System.canWrite(this)) return false
             val cr = contentResolver
             val current = Settings.System.getInt(cr, Settings.System.USER_ROTATION, 0)
-            val next = (current + 1) % 4
+            val next = nextSafeRotation(current)
             Settings.System.putInt(cr, Settings.System.ACCELEROMETER_ROTATION, 0)
             Settings.System.putInt(cr, Settings.System.USER_ROTATION, next)
             true
         } catch (_: Throwable) {
             false
         }
+    }
+
+    private fun nextSafeRotation(current: Int): Int {
+        // Fire TV Stick tends to break in landscape; keep rotations vertical only.
+        val allowed = intArrayOf(0, 2)
+        val idx = allowed.indexOf(current)
+        return if (idx >= 0) allowed[(idx + 1) % allowed.size] else allowed[0]
     }
 
     private fun matchesAssignedKey(assigned: Int, event: KeyEvent): Boolean {
