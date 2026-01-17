@@ -6,7 +6,6 @@ object SettingsKeys {
     const val OPERATION_MODE = "operation_mode" // String: NORMAL|MOUSE
 
     const val TOGGLE_KEYCODE = "toggle_keycode" // String / store as Int or -scanCode
-    const val TOGGLE_LONGPRESS = "toggle_longpress" // boolean (legacy)
     const val TOGGLE_TRIGGER = "toggle_trigger" // String: LONG_PRESS|DOUBLE_TAP|SINGLE_TAP
 
     const val MOUSE_POINTER_SPEED = "mouse_pointer_speed" // int
@@ -42,7 +41,7 @@ object SettingsKeys {
 
     const val MOUSE_KEY_CURSOR_DPAD_TOGGLE = "mouse_key_cursor_dpad_toggle" // String/int
 
-    const val SCREEN_ROTATE_KEY = "screen_rotate_key" // String/int
+    const val SCREENSHOT_KEY = "screenshot_key" // String/int
 
     const val MOUSE_CURSOR_START_POSITION = "mouse_cursor_start_position" // String
     const val MOUSE_CURSOR_LAST_X = "mouse_cursor_last_x" // int

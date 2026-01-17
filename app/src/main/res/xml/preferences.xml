@@ -37,7 +37,9 @@
 
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="@string/prefs_category_proxy">
+    <PreferenceCategory
+        android:key="prefs_category_proxy"
+        android:title="@string/prefs_category_proxy">
 
         <EditTextPreference
             android:key="proxy_host"
@@ -257,8 +259,8 @@
     <PreferenceCategory android:title="@string/prefs_category_other_actions">
 
         <com.ftvrcm.ui.KeyCapturePreference
-            android:key="screen_rotate_key"
-            android:title="@string/prefs_screen_rotate_key"
+            android:key="screenshot_key"
+            android:title="@string/prefs_screenshot_key"
             android:defaultValue="0" />
 
     </PreferenceCategory>

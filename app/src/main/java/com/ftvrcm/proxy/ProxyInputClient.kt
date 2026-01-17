@@ -157,10 +157,10 @@ class ProxyInputClient(
         )
     }
 
-    fun rotateScreen(): CommandResult {
+    fun captureScreenshot(): CommandResult {
         return postJsonForResult(
-            path = "/rotateScreen",
-            type = "proxy_rotate_screen",
+            path = "/screenshot",
+            type = "proxy_screenshot",
             jsonBody = "{}",
         )
     }

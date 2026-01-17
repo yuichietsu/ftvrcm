@@ -1,5 +1,7 @@
 import http from 'node:http';
 import { spawn } from 'node:child_process';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 const PORT = parseInt(process.env.PORT ?? '8787', 10);
 const HOST = process.env.HOST ?? '0.0.0.0';
@@ -54,6 +56,11 @@ const PROXY_TOKEN = process.env.PROXY_TOKEN ?? '';
 // Default target device serial. Example: "192.168.11.12:5555".
 // You can also pass `serial` per-request in JSON body.
 const DEFAULT_SERIAL = process.env.FIRETV_SERIAL ?? '';
+
+const SCREENSHOT_DIR = path.resolve(
+  process.cwd(),
+  getArgValue('--screenshot-dir', process.env.SCREENSHOT_DIR ?? 'screenshots'),
+);
 
 // ADB reliability knobs (env and/or CLI args)
 // - env: ADB_TIMEOUT_MS, ADB_CONNECT_TIMEOUT_MS, ADB_CONNECT_COOLDOWN_MS, ADB_AUTH_FAIL_THRESHOLD,
@@ -140,6 +147,17 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function formatDateForFilename(date) {
+  const pad = (n, len = 2) => String(n).padStart(len, '0');
+  const yyyy = date.getFullYear();
+  const mm = pad(date.getMonth() + 1);
+  const dd = pad(date.getDate());
+  const hh = pad(date.getHours());
+  const min = pad(date.getMinutes());
+  const ss = pad(date.getSeconds());
+  return `${yyyy}${mm}${dd}_${hh}${min}${ss}`;
+}
+
 function safeHeadersForLog(req) {
   const headers = { ...req.headers };
   if (headers['x-auth-token']) headers['x-auth-token'] = '<redacted>';
@@ -205,11 +223,64 @@ function runAdbRaw(adbArgs, timeoutMs) {
   });
 }
 
+function runAdbRawBinary(adbArgs, timeoutMs) {
+  return new Promise((resolve) => {
+    const child = spawn('adb', adbArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
+
+    const chunks = [];
+    let stderr = '';
+    let killedByTimeout = false;
+
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (d) => chunks.push(Buffer.isBuffer(d) ? d : Buffer.from(d)));
+    child.stderr.on('data', (d) => (stderr += d));
+
+    const timer =
+      timeoutMs > 0
+        ? setTimeout(() => {
+            killedByTimeout = true;
+            child.kill('SIGKILL');
+          }, timeoutMs)
+        : null;
+
+    child.on('close', (code) => {
+      if (timer) clearTimeout(timer);
+      resolve({
+        ok: code === 0 && !killedByTimeout,
+        exitCode: killedByTimeout ? -9 : code ?? -1,
+        stdoutBuffer: Buffer.concat(chunks),
+        stderr: stderr.trim(),
+        timedOut: killedByTimeout,
+        command: ['adb', ...adbArgs].join(' '),
+      });
+    });
+
+    child.on('error', (e) => {
+      if (timer) clearTimeout(timer);
+      resolve({
+        ok: false,
+        exitCode: -1,
+        stdoutBuffer: Buffer.alloc(0),
+        stderr: String(e?.message ?? e),
+        timedOut: false,
+        command: ['adb', ...adbArgs].join(' '),
+      });
+    });
+  });
+}
+
 function runAdbOnce(serial, args, timeoutMs = ADB_TIMEOUT_MS) {
   const adbArgs = [];
   if (serial) adbArgs.push('-s', serial);
   adbArgs.push(...args);
   return runAdbRaw(adbArgs, timeoutMs);
+}
+
+function runAdbBinaryOnce(serial, args, timeoutMs = ADB_TIMEOUT_MS) {
+  const adbArgs = [];
+  if (serial) adbArgs.push('-s', serial);
+  adbArgs.push(...args);
+  return runAdbRawBinary(adbArgs, timeoutMs);
 }
 
 function isLikelyTcpSerial(serial) {
@@ -506,6 +577,39 @@ async function runAdb(serial, args, requestId) {
   return result;
 }
 
+async function runAdbBinary(serial, args, requestId) {
+  await ensureAdbReady(serial, requestId);
+
+  let result = await runAdbBinaryOnce(serial, args, ADB_TIMEOUT_MS);
+
+  if (result.ok) {
+    rememberAdbState(serial, 'device');
+    return result;
+  }
+
+  const errorProbe = {
+    stdout: result.stderr,
+    stderr: result.stderr,
+    timedOut: result.timedOut,
+  };
+
+  const kind = classifyAdbError(errorProbe);
+  if (kind === 'unauthorized') {
+    recordAuthFailure(serial);
+    if (shouldReauth(serial)) {
+      await adbReauth(serial, requestId);
+    }
+    result = await runAdbBinaryOnce(serial, args, ADB_TIMEOUT_MS);
+    if (result.ok) rememberAdbState(serial, 'device');
+  } else if (kind === 'offline' || kind === 'not_found' || kind === 'connect_failed') {
+    await adbConnect(serial, requestId);
+    result = await runAdbBinaryOnce(serial, args, ADB_TIMEOUT_MS);
+    if (result.ok) rememberAdbState(serial, 'device');
+  }
+
+  return result;
+}
+
 function getSerial(body) {
   const serial = typeof body?.serial === 'string' ? body.serial : '';
   return serial || DEFAULT_SERIAL;
@@ -596,31 +700,38 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    if (url.pathname === '/rotateScreen') {
-      const current = await runAdb(serial, ['shell', 'settings', 'get', 'system', 'user_rotation'], requestId);
-      const raw = String(current.ok ? current.stdout : '').trim();
-      const currentRotation = Number.isFinite(Number(raw)) ? Number(raw) : 0;
-      const allowed = [0, 2];
-      const idx = allowed.indexOf(currentRotation);
-      const nextRotation = idx >= 0 ? allowed[(idx + 1) % allowed.length] : allowed[0];
+    if (url.pathname === '/screenshot') {
+      const filename = `${formatDateForFilename(new Date())}.png`;
+      const filePath = path.join(SCREENSHOT_DIR, filename);
 
-      const disableAuto = await runAdb(
-        serial,
-        ['shell', 'settings', 'put', 'system', 'accelerometer_rotation', '0'],
-        requestId,
-      );
-      const setRotation = await runAdb(
-        serial,
-        ['shell', 'settings', 'put', 'system', 'user_rotation', String(nextRotation)],
-        requestId,
-      );
+      try {
+        await fs.mkdir(SCREENSHOT_DIR, { recursive: true });
+      } catch (e) {
+        return respond(500, { ok: false, error: 'mkdir failed', detail: String(e?.message ?? e) });
+      }
 
-      const ok = disableAuto.ok && setRotation.ok;
-      return respond(ok ? 200 : 500, {
-        ok,
-        currentRotation,
-        nextRotation,
-        steps: [current, disableAuto, setRotation],
+      const result = await runAdbBinary(serial, ['exec-out', 'screencap', '-p'], requestId);
+      if (!result.ok || result.stdoutBuffer.length === 0) {
+        return respond(500, {
+          ok: false,
+          error: 'screencap failed',
+          exitCode: result.exitCode,
+          stderr: result.stderr,
+          command: result.command,
+        });
+      }
+
+      try {
+        await fs.writeFile(filePath, result.stdoutBuffer);
+      } catch (e) {
+        return respond(500, { ok: false, error: 'write failed', detail: String(e?.message ?? e) });
+      }
+
+      return respond(200, {
+        ok: true,
+        filename,
+        path: filePath,
+        size: result.stdoutBuffer.length,
       });
     }
 

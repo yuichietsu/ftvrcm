@@ -23,6 +23,14 @@ export PORT="8787"
 node server.js
 ```
 
+スクリーンショットの保存先は起動引数で変更できます。
+
+```bash
+node server.js --screenshot-dir ./screenshots
+```
+
+保存ファイル名は日付（`YYYYMMDD_HHMMSS.png`）です。
+
 ### ADBの自動接続/再認証（バックグラウンド）
 
 - ADBが `device` 状態でない（未接続/オフライン等）場合、バックグラウンドで `adb connect <serial>` を自動で試行します（`serial` が `ip:port` の場合）。
@@ -88,7 +96,7 @@ node server.js --debug --log-adb
 
 - `GET /health`
 - `POST /grantAccessibility` `{ component, serial? }`
-- `POST /rotateScreen` `{ serial? }`
+- `POST /screenshot` `{ serial? }`
 - `POST /tap` `{ x, y, serial? }`
 - `POST /doubleTap` `{ x, y, serial? }`
 - `POST /swipe` `{ x1, y1, x2, y2, durationMs?, serial? }`

@@ -10,7 +10,6 @@ com.ftvrcm_preferences.xml
 └── ftvrcm_settings
     ├── toggle_keycode
     ├── toggle_trigger
-    ├── toggle_longpress
     ├── operation_mode
     ├── mouse_pointer_speed
     ├── emulation_method
@@ -28,7 +27,7 @@ com.ftvrcm_preferences.xml
     ├── mouse_key_scroll_right
     ├── mouse_key_pinch_in
     ├── mouse_key_pinch_out
-    ├── screen_rotate_key
+    ├── screenshot_key
     ├── mouse_swipe_distance_percent
     ├── mouse_swipe_double_scale
     ├── mouse_pinch_distance_percent
@@ -65,14 +64,14 @@ com.ftvrcm_preferences.xml
 
 ---
 
-### 1.1 モード切り替えキー（toggle_keycode / toggle_trigger / toggle_longpress）
+### 1.1 モード切り替えキー（toggle_keycode / toggle_trigger）
 
 | 項目 | 値 |
 |------|-----|
-| **キー** | `toggle_keycode` / `toggle_trigger` / `toggle_longpress` |
-| **型** | String / String / Boolean |
-| **デフォルト** | `82`（`KEYCODE_MENU`） / `LONG_PRESS` / `true`（レガシー） |
-| **説明** | 操作モード（通常/タッチ操作）を切り替えるキーと、切り替え操作（長押し/ダブルタップ/シングルタップ）を指定します。`toggle_longpress` は旧設定の互換用です。 |
+| **キー** | `toggle_keycode` / `toggle_trigger` |
+| **型** | String / String |
+| **デフォルト** | `82`（`KEYCODE_MENU`） / `LONG_PRESS` |
+| **説明** | 操作モード（通常/タッチ操作）を切り替えるキーと、切り替え操作（長押し/ダブルタップ/シングルタップ）を指定します。 |
 
 **例**：
 ```xml
@@ -86,18 +85,18 @@ com.ftvrcm_preferences.xml
 
 ---
 
-### 1.2 画面回転キー（screen_rotate_key）
+### 1.2 スクリーンショット撮影キー（screenshot_key）
 
 | 項目 | 値 |
 |------|-----|
-| **キー** | `screen_rotate_key` |
+| **キー** | `screenshot_key` |
 | **型** | String |
 | **デフォルト** | `0`（未割り当て） |
-| **説明** | タッチ操作モード時のみ有効。画面の向きを切り替えるキーを指定します。`emulation_method=PROXY` の場合はADB経由で回転を切り替えます。Fire TVでは横向きで画面が崩れる場合があるため、縦向き（0/180度）のみ切り替えます。 |
+| **説明** | タッチ操作モード時のみ有効。ADBプロキシ経由でスクリーンショットを取得し、PC側プロキシに保存します。 |
 
 **例**：
 ```xml
-<string name="screen_rotate_key">82</string>
+<string name="screenshot_key">82</string>
 ```
 
 ---
@@ -283,11 +282,6 @@ com.ftvrcm_preferences.xml
 <string name="proxy_token">change-me</string>
 ```
 
-### 3.3 （レガシー）アプリ内ADB直結について
-
-過去バージョンではアプリ内ADBクライアントで `adbd` に直接接続する方式がありましたが、Fire OS 8 以降ではブロック/不安定になりやすいため撤去しました。
-現在は `emulation_method=PROXY`（PC上プロキシ経由）を推奨します。
-
 ### 4. キーマッピング（key_mapping）
 
 | 項目 | 値 |
@@ -398,7 +392,7 @@ class SettingsStore(context: Context) {
             putString("mouse_key_scroll_right", "90")
             putString("mouse_key_pinch_in", "0")
             putString("mouse_key_pinch_out", "0")
-            putString("screen_rotate_key", "0")
+            putString("screenshot_key", "0")
 
             putInt("mouse_swipe_distance_percent", 28)
             putString("mouse_swipe_double_scale", "2.0")

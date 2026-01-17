@@ -42,7 +42,6 @@ class SettingsStore(context: Context) {
             putString(SettingsKeys.OPERATION_MODE, OperationMode.NORMAL.name)
 
             putString(SettingsKeys.TOGGLE_KEYCODE, "82") // MENU (Avoid Fire TV BACK long-press conflicts)
-            putBoolean(SettingsKeys.TOGGLE_LONGPRESS, true)
             putString(SettingsKeys.TOGGLE_TRIGGER, ToggleTrigger.LONG_PRESS.name)
 
             putInt(SettingsKeys.MOUSE_POINTER_SPEED, 10)
@@ -82,8 +81,8 @@ class SettingsStore(context: Context) {
             // NOTE: default uses the same key as mode toggle for convenience.
             putString(SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE, "82")
 
-            // Screen rotation toggle (default: unassigned)
-            putString(SettingsKeys.SCREEN_ROTATE_KEY, "0")
+            // Screenshot capture (default: unassigned)
+            putString(SettingsKeys.SCREENSHOT_KEY, "0")
 
             // Cursor start position in mouse mode
             putString(SettingsKeys.MOUSE_CURSOR_START_POSITION, "center")
@@ -143,13 +142,11 @@ class SettingsStore(context: Context) {
 
     fun getToggleTrigger(): ToggleTrigger {
         val raw = prefs.getString(SettingsKeys.TOGGLE_TRIGGER, null)
-        if (raw != null) {
-            return runCatching { ToggleTrigger.valueOf(raw) }.getOrDefault(ToggleTrigger.LONG_PRESS)
+        return if (raw != null) {
+            runCatching { ToggleTrigger.valueOf(raw) }.getOrDefault(ToggleTrigger.LONG_PRESS)
+        } else {
+            ToggleTrigger.LONG_PRESS
         }
-
-        // Legacy fallback: toggle_longpress
-        val legacyLongPress = prefs.getBoolean(SettingsKeys.TOGGLE_LONGPRESS, true)
-        return if (legacyLongPress) ToggleTrigger.LONG_PRESS else ToggleTrigger.SINGLE_TAP
     }
 
     fun getMousePointerSpeedPx(): Int = prefs.getInt(SettingsKeys.MOUSE_POINTER_SPEED, 10).coerceIn(1, 200)
@@ -203,8 +200,8 @@ class SettingsStore(context: Context) {
     fun getMouseKeyCursorDpadToggle(): Int =
         prefs.getString(SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE, "82")?.toIntOrNull() ?: 82
 
-    fun getScreenRotateKey(): Int =
-        prefs.getString(SettingsKeys.SCREEN_ROTATE_KEY, "0")?.toIntOrNull() ?: 0
+    fun getScreenshotKey(): Int =
+        prefs.getString(SettingsKeys.SCREENSHOT_KEY, "0")?.toIntOrNull() ?: 0
 
     fun isTouchVisualFeedbackEnabled(): Boolean =
         prefs.getBoolean(SettingsKeys.TOUCH_VISUAL_FEEDBACK_ENABLED, true)

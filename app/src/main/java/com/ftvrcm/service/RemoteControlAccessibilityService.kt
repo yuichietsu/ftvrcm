@@ -5,7 +5,6 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.provider.Settings
 import android.util.Log
 import android.view.ViewConfiguration
 import android.view.KeyEvent
@@ -350,13 +349,13 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         // 2) Mouse mode key mapping
         if (mode != OperationMode.MOUSE) return false
 
-        // 2.1) Screen rotation toggle (mouse mode only)
-        val screenRotateKey = settings.getScreenRotateKey()
-        if (matchesAssignedKey(screenRotateKey, event)) {
+        // 2.1) Screenshot capture (mouse mode only)
+        val screenshotKey = settings.getScreenshotKey()
+        if (matchesAssignedKey(screenshotKey, event)) {
             return when (event.action) {
                 KeyEvent.ACTION_DOWN -> {
                     if (event.repeatCount > 0) return true
-                    triggerScreenRotation()
+                    triggerScreenshot()
                     true
                 }
                 KeyEvent.ACTION_UP -> true
@@ -738,54 +737,25 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         cursor.setStyle(if (isDpadMode) CursorOverlay.CursorStyle.DPAD else CursorOverlay.CursorStyle.POINTER)
     }
 
-    private fun triggerScreenRotation() {
-        when (settings.getEmulationMethod()) {
-            EmulationMethod.PROXY -> {
-                proxyExecutor.execute {
-                    val result = runCatching { proxy()?.rotateScreen() }
-                        .getOrNull()
+    private fun triggerScreenshot() {
+        if (settings.getEmulationMethod() != EmulationMethod.PROXY) {
+            showToast("スクリーンショットはADBプロキシが必要です")
+            return
+        }
 
-                    mainHandler.post {
-                        if (result?.ok == true) {
-                            showToast("画面の向きを切り替えました")
-                        } else {
-                            val detail = result?.detail?.trim()?.take(120)
-                            showToast("画面回転に失敗しました（ADB）${if (!detail.isNullOrEmpty()) ": $detail" else ""}")
-                        }
-                    }
-                }
-            }
+        proxyExecutor.execute {
+            val result = runCatching { proxy()?.captureScreenshot() }
+                .getOrNull()
 
-            EmulationMethod.ACCESSIBILITY_SERVICE -> {
-                val ok = rotateScreenLocally()
-                if (ok) {
-                    showToast("画面の向きを切り替えました")
+            mainHandler.post {
+                if (result?.ok == true) {
+                    showToast("スクリーンショットを保存しました")
                 } else {
-                    showToast("画面回転にはシステム設定の変更権限が必要です（ADBプロキシ推奨）")
+                    val detail = result?.detail?.trim()?.take(120)
+                    showToast("スクリーンショットに失敗しました（ADB）${if (!detail.isNullOrEmpty()) ": $detail" else ""}")
                 }
             }
         }
-    }
-
-    private fun rotateScreenLocally(): Boolean {
-        return try {
-            if (!Settings.System.canWrite(this)) return false
-            val cr = contentResolver
-            val current = Settings.System.getInt(cr, Settings.System.USER_ROTATION, 0)
-            val next = nextSafeRotation(current)
-            Settings.System.putInt(cr, Settings.System.ACCELEROMETER_ROTATION, 0)
-            Settings.System.putInt(cr, Settings.System.USER_ROTATION, next)
-            true
-        } catch (_: Throwable) {
-            false
-        }
-    }
-
-    private fun nextSafeRotation(current: Int): Int {
-        // Fire TV Stick tends to break in landscape; keep rotations vertical only.
-        val allowed = intArrayOf(0, 2)
-        val idx = allowed.indexOf(current)
-        return if (idx >= 0) allowed[(idx + 1) % allowed.size] else allowed[0]
     }
 
     private fun matchesAssignedKey(assigned: Int, event: KeyEvent): Boolean {

@@ -15,6 +15,7 @@ import android.widget.Toast
 import androidx.core.content.getSystemService
 import androidx.appcompat.app.AlertDialog
 import androidx.preference.Preference
+import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceGroup
 import com.ftvrcm.R
@@ -83,7 +84,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
             when (key) {
                 SettingsKeys.OPERATION_MODE,
                 SettingsKeys.TOGGLE_KEYCODE,
-                SettingsKeys.TOGGLE_LONGPRESS,
                 SettingsKeys.TOGGLE_TRIGGER,
                 SettingsKeys.MOUSE_POINTER_SPEED,
                 SettingsKeys.EMULATION_METHOD,
@@ -139,11 +139,14 @@ class SettingsFragment : PreferenceFragmentCompat() {
         val store = SettingsStore(requireContext())
         val isProxy = store.getEmulationMethod() == EmulationMethod.PROXY
 
+        val proxyCategory = findPreference<PreferenceCategory>("prefs_category_proxy")
         val host = findPreference<Preference>(SettingsKeys.PROXY_HOST)
         val port = findPreference<Preference>(SettingsKeys.PROXY_PORT)
         val token = findPreference<Preference>(SettingsKeys.PROXY_TOKEN)
         val health = findPreference<Preference>("proxy_health_check")
         val grant = findPreference<Preference>("proxy_grant_accessibility")
+
+        proxyCategory?.isVisible = isProxy
 
         host?.isEnabled = isProxy
         port?.isEnabled = isProxy
