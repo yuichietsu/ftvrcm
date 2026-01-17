@@ -22,6 +22,11 @@ class ProxyInputClient(
         val detail: String,
     )
 
+    data class CommandResult(
+        val ok: Boolean,
+        val detail: String,
+    )
+
     private val tag = "ProxyInputClient"
 
     fun tap(x: Int, y: Int): Boolean {
@@ -143,6 +148,23 @@ class ProxyInputClient(
         }
     }
 
+    fun grantAccessibility(component: String): CommandResult {
+        val body = "{\"component\":\"${component}\"}"
+        return postJsonForResult(
+            path = "/grantAccessibility",
+            type = "proxy_grant_accessibility",
+            jsonBody = body,
+        )
+    }
+
+    fun rotateScreen(): CommandResult {
+        return postJsonForResult(
+            path = "/rotateScreen",
+            type = "proxy_rotate_screen",
+            jsonBody = "{}",
+        )
+    }
+
     private fun record(type: String, status: String, detail: String) {
         try {
             context.getSharedPreferences(SettingsKeys.PREFS_NAME, Context.MODE_PRIVATE)
@@ -204,6 +226,60 @@ class ProxyInputClient(
             Log.w(tag, "proxy $path failed (${t.javaClass.simpleName}: ${t.message})")
             record(type = type, status = "FAILED", detail = "${t.javaClass.simpleName}: ${t.message}")
             return false
+        }
+    }
+
+    private fun postJsonForResult(path: String, type: String, jsonBody: String): CommandResult {
+        record(type = type, status = "DISPATCHING", detail = "POST $path $jsonBody")
+
+        val normalizedHost = host.trim()
+        if (normalizedHost.isEmpty()) {
+            val detail = "proxy_host is empty"
+            record(type = type, status = "FAILED", detail = detail)
+            return CommandResult(ok = false, detail = detail)
+        }
+
+        val url = URL("http://$normalizedHost:$port$path")
+        try {
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = 2500
+                readTimeout = 2500
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                if (token.isNotBlank()) {
+                    setRequestProperty("X-Auth-Token", token)
+                }
+            }
+
+            conn.outputStream.use { os ->
+                os.write(jsonBody.toByteArray(Charsets.UTF_8))
+            }
+
+            val code = conn.responseCode
+            val body = try {
+                val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                stream?.let {
+                    BufferedReader(InputStreamReader(it, Charsets.UTF_8)).use { r -> r.readText() }
+                } ?: ""
+            } catch (_: Throwable) {
+                ""
+            }
+
+            val ok = code in 200..299
+            Log.i(tag, "proxy $path http=$code")
+            val detail = "http=$code url=$url\n${body.take(2000)}"
+            record(
+                type = type,
+                status = if (ok) "COMPLETED" else "FAILED",
+                detail = detail,
+            )
+            return CommandResult(ok = ok, detail = detail)
+        } catch (t: Throwable) {
+            Log.w(tag, "proxy $path failed (${t.javaClass.simpleName}: ${t.message})")
+            val detail = "${t.javaClass.simpleName}: ${t.message}"
+            record(type = type, status = "FAILED", detail = detail)
+            return CommandResult(ok = false, detail = detail)
         }
     }
 }

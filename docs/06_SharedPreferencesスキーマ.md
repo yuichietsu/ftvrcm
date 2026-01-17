@@ -28,6 +28,7 @@ com.ftvrcm_preferences.xml
     ├── mouse_key_scroll_right
     ├── mouse_key_pinch_in
     ├── mouse_key_pinch_out
+    ├── screen_rotate_key
     ├── mouse_swipe_distance_percent
     ├── mouse_swipe_double_scale
     ├── mouse_pinch_distance_percent
@@ -82,6 +83,22 @@ com.ftvrcm_preferences.xml
 補足：Fire TV（Fire OS）では `KEYCODE_BACK`（4）長押しがシステム動作と競合し、アクセシビリティが無効化される場合があります。
 補足：未知のキーは `KEYCODE_UNKNOWN` を検出した場合、スキャンコードを負数で保存します（例：`-168`）。
 補足：割り当てなしは `0` を保存します。
+
+---
+
+### 1.2 画面回転キー（screen_rotate_key）
+
+| 項目 | 値 |
+|------|-----|
+| **キー** | `screen_rotate_key` |
+| **型** | String |
+| **デフォルト** | `0`（未割り当て） |
+| **説明** | 画面の向きを切り替えるキーを指定します。`emulation_method=PROXY` の場合はADB経由で回転を切り替えます。 |
+
+**例**：
+```xml
+<string name="screen_rotate_key">82</string>
+```
 
 ---
 
@@ -381,6 +398,7 @@ class SettingsStore(context: Context) {
             putString("mouse_key_scroll_right", "90")
             putString("mouse_key_pinch_in", "0")
             putString("mouse_key_pinch_out", "0")
+            putString("screen_rotate_key", "0")
 
             putInt("mouse_swipe_distance_percent", 28)
             putString("mouse_swipe_double_scale", "2.0")

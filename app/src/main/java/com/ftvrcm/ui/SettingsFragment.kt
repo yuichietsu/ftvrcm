@@ -67,6 +67,12 @@ class SettingsFragment : PreferenceFragmentCompat() {
             true
         }
 
+        val proxyGrantAccessibility = findPreference<Preference>("proxy_grant_accessibility")
+        proxyGrantAccessibility?.setOnPreferenceClickListener {
+            runProxyGrantAccessibility()
+            true
+        }
+
         refreshModeSummary()
         refreshRequiredStateSummary()
         refreshToggleKeySummary()
@@ -137,18 +143,74 @@ class SettingsFragment : PreferenceFragmentCompat() {
         val port = findPreference<Preference>(SettingsKeys.PROXY_PORT)
         val token = findPreference<Preference>(SettingsKeys.PROXY_TOKEN)
         val health = findPreference<Preference>("proxy_health_check")
+        val grant = findPreference<Preference>("proxy_grant_accessibility")
 
         host?.isEnabled = isProxy
         port?.isEnabled = isProxy
         token?.isEnabled = isProxy
         health?.isEnabled = isProxy
+        grant?.isEnabled = isProxy
 
         if (!isProxy) {
             // Keep health check visible but disabled to hint the dependency.
             health?.summary = getString(R.string.prefs_proxy_health_check_summary_disabled)
+            grant?.summary = getString(R.string.prefs_proxy_grant_accessibility_summary_disabled)
         } else {
             health?.summary = getString(R.string.prefs_proxy_health_check_summary)
+            grant?.summary = getString(R.string.prefs_proxy_grant_accessibility_summary)
         }
+    }
+
+    private fun runProxyGrantAccessibility() {
+        val context = requireContext()
+        val pref = findPreference<Preference>("proxy_grant_accessibility")
+
+        if (proxyHealthCheckRunning) {
+            Toast.makeText(context, getString(R.string.prefs_proxy_grant_accessibility_running), Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        proxyHealthCheckRunning = true
+        pref?.isEnabled = false
+        pref?.summary = getString(R.string.prefs_proxy_grant_accessibility_running)
+
+        Thread {
+            val store = SettingsStore(context.applicationContext)
+            val host = store.getProxyHost()
+            val port = store.getProxyPort()
+            val token = store.getProxyToken()
+            val component = ComponentName(context.applicationContext, RemoteControlAccessibilityService::class.java).flattenToString()
+
+            val result = ProxyInputClient(
+                context.applicationContext,
+                host = host,
+                port = port,
+                token = token,
+            ).grantAccessibility(component)
+
+            activity?.runOnUiThread {
+                if (!isAdded) return@runOnUiThread
+                proxyHealthCheckRunning = false
+                refreshProxyPreferences()
+
+                if (result.ok) {
+                    Toast.makeText(context, "ADBでアクセシビリティを有効化しました", Toast.LENGTH_LONG).show()
+                    refreshRequiredStateSummary()
+                    restorePreferenceFocusSoon()
+                } else {
+                    val dialog = AlertDialog.Builder(context)
+                        .setTitle("ADB付与に失敗")
+                        .setMessage(result.detail.trim().take(2000))
+                        .setPositiveButton(getString(android.R.string.ok)) { _, _ -> }
+                        .create()
+
+                    dialog.setOnDismissListener {
+                        restorePreferenceFocusSoon()
+                    }
+                    dialog.show()
+                }
+            }
+        }.start()
     }
 
     private fun runProxyHealthCheck() {

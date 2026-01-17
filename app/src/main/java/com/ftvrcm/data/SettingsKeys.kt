@@ -42,6 +42,8 @@ object SettingsKeys {
 
     const val MOUSE_KEY_CURSOR_DPAD_TOGGLE = "mouse_key_cursor_dpad_toggle" // String/int
 
+    const val SCREEN_ROTATE_KEY = "screen_rotate_key" // String/int
+
     const val MOUSE_CURSOR_START_POSITION = "mouse_cursor_start_position" // String
     const val MOUSE_CURSOR_LAST_X = "mouse_cursor_last_x" // int
     const val MOUSE_CURSOR_LAST_Y = "mouse_cursor_last_y" // int

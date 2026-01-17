@@ -5,6 +5,7 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.provider.Settings
 import android.util.Log
 import android.view.ViewConfiguration
 import android.view.KeyEvent
@@ -343,6 +344,20 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                         else -> return !allowTogglePassThrough
                     }
                 }
+            }
+        }
+
+        // 1.5) Screen rotation toggle (always available)
+        val screenRotateKey = settings.getScreenRotateKey()
+        if (matchesAssignedKey(screenRotateKey, event)) {
+            return when (event.action) {
+                KeyEvent.ACTION_DOWN -> {
+                    if (event.repeatCount > 0) return true
+                    triggerScreenRotation()
+                    true
+                }
+                KeyEvent.ACTION_UP -> true
+                else -> true
             }
         }
 
@@ -721,6 +736,49 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
     private fun updateCursorStyleForInputMode() {
         cursor.setStyle(if (isDpadMode) CursorOverlay.CursorStyle.DPAD else CursorOverlay.CursorStyle.POINTER)
+    }
+
+    private fun triggerScreenRotation() {
+        when (settings.getEmulationMethod()) {
+            EmulationMethod.PROXY -> {
+                proxyExecutor.execute {
+                    val result = runCatching { proxy()?.rotateScreen() }
+                        .getOrNull()
+
+                    mainHandler.post {
+                        if (result?.ok == true) {
+                            showToast("画面の向きを切り替えました")
+                        } else {
+                            val detail = result?.detail?.trim()?.take(120)
+                            showToast("画面回転に失敗しました（ADB）${if (!detail.isNullOrEmpty()) ": $detail" else ""}")
+                        }
+                    }
+                }
+            }
+
+            EmulationMethod.ACCESSIBILITY_SERVICE -> {
+                val ok = rotateScreenLocally()
+                if (ok) {
+                    showToast("画面の向きを切り替えました")
+                } else {
+                    showToast("画面回転にはシステム設定の変更権限が必要です（ADBプロキシ推奨）")
+                }
+            }
+        }
+    }
+
+    private fun rotateScreenLocally(): Boolean {
+        return try {
+            if (!Settings.System.canWrite(this)) return false
+            val cr = contentResolver
+            val current = Settings.System.getInt(cr, Settings.System.USER_ROTATION, 0)
+            val next = (current + 1) % 4
+            Settings.System.putInt(cr, Settings.System.ACCELEROMETER_ROTATION, 0)
+            Settings.System.putInt(cr, Settings.System.USER_ROTATION, next)
+            true
+        } catch (_: Throwable) {
+            false
+        }
     }
 
     private fun matchesAssignedKey(assigned: Int, event: KeyEvent): Boolean {

@@ -41,7 +41,9 @@ node server.js
 - `ADB_REAUTH_COOLDOWN_MS`（デフォルト: `600000`）: 再認証フローの最小実行間隔
 - `ADB_REAUTH_MAX_PER_HOUR`（デフォルト: `3`）: 1時間あたりの再認証フロー最大回数（`0`で無効化）
 - `ADB_READY_CACHE_MS`（デフォルト: `1500`）: 直近の状態が `device` の場合に「新鮮」とみなすキャッシュ時間
-- `ADB_STATE_POLL_MS`（デフォルト: `3000`）: ADB状態のバックグラウンド監視間隔（`0`で無効化）
+- `ADB_STATE_POLL_MS`（デフォルト: `0`）: ADB状態のバックグラウンド監視間隔（`0`で無効化）
+
+`ADB_STATE_POLL_MS=0` の場合はバックグラウンド監視を行わず、ADB接続確認や再認証のトリガは「実際のリクエスト実行時」のみになります（省リソース・ベストエフォート）。
 
 #### 調整用パラメータ（CLI引数）
 
@@ -85,6 +87,8 @@ node server.js --debug --log-adb
 ## API
 
 - `GET /health`
+- `POST /grantAccessibility` `{ component, serial? }`
+- `POST /rotateScreen` `{ serial? }`
 - `POST /tap` `{ x, y, serial? }`
 - `POST /doubleTap` `{ x, y, serial? }`
 - `POST /swipe` `{ x1, y1, x2, y2, durationMs?, serial? }`

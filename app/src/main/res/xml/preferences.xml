@@ -58,6 +58,11 @@
             app:useSimpleSummaryProvider="true" />
 
         <Preference
+            android:key="proxy_grant_accessibility"
+            android:title="@string/prefs_proxy_grant_accessibility"
+            android:summary="@string/prefs_proxy_grant_accessibility_summary" />
+
+        <Preference
             android:key="proxy_health_check"
             android:title="@string/prefs_proxy_health_check"
             android:summary="@string/prefs_proxy_health_check_summary" />
@@ -216,6 +221,11 @@
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/prefs_category_system">
+
+        <com.ftvrcm.ui.KeyCapturePreference
+            android:key="screen_rotate_key"
+            android:title="@string/prefs_screen_rotate_key"
+            android:defaultValue="0" />
 
         <Preference
             android:key="status_accessibility_service"

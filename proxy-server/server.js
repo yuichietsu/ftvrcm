@@ -86,7 +86,7 @@ const ADB_READY_CACHE_MS = Math.max(
 );
 const ADB_STATE_POLL_MS = Math.max(
   0,
-  Math.round(getArgNum('--adb-state-poll-ms', envNum('ADB_STATE_POLL_MS', 3000))),
+  Math.round(getArgNum('--adb-state-poll-ms', envNum('ADB_STATE_POLL_MS', 0))),
 );
 const ADB_REAUTH_COOLDOWN_MS = Math.max(
   0,
@@ -562,6 +562,64 @@ const server = http.createServer(async (req, res) => {
     const serial = getSerial(body);
     if (!serial) {
       return respond(400, { ok: false, error: 'missing serial (set FIRETV_SERIAL or pass serial in body)' });
+    }
+
+    if (url.pathname === '/grantAccessibility') {
+      const component = typeof body.component === 'string' ? body.component.trim() : '';
+      if (!component) {
+        return respond(400, { ok: false, error: 'missing component' });
+      }
+
+      const current = await runAdb(serial, ['shell', 'settings', 'get', 'secure', 'enabled_accessibility_services'], requestId);
+      const raw = current.ok ? String(current.stdout ?? '').trim() : '';
+      const existing = raw && raw !== 'null' ? raw.split(':').filter(Boolean) : [];
+      if (!existing.includes(component)) existing.push(component);
+      const nextValue = existing.join(':');
+
+      const putServices = await runAdb(
+        serial,
+        ['shell', 'settings', 'put', 'secure', 'enabled_accessibility_services', nextValue],
+        requestId,
+      );
+      const putEnabled = await runAdb(
+        serial,
+        ['shell', 'settings', 'put', 'secure', 'accessibility_enabled', '1'],
+        requestId,
+      );
+
+      const ok = putServices.ok && putEnabled.ok;
+      return respond(ok ? 200 : 500, {
+        ok,
+        component,
+        enabledServices: nextValue,
+        steps: [current, putServices, putEnabled],
+      });
+    }
+
+    if (url.pathname === '/rotateScreen') {
+      const current = await runAdb(serial, ['shell', 'settings', 'get', 'system', 'user_rotation'], requestId);
+      const raw = String(current.ok ? current.stdout : '').trim();
+      const currentRotation = Number.isFinite(Number(raw)) ? Number(raw) : 0;
+      const nextRotation = (currentRotation + 1) % 4;
+
+      const disableAuto = await runAdb(
+        serial,
+        ['shell', 'settings', 'put', 'system', 'accelerometer_rotation', '0'],
+        requestId,
+      );
+      const setRotation = await runAdb(
+        serial,
+        ['shell', 'settings', 'put', 'system', 'user_rotation', String(nextRotation)],
+        requestId,
+      );
+
+      const ok = disableAuto.ok && setRotation.ok;
+      return respond(ok ? 200 : 500, {
+        ok,
+        currentRotation,
+        nextRotation,
+        steps: [current, disableAuto, setRotation],
+      });
     }
 
     if (url.pathname === '/tap') {
