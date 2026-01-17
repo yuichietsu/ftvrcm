@@ -35,6 +35,8 @@ class CursorOverlay(private val context: Context) {
     private var x: Int = 200
     private var y: Int = 200
 
+    fun isVisible(): Boolean = view != null
+
     fun show() {
         if (view != null) return
 

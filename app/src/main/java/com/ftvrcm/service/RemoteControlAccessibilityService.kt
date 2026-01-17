@@ -743,11 +743,21 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             return
         }
 
+        val wasVisible = cursor.isVisible()
+        if (wasVisible) {
+            cursor.hide()
+        }
+
         proxyExecutor.execute {
             val result = runCatching { proxy()?.captureScreenshot() }
                 .getOrNull()
 
             mainHandler.post {
+                if (wasVisible && mode == OperationMode.MOUSE) {
+                    cursor.show()
+                    updateCursorStyleForInputMode()
+                }
+
                 if (result?.ok == true) {
                     showToast("スクリーンショットを保存しました")
                 } else {
