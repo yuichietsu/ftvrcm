@@ -1,7 +1,7 @@
 <resources>
     <string-array name="emulation_method_entries">
         <item>アクセシビリティサービス</item>
-        <item>ADBプロキシ</item>
+        <item>ADBプロキシ（上級者向け）</item>
     </string-array>
 
     <string-array name="emulation_method_values">

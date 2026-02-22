@@ -18,6 +18,7 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceGroup
+import java.lang.ref.WeakReference
 import com.ftvrcm.R
 import com.ftvrcm.data.SettingsKeys
 import com.ftvrcm.data.SettingsStore
@@ -33,6 +34,12 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
     private var listener: SharedPreferences.OnSharedPreferenceChangeListener? = null
     @Volatile private var proxyHealthCheckRunning: Boolean = false
+
+    /**
+     * hide 直前にフォーカスしていた View の弱参照。
+     * hide/show でViewは生きているため、アダプター位置でなく View 導第で直接復元する。
+     */
+    private var savedFocusedView = WeakReference<android.view.View>(null)
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         preferenceManager.sharedPreferencesName = SettingsKeys.PREFS_NAME
@@ -127,40 +134,46 @@ class SettingsFragment : PreferenceFragmentCompat() {
         }
     }
 
+    /**
+     * hide 時にフォーカスViewを保存し、show 時にそのまま復元する。
+     *
+     * Androidは hide 時にフォーカスを自動保存しない。show 後はシステムが先頭項目を
+     * 探してフォーカスするため、明示的に requestFocus() する必要がある。
+     * hide/show でViewは破棄されないため、WeakReference で直接 View を保持して
+     * post{} なしで即時復元できる。
+     */
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (hidden) {
+            savedFocusedView = WeakReference(listView?.focusedChild)
+        } else {
+            savedFocusedView.get()?.requestFocus()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         refreshModeSummary()
         refreshRequiredStateSummary()
         refreshToggleKeySummary()
         refreshProxyPreferences()
+
     }
 
     private fun refreshProxyPreferences() {
-        val store = SettingsStore(requireContext())
-        val isProxy = store.getEmulationMethod() == EmulationMethod.PROXY
+        val isProxy = SettingsStore(requireContext()).getEmulationMethod() == EmulationMethod.PROXY
 
-        val proxyCategory = findPreference<PreferenceCategory>("prefs_category_proxy")
-        val host = findPreference<Preference>(SettingsKeys.PROXY_HOST)
-        val port = findPreference<Preference>(SettingsKeys.PROXY_PORT)
-        val token = findPreference<Preference>(SettingsKeys.PROXY_TOKEN)
-        val health = findPreference<Preference>("proxy_health_check")
-        val grant = findPreference<Preference>("proxy_grant_accessibility")
+        // トップレベル: ADBプロキシ設定サブスクリーンの表示/非表示を切り替える
+        findPreference<Preference>("screen_proxy")?.isVisible = isProxy
 
-        proxyCategory?.isVisible = isProxy
-
-        host?.isEnabled = isProxy
-        port?.isEnabled = isProxy
-        token?.isEnabled = isProxy
-        health?.isEnabled = isProxy
-        grant?.isEnabled = isProxy
-
-        if (!isProxy) {
-            // Keep health check visible but disabled to hint the dependency.
-            health?.summary = getString(R.string.prefs_proxy_health_check_summary_disabled)
-            grant?.summary = getString(R.string.prefs_proxy_grant_accessibility_summary_disabled)
-        } else {
-            health?.summary = getString(R.string.prefs_proxy_health_check_summary)
-            grant?.summary = getString(R.string.prefs_proxy_grant_accessibility_summary)
+        // サブスクリーン内コンテキスト: ボタンは常に有効（プロキシモード前提で表示されるため）
+        findPreference<Preference>("proxy_health_check")?.let {
+            it.isEnabled = true
+            it.summary = getString(R.string.prefs_proxy_health_check_summary)
+        }
+        findPreference<Preference>("proxy_grant_accessibility")?.let {
+            it.isEnabled = true
+            it.summary = getString(R.string.prefs_proxy_grant_accessibility_summary)
         }
     }
 
@@ -285,14 +298,8 @@ class SettingsFragment : PreferenceFragmentCompat() {
     }
 
     private fun refreshModeSummary() {
-        val store = SettingsStore(requireContext())
-        val modePref = findPreference<Preference>("operation_mode_current")
-        val mode = store.getOperationMode()
-
-        modePref?.summary = when (mode) {
-            OperationMode.NORMAL -> getString(R.string.mode_normal)
-            OperationMode.MOUSE -> getString(R.string.mode_mouse)
-        }
+        // operation_mode_current は削除済み。ダッシュボードのみ更新する。
+        refreshDashboard()
     }
 
     private fun refreshToggleKeySummary() {
@@ -324,12 +331,17 @@ class SettingsFragment : PreferenceFragmentCompat() {
     }
 
     private fun refreshRequiredStateSummary() {
-        val statusPref = findPreference<Preference>("status_accessibility_service")
-        statusPref?.summary = if (isAccessibilityServiceEnabled()) {
-            getString(R.string.prefs_status_accessibility_service_on)
-        } else {
-            getString(R.string.prefs_status_accessibility_service_off)
-        }
+        // status_accessibility_service は削除済み。ダッシュボードのみ更新する。
+        refreshDashboard()
+    }
+
+    private fun refreshDashboard() {
+        val activity = activity as? SettingsActivity ?: return
+        val mode = SettingsStore(requireContext()).getOperationMode()
+        activity.updateDashboard(
+            touchEnabled = (mode == OperationMode.MOUSE),
+            accessibilityOn = isAccessibilityServiceEnabled(),
+        )
     }
 
     private fun isAccessibilityServiceEnabled(): Boolean {

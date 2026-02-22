@@ -1,14 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  設定画面の階層構造:
+  トップ（固定ヘッダー：ステータスダッシュボードはActivityのViewとして表示）
+  ├─ [タッチ操作の有効化] カテゴリ
+  ├─ [タッチ操作方式] カテゴリ（ADBプロキシ設定サブスクリーン含む）
+  ├─ ▶ キーマッピング（サブスクリーン）
+  ├─ ▶ タッチ操作の詳細設定（サブスクリーン）
+  │   ├─ [カーソル] カテゴリ
+  │   └─ ▶ 動作チューニング（サブスクリーン）
+  ├─ [システム] カテゴリ
+  └─ [ツール] カテゴリ
+-->
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <!-- タッチ操作の有効化 -->
     <PreferenceCategory android:title="@string/prefs_category_mode">
-
-        <Preference
-            android:key="operation_mode_current"
-            android:title="@string/prefs_mode_current"
-            android:summary="@string/prefs_mode_current_summary"
-            android:selectable="false" />
 
         <com.ftvrcm.ui.KeyCapturePreference
             android:key="toggle_keycode"
@@ -25,6 +32,7 @@
 
     </PreferenceCategory>
 
+    <!-- タッチ操作方式 -->
     <PreferenceCategory android:title="@string/prefs_category_mouse">
 
         <ListPreference
@@ -35,200 +43,235 @@
             android:defaultValue="ACCESSIBILITY_SERVICE"
             app:useSimpleSummaryProvider="true" />
 
-    </PreferenceCategory>
+        <!-- ADBプロキシ設定サブスクリーン（PROXY選択時のみ表示） -->
+        <PreferenceScreen
+            android:key="screen_proxy"
+            android:title="@string/prefs_screen_proxy_title"
+            android:summary="@string/prefs_screen_proxy_summary">
 
-    <PreferenceCategory
-        android:key="prefs_category_proxy"
-        android:title="@string/prefs_category_proxy">
+            <EditTextPreference
+                android:key="proxy_host"
+                android:title="@string/prefs_proxy_host"
+                android:defaultValue=""
+                app:useSimpleSummaryProvider="true" />
 
-        <EditTextPreference
-            android:key="proxy_host"
-            android:title="@string/prefs_proxy_host"
-            android:defaultValue=""
-            app:useSimpleSummaryProvider="true" />
+            <EditTextPreference
+                android:key="proxy_port"
+                android:title="@string/prefs_proxy_port"
+                android:defaultValue="8787"
+                app:useSimpleSummaryProvider="true" />
 
-        <EditTextPreference
-            android:key="proxy_port"
-            android:title="@string/prefs_proxy_port"
-            android:defaultValue="8787"
-            app:useSimpleSummaryProvider="true" />
+            <EditTextPreference
+                android:key="proxy_token"
+                android:title="@string/prefs_proxy_token"
+                android:defaultValue=""
+                app:useSimpleSummaryProvider="true" />
 
-        <EditTextPreference
-            android:key="proxy_token"
-            android:title="@string/prefs_proxy_token"
-            android:defaultValue=""
-            app:useSimpleSummaryProvider="true" />
+            <Preference
+                android:key="proxy_grant_accessibility"
+                android:title="@string/prefs_proxy_grant_accessibility"
+                android:summary="@string/prefs_proxy_grant_accessibility_summary" />
 
-        <Preference
-            android:key="proxy_grant_accessibility"
-            android:title="@string/prefs_proxy_grant_accessibility"
-            android:summary="@string/prefs_proxy_grant_accessibility_summary" />
+            <Preference
+                android:key="proxy_health_check"
+                android:title="@string/prefs_proxy_health_check"
+                android:summary="@string/prefs_proxy_health_check_summary" />
 
-        <Preference
-            android:key="proxy_health_check"
-            android:title="@string/prefs_proxy_health_check"
-            android:summary="@string/prefs_proxy_health_check_summary" />
-
-    </PreferenceCategory>
-
-    <PreferenceCategory android:title="@string/prefs_category_cursor">
-
-        <SeekBarPreference
-            android:key="mouse_pointer_speed"
-            android:title="@string/prefs_mouse_speed"
-            android:min="1"
-            android:max="50"
-            android:defaultValue="10"
-            android:summary="@string/prefs_mouse_speed_summary"
-            app:showSeekBarValue="true" />
-
-        <ListPreference
-            android:key="mouse_cursor_start_position"
-            android:title="@string/prefs_mouse_cursor_start_position"
-            android:entries="@array/cursor_start_position_entries"
-            android:entryValues="@array/cursor_start_position_values"
-            android:defaultValue="center"
-            app:useSimpleSummaryProvider="true" />
-
-        <SwitchPreferenceCompat
-            android:key="touch_visual_feedback_enabled"
-            android:title="@string/prefs_touch_visual_feedback"
-            android:summary="@string/prefs_touch_visual_feedback_summary"
-            android:defaultValue="true" />
+        </PreferenceScreen>
 
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="@string/prefs_category_key_mapping_cursor">
+    <!-- キーマッピング（サブスクリーン） -->
+    <PreferenceScreen
+        android:key="screen_key_mapping"
+        android:title="@string/prefs_screen_key_mapping_title"
+        android:summary="@string/prefs_screen_key_mapping_summary">
 
-        <com.ftvrcm.ui.KeyCapturePreference
-            android:key="mouse_key_up"
-            android:title="@string/prefs_mouse_key_up"
-            android:defaultValue="19" />
+        <PreferenceCategory android:title="@string/prefs_category_key_mapping_cursor">
 
-        <com.ftvrcm.ui.KeyCapturePreference
-            android:key="mouse_key_down"
-            android:title="@string/prefs_mouse_key_down"
-            android:defaultValue="20" />
+            <com.ftvrcm.ui.KeyCapturePreference
+                android:key="mouse_key_up"
+                android:title="@string/prefs_mouse_key_up"
+                android:defaultValue="19" />
 
-        <com.ftvrcm.ui.KeyCapturePreference
-            android:key="mouse_key_left"
-            android:title="@string/prefs_mouse_key_left"
-            android:defaultValue="21" />
+            <com.ftvrcm.ui.KeyCapturePreference
+                android:key="mouse_key_down"
+                android:title="@string/prefs_mouse_key_down"
+                android:defaultValue="20" />
 
-        <com.ftvrcm.ui.KeyCapturePreference
-            android:key="mouse_key_right"
-            android:title="@string/prefs_mouse_key_right"
-            android:defaultValue="22" />
+            <com.ftvrcm.ui.KeyCapturePreference
+                android:key="mouse_key_left"
+                android:title="@string/prefs_mouse_key_left"
+                android:defaultValue="21" />
 
-        <com.ftvrcm.ui.KeyCapturePreference
-            android:key="mouse_key_click"
-            android:title="@string/prefs_mouse_key_click"
-            android:defaultValue="23" />
+            <com.ftvrcm.ui.KeyCapturePreference
+                android:key="mouse_key_right"
+                android:title="@string/prefs_mouse_key_right"
+                android:defaultValue="22" />
 
-        <com.ftvrcm.ui.KeyCapturePreference
-            android:key="mouse_key_cursor_dpad_toggle"
-            android:title="@string/prefs_mouse_key_cursor_dpad_toggle"
-            android:summary="@string/prefs_mouse_key_cursor_dpad_toggle_summary"
-            android:defaultValue="82" />
+            <com.ftvrcm.ui.KeyCapturePreference
+                android:key="mouse_key_click"
+                android:title="@string/prefs_mouse_key_click"
+                android:defaultValue="23" />
 
-    </PreferenceCategory>
+        </PreferenceCategory>
 
-    <PreferenceCategory android:title="@string/prefs_category_key_mapping_swipe">
+        <PreferenceCategory android:title="@string/prefs_category_key_mapping_swipe">
 
-        <com.ftvrcm.ui.KeyCapturePreference
-            android:key="mouse_key_scroll_up"
-            android:title="@string/prefs_mouse_key_scroll_up"
-            android:defaultValue="166" />
+            <com.ftvrcm.ui.KeyCapturePreference
+                android:key="mouse_key_scroll_up"
+                android:title="@string/prefs_mouse_key_scroll_up"
+                android:defaultValue="166" />
 
-        <com.ftvrcm.ui.KeyCapturePreference
-            android:key="mouse_key_scroll_down"
-            android:title="@string/prefs_mouse_key_scroll_down"
-            android:defaultValue="167" />
+            <com.ftvrcm.ui.KeyCapturePreference
+                android:key="mouse_key_scroll_down"
+                android:title="@string/prefs_mouse_key_scroll_down"
+                android:defaultValue="167" />
 
-        <com.ftvrcm.ui.KeyCapturePreference
-            android:key="mouse_key_scroll_left"
-            android:title="@string/prefs_mouse_key_scroll_left"
-            android:defaultValue="89" />
+            <com.ftvrcm.ui.KeyCapturePreference
+                android:key="mouse_key_scroll_left"
+                android:title="@string/prefs_mouse_key_scroll_left"
+                android:defaultValue="89" />
 
-        <com.ftvrcm.ui.KeyCapturePreference
-            android:key="mouse_key_scroll_right"
-            android:title="@string/prefs_mouse_key_scroll_right"
-            android:defaultValue="90" />
+            <com.ftvrcm.ui.KeyCapturePreference
+                android:key="mouse_key_scroll_right"
+                android:title="@string/prefs_mouse_key_scroll_right"
+                android:defaultValue="90" />
 
-    </PreferenceCategory>
+        </PreferenceCategory>
 
-    <PreferenceCategory android:title="@string/prefs_category_key_mapping_pinch">
+        <PreferenceCategory android:title="@string/prefs_category_key_mapping_pinch">
 
-        <com.ftvrcm.ui.KeyCapturePreference
-            android:key="mouse_key_pinch_in"
-            android:title="@string/prefs_mouse_key_pinch_in"
-            android:defaultValue="0" />
+            <com.ftvrcm.ui.KeyCapturePreference
+                android:key="mouse_key_pinch_in"
+                android:title="@string/prefs_mouse_key_pinch_in"
+                android:defaultValue="0" />
 
-        <com.ftvrcm.ui.KeyCapturePreference
-            android:key="mouse_key_pinch_out"
-            android:title="@string/prefs_mouse_key_pinch_out"
-            android:defaultValue="0" />
+            <com.ftvrcm.ui.KeyCapturePreference
+                android:key="mouse_key_pinch_out"
+                android:title="@string/prefs_mouse_key_pinch_out"
+                android:defaultValue="0" />
 
-    </PreferenceCategory>
+        </PreferenceCategory>
 
-    <PreferenceCategory android:title="@string/prefs_category_gestures">
+        <PreferenceCategory android:title="@string/prefs_category_key_mapping_other">
 
-        <SeekBarPreference
-            android:key="mouse_swipe_distance_percent"
-            android:title="@string/prefs_mouse_swipe_distance"
-            android:min="5"
-            android:max="95"
-            android:defaultValue="28"
-            android:summary="@string/prefs_mouse_swipe_distance_summary"
-            app:showSeekBarValue="true" />
+            <com.ftvrcm.ui.KeyCapturePreference
+                android:key="mouse_key_cursor_dpad_toggle"
+                android:title="@string/prefs_mouse_key_cursor_dpad_toggle"
+                android:summary="@string/prefs_mouse_key_cursor_dpad_toggle_summary"
+                android:defaultValue="82" />
 
-        <ListPreference
-            android:key="mouse_swipe_double_scale"
-            android:title="@string/prefs_mouse_swipe_double_scale"
-            android:entries="@array/distance_double_scale_entries"
-            android:entryValues="@array/distance_double_scale_values"
-            android:defaultValue="2.0"
-            app:useSimpleSummaryProvider="true" />
+            <com.ftvrcm.ui.KeyCapturePreference
+                android:key="screenshot_key"
+                android:title="@string/prefs_screenshot_key"
+                android:defaultValue="0" />
 
-        <SeekBarPreference
-            android:key="mouse_pinch_distance_percent"
-            android:title="@string/prefs_mouse_pinch_distance"
-            android:min="5"
-            android:max="95"
-            android:defaultValue="28"
-            android:summary="@string/prefs_mouse_pinch_distance_summary"
-            app:showSeekBarValue="true" />
+        </PreferenceCategory>
 
-        <ListPreference
-            android:key="mouse_pinch_double_scale"
-            android:title="@string/prefs_mouse_pinch_double_scale"
-            android:entries="@array/distance_double_scale_entries"
-            android:entryValues="@array/distance_double_scale_values"
-            android:defaultValue="2.0"
-            app:useSimpleSummaryProvider="true" />
+    </PreferenceScreen>
 
-        <SwitchPreferenceCompat
-            android:key="mouse_scroll_repeat_longpress"
-            android:title="@string/prefs_mouse_scroll_repeat_longpress"
-            android:defaultValue="true" />
+    <!-- タッチ操作の詳細設定（サブスクリーン） -->
+    <PreferenceScreen
+        android:key="screen_mouse"
+        android:title="@string/prefs_screen_mouse_title"
+        android:summary="@string/prefs_screen_mouse_summary">
 
-        <SeekBarPreference
-            android:key="mouse_scroll_repeat_interval_ms"
-            android:title="@string/prefs_mouse_scroll_repeat_interval_ms"
-            android:min="30"
-            android:max="500"
-            android:defaultValue="120"
-            app:showSeekBarValue="true" />
+        <!-- カーソル -->
+        <PreferenceCategory android:title="@string/prefs_category_cursor">
 
-    </PreferenceCategory>
+            <SeekBarPreference
+                android:key="mouse_pointer_speed"
+                android:title="@string/prefs_mouse_speed"
+                android:min="1"
+                android:max="50"
+                android:defaultValue="10"
+                android:summary="@string/prefs_mouse_speed_summary"
+                app:showSeekBarValue="true" />
 
+            <ListPreference
+                android:key="mouse_cursor_start_position"
+                android:title="@string/prefs_mouse_cursor_start_position"
+                android:entries="@array/cursor_start_position_entries"
+                android:entryValues="@array/cursor_start_position_values"
+                android:defaultValue="center"
+                app:useSimpleSummaryProvider="true" />
+
+            <SwitchPreferenceCompat
+                android:key="touch_visual_feedback_enabled"
+                android:title="@string/prefs_touch_visual_feedback"
+                android:summary="@string/prefs_touch_visual_feedback_summary"
+                android:defaultValue="true" />
+
+        </PreferenceCategory>
+
+        <!-- 動作チューニング（サブスクリーン） -->
+        <PreferenceScreen
+            android:key="screen_tuning"
+            android:title="@string/prefs_screen_tuning_title"
+            android:summary="@string/prefs_screen_tuning_summary">
+
+            <PreferenceCategory android:title="@string/prefs_category_tuning_swipe">
+
+                <SeekBarPreference
+                    android:key="mouse_swipe_distance_percent"
+                    android:title="@string/prefs_mouse_swipe_distance"
+                    android:min="5"
+                    android:max="95"
+                    android:defaultValue="28"
+                    android:summary="@string/prefs_mouse_swipe_distance_summary"
+                    app:showSeekBarValue="true" />
+
+                <ListPreference
+                    android:key="mouse_swipe_double_scale"
+                    android:title="@string/prefs_mouse_swipe_double_scale"
+                    android:entries="@array/distance_double_scale_entries"
+                    android:entryValues="@array/distance_double_scale_values"
+                    android:defaultValue="2.0"
+                    app:useSimpleSummaryProvider="true" />
+
+                <SwitchPreferenceCompat
+                    android:key="mouse_scroll_repeat_longpress"
+                    android:title="@string/prefs_mouse_scroll_repeat_longpress"
+                    android:defaultValue="true" />
+
+                <SeekBarPreference
+                    android:key="mouse_scroll_repeat_interval_ms"
+                    android:title="@string/prefs_mouse_scroll_repeat_interval_ms"
+                    android:min="30"
+                    android:max="500"
+                    android:defaultValue="120"
+                    app:showSeekBarValue="true" />
+
+            </PreferenceCategory>
+
+            <PreferenceCategory android:title="@string/prefs_category_tuning_zoom">
+
+                <SeekBarPreference
+                    android:key="mouse_pinch_distance_percent"
+                    android:title="@string/prefs_mouse_pinch_distance"
+                    android:min="5"
+                    android:max="95"
+                    android:defaultValue="28"
+                    android:summary="@string/prefs_mouse_pinch_distance_summary"
+                    app:showSeekBarValue="true" />
+
+                <ListPreference
+                    android:key="mouse_pinch_double_scale"
+                    android:title="@string/prefs_mouse_pinch_double_scale"
+                    android:entries="@array/distance_double_scale_entries"
+                    android:entryValues="@array/distance_double_scale_values"
+                    android:defaultValue="2.0"
+                    app:useSimpleSummaryProvider="true" />
+
+            </PreferenceCategory>
+
+        </PreferenceScreen>
+
+    </PreferenceScreen>
+
+    <!-- システム：OS設定へのリンク -->
     <PreferenceCategory android:title="@string/prefs_category_system">
-
-        <Preference
-            android:key="status_accessibility_service"
-            android:title="@string/prefs_status_accessibility_service"
-            android:summary="@string/prefs_status_unknown"
-            android:selectable="false" />
 
         <Preference
             android:key="open_accessibility_settings"
@@ -240,28 +283,20 @@
             android:title="@string/prefs_open_app_details_settings"
             android:summary="@string/prefs_open_app_details_settings_summary" />
 
-        <Preference
-            android:key="reset_defaults"
-            android:title="@string/prefs_reset_defaults"
-            android:summary="@string/prefs_reset_defaults_summary" />
-
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="@string/prefs_category_tests">
+    <!-- ツール：テストとリセット -->
+    <PreferenceCategory android:title="@string/prefs_category_tools">
 
         <Preference
             android:key="open_touch_test"
             android:title="@string/prefs_open_touch_test"
             android:summary="@string/prefs_open_touch_test_summary" />
 
-    </PreferenceCategory>
-
-    <PreferenceCategory android:title="@string/prefs_category_other_actions">
-
-        <com.ftvrcm.ui.KeyCapturePreference
-            android:key="screenshot_key"
-            android:title="@string/prefs_screenshot_key"
-            android:defaultValue="0" />
+        <Preference
+            android:key="reset_defaults"
+            android:title="@string/prefs_reset_defaults"
+            android:summary="@string/prefs_reset_defaults_summary" />
 
     </PreferenceCategory>
 
