@@ -19,6 +19,7 @@ Node.js v18 以上が必要です。依存パッケージはありません（No
 | `PROXY_TOKEN` | ― | 認証トークン（任意・推奨） |
 | `HOST` | `0.0.0.0` | リッスンアドレス |
 | `PORT` | `8787` | リッスンポート |
+| `SCREENSHOT_DIR` | `screenshots` | スクリーンショット保存ディレクトリ（`--screenshot-dir` CLI 引数でも指定可） |
 
 ### ADB 制御パラメータ
 
@@ -31,7 +32,7 @@ Node.js v18 以上が必要です。依存パッケージはありません（No
 | `ADB_AUTH_FAIL_WINDOW_MS` | `60000` | 連続判定の時間窓（ms） |
 | `ADB_REAUTH_COOLDOWN_MS` | `600000` | 再認証フローの最小実行間隔（ms） |
 | `ADB_REAUTH_MAX_PER_HOUR` | `3` | 1 時間あたりの再認証フロー最大回数（`0` で無効化） |
-| `ADB_READY_CACHE_MS` | `1500` | ADB 状態が `device` のときに「新鮮」とみなすキャッシュ時間（ms） |
+| `ADB_READY_CACHE_MS` | `0` | ADB 状態が `device` のときに「新鮮」とみなすキャッシュ時間（ms）（`0` で無効化） |
 | `ADB_STATE_POLL_MS` | `0` | ADB 状態のバックグラウンド監視間隔（`0` で無効化） |
 
 ### ログパラメータ
@@ -80,6 +81,54 @@ ADB および接続状態を確認します。TCP 接続が切れている場合
 ```json
 { "x": 540, "y": 960, "serial": "optional" }
 ```
+
+### `POST /doubleTap`
+
+ダブルタップを送出します（約 100ms 間隔で 2 回タップ）。
+
+```json
+{ "x": 540, "y": 960, "serial": "optional" }
+```
+
+### `POST /longPress`
+
+長押しを送出します（`adb shell input swipe` で同一座標に対してスワイプ）。
+
+```json
+{ "x": 540, "y": 960, "durationMs": 600, "serial": "optional" }
+```
+
+- `durationMs`: 長押し時間（ms）。デフォルト: `600`
+
+### `POST /swipe`
+
+スワイプを送出します。
+
+```json
+{ "x1": 540, "y1": 960, "x2": 540, "y2": 400, "durationMs": 200, "serial": "optional" }
+```
+
+- `durationMs`: スワイプ時間（ms）。デフォルト: `200`
+
+### `POST /pinchIn`
+
+ピンチイン（ズームアウト）を送出します。
+
+```json
+{
+  "x1Start": 440, "y1Start": 760,
+  "x1End": 490, "y1End": 910,
+  "x2Start": 640, "y2Start": 1160,
+  "x2End": 590, "y2End": 1010,
+  "durationMs": 240, "serial": "optional"
+}
+```
+
+- `durationMs`: ジェスチャ時間（ms）。デフォルト: `240`
+
+### `POST /pinchOut`
+
+ピンチアウト（ズームイン）を送出します。`/pinchIn` と同じフィールドを使用します。
 
 ### `POST /grantAccessibility`
 
