@@ -2,6 +2,9 @@ import http from 'node:http';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import AdbModule from '@devicefarmer/adbkit';
+
+const { Adb } = AdbModule;
 
 const PORT = parseInt(process.env.PORT ?? '8787', 10);
 const HOST = process.env.HOST ?? '0.0.0.0';
@@ -63,12 +66,6 @@ const SCREENSHOT_DIR = path.resolve(
 );
 
 // ADB reliability knobs (env and/or CLI args)
-// - env: ADB_TIMEOUT_MS, ADB_CONNECT_TIMEOUT_MS, ADB_CONNECT_COOLDOWN_MS, ADB_AUTH_FAIL_THRESHOLD,
-//        ADB_AUTH_FAIL_WINDOW_MS, ADB_READY_CACHE_MS, ADB_REAUTH_COOLDOWN_MS, ADB_REAUTH_MAX_PER_HOUR,
-//        ADB_STATE_POLL_MS
-// - args: --adb-timeout-ms, --adb-connect-timeout-ms, --adb-connect-cooldown-ms, --adb-auth-fail-threshold,
-//         --adb-auth-fail-window-ms, --adb-ready-cache-ms, --adb-reauth-cooldown-ms, --adb-reauth-max-per-hour,
-//         --adb-state-poll-ms
 const ADB_TIMEOUT_MS = Math.max(1000, Math.round(getArgNum('--adb-timeout-ms', envNum('ADB_TIMEOUT_MS', 8000))));
 const ADB_CONNECT_TIMEOUT_MS = Math.max(
   1000,
@@ -103,6 +100,11 @@ const ADB_REAUTH_MAX_PER_HOUR = Math.max(
   0,
   Math.round(getArgNum('--adb-reauth-max-per-hour', envNum('ADB_REAUTH_MAX_PER_HOUR', 3))),
 );
+
+// ─── adbkit client (persistent connection to adb server) ───
+const adbClient = Adb.createClient();
+
+// ─── utility functions ───
 
 function json(res, statusCode, body) {
   const payload = JSON.stringify(body);
@@ -173,132 +175,47 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-function runAdbRaw(adbArgs, timeoutMs) {
-  return new Promise((resolve) => {
-    const child = spawn('adb', adbArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
+// ─── Stream helpers ───
 
-    let stdout = '';
-    let stderr = '';
-    let killedByTimeout = false;
-
-    child.stdout.setEncoding('utf8');
-    child.stderr.setEncoding('utf8');
-
-    child.stdout.on('data', (d) => (stdout += d));
-    child.stderr.on('data', (d) => (stderr += d));
-
-    const timer =
-      timeoutMs > 0
-        ? setTimeout(() => {
-            killedByTimeout = true;
-            child.kill('SIGKILL');
-          }, timeoutMs)
-        : null;
-
-    child.on('close', (code) => {
-      if (timer) clearTimeout(timer);
-      const out = stdout.trim();
-      const err = stderr.trim();
-      resolve({
-        ok: code === 0 && !killedByTimeout,
-        exitCode: killedByTimeout ? -9 : code ?? -1,
-        stdout: out,
-        stderr: err,
-        timedOut: killedByTimeout,
-        command: ['adb', ...adbArgs].join(' '),
-      });
-    });
-
-    child.on('error', (e) => {
-      if (timer) clearTimeout(timer);
-      resolve({
-        ok: false,
-        exitCode: -1,
-        stdout: '',
-        stderr: String(e?.message ?? e),
-        timedOut: false,
-        command: ['adb', ...adbArgs].join(' '),
-      });
-    });
-  });
-}
-
-function runAdbRawBinary(adbArgs, timeoutMs) {
-  return new Promise((resolve) => {
-    const child = spawn('adb', adbArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
-
+/** Read all data from a readable stream into a Buffer. */
+function streamToBuffer(stream) {
+  return new Promise((resolve, reject) => {
     const chunks = [];
-    let stderr = '';
-    let killedByTimeout = false;
-
-    child.stderr.setEncoding('utf8');
-    child.stdout.on('data', (d) => chunks.push(Buffer.isBuffer(d) ? d : Buffer.from(d)));
-    child.stderr.on('data', (d) => (stderr += d));
-
-    const timer =
-      timeoutMs > 0
-        ? setTimeout(() => {
-            killedByTimeout = true;
-            child.kill('SIGKILL');
-          }, timeoutMs)
-        : null;
-
-    child.on('close', (code) => {
-      if (timer) clearTimeout(timer);
-      resolve({
-        ok: code === 0 && !killedByTimeout,
-        exitCode: killedByTimeout ? -9 : code ?? -1,
-        stdoutBuffer: Buffer.concat(chunks),
-        stderr: stderr.trim(),
-        timedOut: killedByTimeout,
-        command: ['adb', ...adbArgs].join(' '),
-      });
-    });
-
-    child.on('error', (e) => {
-      if (timer) clearTimeout(timer);
-      resolve({
-        ok: false,
-        exitCode: -1,
-        stdoutBuffer: Buffer.alloc(0),
-        stderr: String(e?.message ?? e),
-        timedOut: false,
-        command: ['adb', ...adbArgs].join(' '),
-      });
-    });
+    stream.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+    stream.on('end', () => resolve(Buffer.concat(chunks)));
+    stream.on('error', reject);
   });
 }
 
-function runAdbOnce(serial, args, timeoutMs = ADB_TIMEOUT_MS) {
-  const adbArgs = [];
-  if (serial) adbArgs.push('-s', serial);
-  adbArgs.push(...args);
-  return runAdbRaw(adbArgs, timeoutMs);
+/** Run a promise with a timeout. Rejects with a timeout error if the promise does not resolve in time. */
+function withTimeout(promise, ms, label = 'operation') {
+  if (ms <= 0) return promise;
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
 }
 
-function runAdbBinaryOnce(serial, args, timeoutMs = ADB_TIMEOUT_MS) {
-  const adbArgs = [];
-  if (serial) adbArgs.push('-s', serial);
-  adbArgs.push(...args);
-  return runAdbRawBinary(adbArgs, timeoutMs);
-}
+// ─── adbkit-based ADB operations ───
 
 function isLikelyTcpSerial(serial) {
-  // Best-effort heuristic: host:port, or IPv4:port.
   if (!serial) return false;
   return serial.includes(':');
 }
 
-function classifyAdbError(result) {
-  const text = `${result?.stdout ?? ''}\n${result?.stderr ?? ''}`.toLowerCase();
+function classifyAdbkitError(err) {
+  const text = String(err?.message ?? err).toLowerCase();
 
   if (text.includes('device unauthorized') || text.includes('unauthorized')) return 'unauthorized';
   if (text.includes('failed to authenticate')) return 'unauthorized';
 
   if (text.includes('device offline') || text.includes('offline')) return 'offline';
-  if (text.includes('no devices') || text.includes('device not found')) return 'not_found';
+  if (text.includes('no devices') || text.includes('device not found') || text.includes('not found')) return 'not_found';
   if (text.includes('cannot connect') || text.includes('unable to connect') || text.includes('connection refused')) return 'connect_failed';
-  if (result?.timedOut) return 'timeout';
+  if (text.includes('timed out') || text.includes('timeout')) return 'timeout';
   return '';
 }
 
@@ -334,32 +251,31 @@ function rememberAdbState(serial, state) {
 }
 
 async function adbGetState(serial) {
-  const r = await runAdbOnce(serial, ['get-state'], 2000);
-  // When unauthorized/offline/notfound, adb tends to print errors to stderr.
-  if (r.ok && r.stdout) {
-    const state = r.stdout.trim();
+  try {
+    const device = adbClient.getDevice(serial);
+    const state = await withTimeout(device.getState(), 2000, 'getState');
     rememberAdbState(serial, state);
     return state;
+  } catch (err) {
+    const kind = classifyAdbkitError(err);
+    if (kind === 'unauthorized') {
+      rememberAdbState(serial, 'unauthorized');
+      return 'unauthorized';
+    }
+    if (kind === 'offline') {
+      rememberAdbState(serial, 'offline');
+      return 'offline';
+    }
+    if (kind === 'not_found') {
+      rememberAdbState(serial, 'not_found');
+      return 'not_found';
+    }
+    rememberAdbState(serial, 'unknown');
+    return 'unknown';
   }
-  const kind = classifyAdbError(r);
-  if (kind === 'unauthorized') {
-    rememberAdbState(serial, 'unauthorized');
-    return 'unauthorized';
-  }
-  if (kind === 'offline') {
-    rememberAdbState(serial, 'offline');
-    return 'offline';
-  }
-  if (kind === 'not_found') {
-    rememberAdbState(serial, 'not_found');
-    return 'not_found';
-  }
-  rememberAdbState(serial, 'unknown');
-  return 'unknown';
 }
 
 async function adbConnect(serial, requestId) {
-  // Only meaningful for TCP/IP serials (ip:port). For USB serials, connect doesn't apply.
   if (!isLikelyTcpSerial(serial)) return { ok: true, skipped: true, reason: 'non-tcp-serial' };
 
   const st = getDeviceState(serial);
@@ -372,23 +288,27 @@ async function adbConnect(serial, requestId) {
   st.connectAttempts += 1;
 
   if (DEBUG && LOG_ADB) {
-    log(`${nowIso()} [${requestId}] adb connect attempt serial=${serial}`);
+    log(`${nowIso()} [${requestId}] adbkit connect attempt serial=${serial}`);
   }
 
-  const r = await runAdbRaw(['connect', serial], ADB_CONNECT_TIMEOUT_MS);
-  if (DEBUG && LOG_ADB) {
-    log(`${nowIso()} [${requestId}] adb ${r.command}`);
-    if (r.stderr) log(`${nowIso()} [${requestId}] adb stderr=${JSON.stringify(r.stderr)}`);
-    if (r.stdout) log(`${nowIso()} [${requestId}] adb stdout=${JSON.stringify(r.stdout)}`);
+  try {
+    const id = await withTimeout(adbClient.connect(serial), ADB_CONNECT_TIMEOUT_MS, 'connect');
+    if (DEBUG && LOG_ADB) {
+      log(`${nowIso()} [${requestId}] adbkit connected id=${id}`);
+    }
+    return { ok: true, id };
+  } catch (err) {
+    if (DEBUG && LOG_ADB) {
+      log(`${nowIso()} [${requestId}] adbkit connect error=${String(err?.message ?? err)}`);
+    }
+    return { ok: false, error: String(err?.message ?? err) };
   }
-  return r;
 }
 
 function recordAuthFailure(serial) {
   const st = getDeviceState(serial);
   const now = Date.now();
   st.authFailTimes.push(now);
-  // keep within window
   const cutoff = now - ADB_AUTH_FAIL_WINDOW_MS;
   while (st.authFailTimes.length && st.authFailTimes[0] < cutoff) st.authFailTimes.shift();
 }
@@ -399,15 +319,12 @@ function shouldReauth(serial) {
   const st = getDeviceState(serial);
   const now = Date.now();
 
-  // Cooldown to avoid hammering
   if (ADB_REAUTH_COOLDOWN_MS > 0 && now - st.lastReauthAt < ADB_REAUTH_COOLDOWN_MS) return false;
 
-  // Threshold within window
   const cutoff = now - ADB_AUTH_FAIL_WINDOW_MS;
   const recentFails = st.authFailTimes.filter((t) => t >= cutoff).length;
   if (recentFails < ADB_AUTH_FAIL_THRESHOLD) return false;
 
-  // Hourly cap
   const hourCutoff = now - 60 * 60_000;
   st.reauthTimes = st.reauthTimes.filter((t) => t >= hourCutoff);
   if (st.reauthTimes.length >= ADB_REAUTH_MAX_PER_HOUR) return false;
@@ -421,42 +338,49 @@ async function adbReauth(serial, requestId) {
   st.lastReauthAt = now;
   st.reauthTimes.push(now);
 
-  // Best-effort recovery sequence:
-  // 1) disconnect target (TCP)
-  // 2) kill-server/start-server
-  // 3) connect again (TCP)
-  // Note: actual authorization requires user acceptance on the device.
-  const steps = [];
-  if (isLikelyTcpSerial(serial)) {
-    steps.push(() => runAdbRaw(['disconnect', serial], 3000));
-  }
-  steps.push(() => runAdbRaw(['kill-server'], 3000));
-  steps.push(() => runAdbRaw(['start-server'], 5000));
-  if (isLikelyTcpSerial(serial)) {
-    steps.push(() => runAdbRaw(['connect', serial], ADB_CONNECT_TIMEOUT_MS));
-  }
-
   if (DEBUG) {
     log(`${nowIso()} [${requestId}] reauth starting serial=${serial}`);
   }
 
-  const results = [];
-  for (const step of steps) {
-    // Small spacing to avoid immediate hammering when adb is restarting.
-    // This is intentionally tiny to keep UX OK.
-    // eslint-disable-next-line no-await-in-loop
-    const r = await step();
-    results.push(r);
-    if (DEBUG && LOG_ADB) {
-      log(`${nowIso()} [${requestId}] adb ${r.command}`);
-      if (r.stderr) log(`${nowIso()} [${requestId}] adb stderr=${JSON.stringify(r.stderr)}`);
-      if (r.stdout) log(`${nowIso()} [${requestId}] adb stdout=${JSON.stringify(r.stdout)}`);
+  // Best-effort recovery sequence via adbkit:
+  // 1) disconnect target (TCP)
+  // 2) kill adb server
+  // 3) wait, then reconnect (adbkit will auto-start server on next call)
+  // 4) connect again (TCP)
+  try {
+    if (isLikelyTcpSerial(serial)) {
+      try {
+        await withTimeout(adbClient.disconnect(serial), 3000, 'disconnect');
+        if (DEBUG && LOG_ADB) log(`${nowIso()} [${requestId}] adbkit disconnect ok`);
+      } catch (e) {
+        if (DEBUG && LOG_ADB) log(`${nowIso()} [${requestId}] adbkit disconnect err=${e?.message}`);
+      }
     }
-    // eslint-disable-next-line no-await-in-loop
-    await sleep(150);
-  }
 
-  return { ok: results.every((r) => r.ok), steps: results };
+    // Kill the adb server. adbkit client will recreate connections on next use.
+    try {
+      await withTimeout(adbClient.kill(), 3000, 'kill-server');
+      if (DEBUG && LOG_ADB) log(`${nowIso()} [${requestId}] adbkit kill-server ok`);
+    } catch (e) {
+      if (DEBUG && LOG_ADB) log(`${nowIso()} [${requestId}] adbkit kill-server err=${e?.message}`);
+    }
+
+    // Wait for adb server to be restarted (adbkit will start it on next connection)
+    await sleep(500);
+
+    if (isLikelyTcpSerial(serial)) {
+      try {
+        const id = await withTimeout(adbClient.connect(serial), ADB_CONNECT_TIMEOUT_MS, 'reconnect');
+        if (DEBUG && LOG_ADB) log(`${nowIso()} [${requestId}] adbkit reconnect ok id=${id}`);
+      } catch (e) {
+        if (DEBUG && LOG_ADB) log(`${nowIso()} [${requestId}] adbkit reconnect err=${e?.message}`);
+      }
+    }
+
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: String(err?.message ?? err) };
+  }
 }
 
 async function pollAdbState(serial) {
@@ -554,12 +478,111 @@ async function ensureAdbReady(serial, requestId) {
   return { ok: state === 'device', state, cached: false, fresh: false };
 }
 
+// ─── High-level ADB command execution via adbkit ───
+
+/**
+ * Execute a shell command on the device via adbkit's persistent connection.
+ * Returns a result object compatible with the original spawn-based API.
+ */
+async function runShellCommand(serial, command, requestId, timeoutMs = ADB_TIMEOUT_MS) {
+  const cmdStr = typeof command === 'string' ? command : command.join(' ');
+  const fakeCommand = `adb -s ${serial} shell ${cmdStr}`;
+
+  try {
+    const device = adbClient.getDevice(serial);
+    const stream = await withTimeout(device.shell(command), timeoutMs, 'shell');
+    const buf = await withTimeout(streamToBuffer(stream), timeoutMs, 'shell-read');
+    const stdout = buf.toString('utf-8').trim();
+
+    return {
+      ok: true,
+      exitCode: 0,
+      stdout,
+      stderr: '',
+      timedOut: false,
+      command: fakeCommand,
+    };
+  } catch (err) {
+    const message = String(err?.message ?? err);
+    const timedOut = message.includes('timed out');
+    return {
+      ok: false,
+      exitCode: timedOut ? -9 : -1,
+      stdout: '',
+      stderr: message,
+      timedOut,
+      command: fakeCommand,
+    };
+  }
+}
+
+/**
+ * Take a screenshot via adbkit's screencap (uses exec-out internally, binary-safe).
+ * Returns a result object compatible with the original spawn-based API.
+ */
+async function runScreencap(serial, requestId, timeoutMs = ADB_TIMEOUT_MS) {
+  const fakeCommand = `adb -s ${serial} exec-out screencap -p`;
+
+  try {
+    const device = adbClient.getDevice(serial);
+    const stream = await withTimeout(device.screencap(), timeoutMs, 'screencap');
+    const stdoutBuffer = await withTimeout(streamToBuffer(stream), timeoutMs, 'screencap-read');
+
+    return {
+      ok: true,
+      exitCode: 0,
+      stdoutBuffer,
+      stderr: '',
+      timedOut: false,
+      command: fakeCommand,
+    };
+  } catch (err) {
+    const message = String(err?.message ?? err);
+    const timedOut = message.includes('timed out');
+    return {
+      ok: false,
+      exitCode: timedOut ? -9 : -1,
+      stdoutBuffer: Buffer.alloc(0),
+      stderr: message,
+      timedOut,
+      command: fakeCommand,
+    };
+  }
+}
+
+// ─── Wrapper with retry/recovery logic (same behavior as original) ───
+
+function classifyAdbError(result) {
+  const text = `${result?.stdout ?? ''}\n${result?.stderr ?? ''}`.toLowerCase();
+
+  if (text.includes('device unauthorized') || text.includes('unauthorized')) return 'unauthorized';
+  if (text.includes('failed to authenticate')) return 'unauthorized';
+
+  if (text.includes('device offline') || text.includes('offline')) return 'offline';
+  if (text.includes('no devices') || text.includes('device not found')) return 'not_found';
+  if (text.includes('cannot connect') || text.includes('unable to connect') || text.includes('connection refused')) return 'connect_failed';
+  if (result?.timedOut) return 'timeout';
+  return '';
+}
+
 async function runAdb(serial, args, requestId) {
   // 1) ensure connected/authorized (best-effort)
   await ensureAdbReady(serial, requestId);
 
-  // 2) execute command
-  let result = await runAdbOnce(serial, args, ADB_TIMEOUT_MS);
+  // 2) execute command - detect if it's a shell command
+  let shellCmd;
+  if (args[0] === 'shell') {
+    shellCmd = args.length === 2 ? args[1] : args.slice(1).join(' ');
+  }
+
+  let result;
+  if (shellCmd != null) {
+    result = await runShellCommand(serial, shellCmd, requestId);
+  } else {
+    // Non-shell commands (e.g. get-state, connect) — shouldn't reach here normally,
+    // but fall back to spawn for safety
+    result = await runAdbOnceSpawn(serial, args, ADB_TIMEOUT_MS);
+  }
 
   if (result.ok) {
     rememberAdbState(serial, 'device');
@@ -577,12 +600,20 @@ async function runAdb(serial, args, requestId) {
     if (shouldReauth(serial)) {
       await adbReauth(serial, requestId);
     }
-    // retry once (even if not reauthed, device might have been accepted manually)
-    result = await runAdbOnce(serial, args, ADB_TIMEOUT_MS);
+    // retry once
+    if (shellCmd != null) {
+      result = await runShellCommand(serial, shellCmd, requestId);
+    } else {
+      result = await runAdbOnceSpawn(serial, args, ADB_TIMEOUT_MS);
+    }
     if (result.ok) rememberAdbState(serial, 'device');
   } else if (kind === 'offline' || kind === 'not_found' || kind === 'connect_failed') {
     await adbConnect(serial, requestId);
-    result = await runAdbOnce(serial, args, ADB_TIMEOUT_MS);
+    if (shellCmd != null) {
+      result = await runShellCommand(serial, shellCmd, requestId);
+    } else {
+      result = await runAdbOnceSpawn(serial, args, ADB_TIMEOUT_MS);
+    }
     if (result.ok) rememberAdbState(serial, 'device');
   }
 
@@ -592,7 +623,8 @@ async function runAdb(serial, args, requestId) {
 async function runAdbBinary(serial, args, requestId) {
   await ensureAdbReady(serial, requestId);
 
-  let result = await runAdbBinaryOnce(serial, args, ADB_TIMEOUT_MS);
+  // The only binary command used is screencap
+  let result = await runScreencap(serial, requestId);
 
   if (result.ok) {
     rememberAdbState(serial, 'device');
@@ -611,16 +643,72 @@ async function runAdbBinary(serial, args, requestId) {
     if (shouldReauth(serial)) {
       await adbReauth(serial, requestId);
     }
-    result = await runAdbBinaryOnce(serial, args, ADB_TIMEOUT_MS);
+    result = await runScreencap(serial, requestId);
     if (result.ok) rememberAdbState(serial, 'device');
   } else if (kind === 'offline' || kind === 'not_found' || kind === 'connect_failed') {
     await adbConnect(serial, requestId);
-    result = await runAdbBinaryOnce(serial, args, ADB_TIMEOUT_MS);
+    result = await runScreencap(serial, requestId);
     if (result.ok) rememberAdbState(serial, 'device');
   }
 
   return result;
 }
+
+// ─── Fallback spawn for rare non-shell commands ───
+
+function runAdbOnceSpawn(serial, args, timeoutMs = ADB_TIMEOUT_MS) {
+  return new Promise((resolve) => {
+    const adbArgs = [];
+    if (serial) adbArgs.push('-s', serial);
+    adbArgs.push(...args);
+
+    const child = spawn('adb', adbArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
+
+    let stdout = '';
+    let stderr = '';
+    let killedByTimeout = false;
+
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+
+    child.stdout.on('data', (d) => (stdout += d));
+    child.stderr.on('data', (d) => (stderr += d));
+
+    const timer =
+      timeoutMs > 0
+        ? setTimeout(() => {
+            killedByTimeout = true;
+            child.kill('SIGKILL');
+          }, timeoutMs)
+        : null;
+
+    child.on('close', (code) => {
+      if (timer) clearTimeout(timer);
+      resolve({
+        ok: code === 0 && !killedByTimeout,
+        exitCode: killedByTimeout ? -9 : code ?? -1,
+        stdout: stdout.trim(),
+        stderr: stderr.trim(),
+        timedOut: killedByTimeout,
+        command: ['adb', ...adbArgs].join(' '),
+      });
+    });
+
+    child.on('error', (e) => {
+      if (timer) clearTimeout(timer);
+      resolve({
+        ok: false,
+        exitCode: -1,
+        stdout: '',
+        stderr: String(e?.message ?? e),
+        timedOut: false,
+        command: ['adb', ...adbArgs].join(' '),
+      });
+    });
+  });
+}
+
+// ─── Request helpers ───
 
 function getSerial(body) {
   const serial = typeof body?.serial === 'string' ? body.serial : '';
@@ -958,6 +1046,7 @@ startAdbStatePoller();
 
 server.listen(PORT, HOST, () => {
   log(`ftvrcm-proxy-server listening on http://${HOST}:${PORT}`);
+  log(`adb backend: adbkit (persistent connection)`);
   if (DEBUG) {
     log(`debug enabled: LOG_BODY=${LOG_BODY} LOG_ADB=${LOG_ADB}`);
     log(
