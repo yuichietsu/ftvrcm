@@ -1,5 +1,4 @@
 import http from 'node:http';
-import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import AdbModule from '@devicefarmer/adbkit';
@@ -627,20 +626,12 @@ async function runAdb(serial, args, requestId) {
   // 1) ensure connected/authorized (best-effort)
   await ensureAdbReady(serial, requestId);
 
-  // 2) execute command - detect if it's a shell command
-  let shellCmd;
-  if (args[0] === 'shell') {
-    shellCmd = args.length === 2 ? args[1] : args.slice(1).join(' ');
-  }
+  // 2) execute shell command via adbkit
+  const shellCmd = args[0] === 'shell'
+    ? (args.length === 2 ? args[1] : args.slice(1).join(' '))
+    : args.join(' ');
 
-  let result;
-  if (shellCmd != null) {
-    result = await runShellCommand(serial, shellCmd, requestId);
-  } else {
-    // Non-shell commands (e.g. get-state, connect) — shouldn't reach here normally,
-    // but fall back to spawn for safety
-    result = await runAdbOnceSpawn(serial, args, ADB_TIMEOUT_MS);
-  }
+  let result = await runShellCommand(serial, shellCmd, requestId);
 
   if (result.ok) {
     rememberAdbState(serial, 'device');
@@ -658,20 +649,11 @@ async function runAdb(serial, args, requestId) {
     if (shouldReauth(serial)) {
       await adbReauth(serial, requestId);
     }
-    // retry once
-    if (shellCmd != null) {
-      result = await runShellCommand(serial, shellCmd, requestId);
-    } else {
-      result = await runAdbOnceSpawn(serial, args, ADB_TIMEOUT_MS);
-    }
+    result = await runShellCommand(serial, shellCmd, requestId);
     if (result.ok) rememberAdbState(serial, 'device');
   } else if (kind === 'offline' || kind === 'not_found' || kind === 'connect_failed') {
     await adbConnect(serial, requestId);
-    if (shellCmd != null) {
-      result = await runShellCommand(serial, shellCmd, requestId);
-    } else {
-      result = await runAdbOnceSpawn(serial, args, ADB_TIMEOUT_MS);
-    }
+    result = await runShellCommand(serial, shellCmd, requestId);
     if (result.ok) rememberAdbState(serial, 'device');
   }
 
@@ -712,61 +694,7 @@ async function runAdbBinary(serial, args, requestId) {
   return result;
 }
 
-// ─── Fallback spawn for rare non-shell commands ───
 
-function runAdbOnceSpawn(serial, args, timeoutMs = ADB_TIMEOUT_MS) {
-  return new Promise((resolve) => {
-    const adbArgs = [];
-    if (serial) adbArgs.push('-s', serial);
-    adbArgs.push(...args);
-
-    const child = spawn('adb', adbArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
-
-    let stdout = '';
-    let stderr = '';
-    let killedByTimeout = false;
-
-    child.stdout.setEncoding('utf8');
-    child.stderr.setEncoding('utf8');
-
-    child.stdout.on('data', (d) => (stdout += d));
-    child.stderr.on('data', (d) => (stderr += d));
-
-    const timer =
-      timeoutMs > 0
-        ? setTimeout(() => {
-            killedByTimeout = true;
-            child.kill('SIGKILL');
-          }, timeoutMs)
-        : null;
-
-    child.on('close', (code) => {
-      if (timer) clearTimeout(timer);
-      resolve({
-        ok: code === 0 && !killedByTimeout,
-        exitCode: killedByTimeout ? -9 : code ?? -1,
-        stdout: stdout.trim(),
-        stderr: stderr.trim(),
-        timedOut: killedByTimeout,
-        command: ['adb', ...adbArgs].join(' '),
-        backend: 'spawn',
-      });
-    });
-
-    child.on('error', (e) => {
-      if (timer) clearTimeout(timer);
-      resolve({
-        ok: false,
-        exitCode: -1,
-        stdout: '',
-        stderr: String(e?.message ?? e),
-        timedOut: false,
-        command: ['adb', ...adbArgs].join(' '),
-        backend: 'spawn',
-      });
-    });
-  });
-}
 
 // ─── Request helpers ───
 
