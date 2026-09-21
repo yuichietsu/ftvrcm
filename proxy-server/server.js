@@ -424,6 +424,60 @@ async function pollAdbState(serial) {
   }
 }
 
+// ─── Event-driven device tracking via adbkit (replaces heavy polling) ───
+
+let deviceTrackerActive = false;
+
+function startDeviceTracker() {
+  adbClient.trackDevices()
+    .then((tracker) => {
+      deviceTrackerActive = true;
+      log(`${nowIso()} [tracker] adbkit trackDevices started (event-driven monitoring)`);
+
+      tracker.on('add', (device) => {
+        const state = device.type ?? 'device';
+        rememberAdbState(device.id, state);
+        if (DEBUG) {
+          log(`${nowIso()} [tracker] device add id=${device.id} state=${state}`);
+        }
+      });
+
+      tracker.on('remove', (device) => {
+        rememberAdbState(device.id, 'not_found');
+        if (DEBUG) {
+          log(`${nowIso()} [tracker] device remove id=${device.id}`);
+        }
+      });
+
+      tracker.on('change', (device) => {
+        const state = device.type ?? 'unknown';
+        rememberAdbState(device.id, state);
+        if (DEBUG) {
+          log(`${nowIso()} [tracker] device change id=${device.id} state=${state}`);
+        }
+      });
+
+      tracker.on('end', () => {
+        deviceTrackerActive = false;
+        log(`${nowIso()} [tracker] trackDevices ended, will retry in 5s`);
+        setTimeout(startDeviceTracker, 5000);
+      });
+
+      tracker.on('error', (err) => {
+        deviceTrackerActive = false;
+        log(`${nowIso()} [tracker] trackDevices error=${String(err?.message ?? err)}, will retry in 5s`);
+        setTimeout(startDeviceTracker, 5000);
+      });
+    })
+    .catch((err) => {
+      deviceTrackerActive = false;
+      log(`${nowIso()} [tracker] trackDevices failed to start: ${String(err?.message ?? err)}, will retry in 5s`);
+      setTimeout(startDeviceTracker, 5000);
+    });
+}
+
+// ─── Fallback polling (kept for environments where trackDevices may not work) ───
+
 let pollerRunning = false;
 
 function startAdbStatePoller() {
@@ -501,6 +555,7 @@ async function runShellCommand(serial, command, requestId, timeoutMs = ADB_TIMEO
       stderr: '',
       timedOut: false,
       command: fakeCommand,
+      backend: 'adbkit',
     };
   } catch (err) {
     const message = String(err?.message ?? err);
@@ -512,6 +567,7 @@ async function runShellCommand(serial, command, requestId, timeoutMs = ADB_TIMEO
       stderr: message,
       timedOut,
       command: fakeCommand,
+      backend: 'adbkit',
     };
   }
 }
@@ -535,6 +591,7 @@ async function runScreencap(serial, requestId, timeoutMs = ADB_TIMEOUT_MS) {
       stderr: '',
       timedOut: false,
       command: fakeCommand,
+      backend: 'adbkit',
     };
   } catch (err) {
     const message = String(err?.message ?? err);
@@ -546,6 +603,7 @@ async function runScreencap(serial, requestId, timeoutMs = ADB_TIMEOUT_MS) {
       stderr: message,
       timedOut,
       command: fakeCommand,
+      backend: 'adbkit',
     };
   }
 }
@@ -691,6 +749,7 @@ function runAdbOnceSpawn(serial, args, timeoutMs = ADB_TIMEOUT_MS) {
         stderr: stderr.trim(),
         timedOut: killedByTimeout,
         command: ['adb', ...adbArgs].join(' '),
+        backend: 'spawn',
       });
     });
 
@@ -703,6 +762,7 @@ function runAdbOnceSpawn(serial, args, timeoutMs = ADB_TIMEOUT_MS) {
         stderr: String(e?.message ?? e),
         timedOut: false,
         command: ['adb', ...adbArgs].join(' '),
+        backend: 'spawn',
       });
     });
   });
@@ -737,7 +797,7 @@ const server = http.createServer(async (req, res) => {
         const ms = Date.now() - startedAt;
         const extra =
           body && typeof body === 'object' && 'exitCode' in body
-            ? ` exitCode=${body.exitCode} ok=${body.ok}`
+            ? ` exitCode=${body.exitCode} ok=${body.ok} backend=${body.backend ?? 'n/a'}`
             : '';
         log(`${nowIso()} [${requestId}] ${statusCode} ${req.method} ${url.pathname} ${ms}ms from=${req.socket.remoteAddress}${extra}`);
       }
@@ -1042,11 +1102,12 @@ server.on('connection', (socket) => {
   }
 });
 
+startDeviceTracker();
 startAdbStatePoller();
 
 server.listen(PORT, HOST, () => {
   log(`ftvrcm-proxy-server listening on http://${HOST}:${PORT}`);
-  log(`adb backend: adbkit (persistent connection)`);
+  log(`adb backend: adbkit (persistent connection), device tracking: event-driven + poll fallback`);
   if (DEBUG) {
     log(`debug enabled: LOG_BODY=${LOG_BODY} LOG_ADB=${LOG_ADB}`);
     log(
