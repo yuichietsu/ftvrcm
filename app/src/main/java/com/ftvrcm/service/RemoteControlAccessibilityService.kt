@@ -1178,18 +1178,21 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         val minSide = minOf(w, h)
         val distancePercent = settings.getMousePinchDistancePercent()
         val baseDistance = ((minSide * (distancePercent / 100.0))).toInt().coerceIn(40, minSide - 1)
-        val distance = (baseDistance * distanceScale).toInt().coerceIn(40, minSide - 1)
-        val minGap = (distance * 0.35f).toInt().coerceAtLeast(24)
-        val half = (distance / 2).coerceAtLeast(minGap + 1)
+        // 中心に近い位置の距離（innerOffset）は倍率に関わらず一定
+        val innerOffset = (baseDistance * 0.15f).toInt().coerceIn(24, (baseDistance / 3).coerceAtLeast(25))
+        // そこから遠ざかる移動距離（travel）が倍率（distanceScale）に応じて拡大される
+        val baseTravel = ((baseDistance / 2) - innerOffset).coerceAtLeast(20)
+        val travel = (baseTravel * distanceScale).toInt().coerceAtMost((minSide / 2) - innerOffset - 1)
+        val outerOffset = innerOffset + travel
 
         val c = cursor.center()
         fun clampX(x: Int) = x.coerceIn(0, w - 1)
         fun clampY(y: Int) = y.coerceIn(0, h - 1)
 
         val (startOffset, endOffset) = if (action == PinchAction.IN) {
-            half to minGap
+            outerOffset to innerOffset
         } else {
-            minGap to half
+            innerOffset to outerOffset
         }
 
         val x1Start = clampX(c.x - startOffset)
@@ -1223,7 +1226,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
                 Log.i(
                     tag,
-                    "pinch via accessibility action=$action center=(${c.x},${c.y}) distance=$distance (${distancePercent}%)",
+                    "pinch via accessibility action=$action center=(${c.x},${c.y}) travel=$travel (scale=$distanceScale) inner=$innerOffset outer=$outerOffset",
                 )
             }
 
@@ -1253,7 +1256,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
                 Log.i(
                     tag,
-                    "pinch via Shizuku action=$action center=(${c.x},${c.y}) distance=$distance (${distancePercent}%)",
+                    "pinch via Shizuku action=$action center=(${c.x},${c.y}) travel=$travel (scale=$distanceScale) inner=$innerOffset outer=$outerOffset",
                 )
             }
 
@@ -1297,7 +1300,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
                 Log.i(
                     tag,
-                    "pinch via proxy action=$action center=(${c.x},${c.y}) distance=$distance (${distancePercent}%)",
+                    "pinch via proxy action=$action center=(${c.x},${c.y}) travel=$travel (scale=$distanceScale) inner=$innerOffset outer=$outerOffset",
                 )
             }
         }
@@ -1453,8 +1456,14 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                     "swipe_down" -> dispatchScrollOrSwipe(SwipeAction.DOWN, 1.0f)
                     "swipe_left" -> dispatchScrollOrSwipe(SwipeAction.LEFT, 1.0f)
                     "swipe_right" -> dispatchScrollOrSwipe(SwipeAction.RIGHT, 1.0f)
-                    "pinch_in" -> dispatchPinch(PinchAction.IN, 1.0f)
-                    "pinch_out" -> dispatchPinch(PinchAction.OUT, 1.0f)
+                    "pinch_in" -> {
+                        val scale = intent.getFloatExtra("scale", 1.0f)
+                        dispatchPinch(PinchAction.IN, scale)
+                    }
+                    "pinch_out" -> {
+                        val scale = intent.getFloatExtra("scale", 1.0f)
+                        dispatchPinch(PinchAction.OUT, scale)
+                    }
                 }
             }
         }
