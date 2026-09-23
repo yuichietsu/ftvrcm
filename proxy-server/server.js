@@ -87,10 +87,6 @@ const ADB_READY_CACHE_MS = Math.max(
   0,
   Math.round(getArgNum('--adb-ready-cache-ms', envNum('ADB_READY_CACHE_MS', 0))),
 );
-const ADB_STATE_POLL_MS = Math.max(
-  0,
-  Math.round(getArgNum('--adb-state-poll-ms', envNum('ADB_STATE_POLL_MS', 0))),
-);
 const ADB_REAUTH_COOLDOWN_MS = Math.max(
   0,
   Math.round(getArgNum('--adb-reauth-cooldown-ms', envNum('ADB_REAUTH_COOLDOWN_MS', 10 * 60_000))),
@@ -232,8 +228,6 @@ function getDeviceState(serial) {
       lastState: '',
       lastStateAt: 0,
       lastOkAt: 0,
-      lastPollAt: 0,
-      polling: false,
       lastUsedAt: 0,
     });
   }
@@ -382,48 +376,8 @@ async function adbReauth(serial, requestId) {
   }
 }
 
-async function pollAdbState(serial) {
-  const st = getDeviceState(serial);
-  if (st.polling) return;
 
-  st.polling = true;
-  st.lastPollAt = Date.now();
 
-  const requestId = `bg-${Math.random().toString(16).slice(2, 8)}`;
-
-  try {
-    const state = await adbGetState(serial);
-
-    if (DEBUG && state !== 'device') {
-      log(`${nowIso()} [${requestId}] adb poll state=${state} serial=${serial}`);
-    }
-
-    if (state === 'device') return;
-
-    if (state === 'unauthorized') {
-      recordAuthFailure(serial);
-      if (shouldReauth(serial)) {
-        await adbReauth(serial, requestId);
-      }
-      return;
-    }
-
-    if (state === 'offline' || state === 'not_found' || state === 'unknown') {
-      await adbConnect(serial, requestId);
-      const after = await adbGetState(serial);
-      if (after === 'unauthorized') {
-        recordAuthFailure(serial);
-        if (shouldReauth(serial)) {
-          await adbReauth(serial, requestId);
-        }
-      }
-    }
-  } finally {
-    st.polling = false;
-  }
-}
-
-// ─── Event-driven device tracking via adbkit (replaces heavy polling) ───
 
 let deviceTrackerActive = false;
 
@@ -475,33 +429,7 @@ function startDeviceTracker() {
     });
 }
 
-// ─── Fallback polling (kept for environments where trackDevices may not work) ───
 
-let pollerRunning = false;
-
-function startAdbStatePoller() {
-  if (ADB_STATE_POLL_MS <= 0) return;
-
-  setInterval(() => {
-    if (pollerRunning) return;
-    pollerRunning = true;
-
-    (async () => {
-      for (const serial of deviceState.keys()) {
-        // eslint-disable-next-line no-await-in-loop
-        await pollAdbState(serial);
-      }
-    })()
-      .catch((e) => {
-        if (DEBUG) {
-          log(`${nowIso()} adb poll error=${JSON.stringify(String(e?.message ?? e))}`);
-        }
-      })
-      .finally(() => {
-        pollerRunning = false;
-      });
-  }, ADB_STATE_POLL_MS);
-}
 
 async function ensureAdbReady(serial, requestId) {
   const st = getDeviceState(serial);
@@ -1031,18 +959,16 @@ server.on('connection', (socket) => {
 });
 
 startDeviceTracker();
-startAdbStatePoller();
 
 server.listen(PORT, HOST, () => {
   log(`ftvrcm-proxy-server listening on http://${HOST}:${PORT}`);
-  log(`adb backend: adbkit (persistent connection), device tracking: event-driven + poll fallback`);
+  log(`adb backend: adbkit (persistent connection), device tracking: event-driven (trackDevices)`);
   if (DEBUG) {
     log(`debug enabled: LOG_BODY=${LOG_BODY} LOG_ADB=${LOG_ADB}`);
     log(
       `adb knobs: TIMEOUT_MS=${ADB_TIMEOUT_MS} CONNECT_TIMEOUT_MS=${ADB_CONNECT_TIMEOUT_MS} CONNECT_COOLDOWN_MS=${ADB_CONNECT_COOLDOWN_MS} ` +
         `AUTH_FAIL_THRESHOLD=${ADB_AUTH_FAIL_THRESHOLD} AUTH_FAIL_WINDOW_MS=${ADB_AUTH_FAIL_WINDOW_MS} ` +
-        `REAUTH_COOLDOWN_MS=${ADB_REAUTH_COOLDOWN_MS} REAUTH_MAX_PER_HOUR=${ADB_REAUTH_MAX_PER_HOUR} READY_CACHE_MS=${ADB_READY_CACHE_MS} ` +
-        `STATE_POLL_MS=${ADB_STATE_POLL_MS}`,
+        `REAUTH_COOLDOWN_MS=${ADB_REAUTH_COOLDOWN_MS} REAUTH_MAX_PER_HOUR=${ADB_REAUTH_MAX_PER_HOUR} READY_CACHE_MS=${ADB_READY_CACHE_MS}`,
     );
   }
   if (!DEFAULT_SERIAL) {
