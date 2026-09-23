@@ -32,7 +32,13 @@ BACKダブルタップで割り当てなし、5秒でキャンセル（BACK単�
     <string name="prefs_touch_visual_feedback_summary">タップ、スワイプ、スクロールが発生したことを視覚的にお知らせします</string>
 
     <string name="prefs_use_shizuku">Shizukuを使用する（推奨）</string>
-    <string name="prefs_use_shizuku_summary">Shizukuの特権Binder経由で即時注入し、タッチ操作の応答性を高速化します</string>
+    <string name="prefs_use_shizuku_summary">スマートフォンのような自然なスワイプや2本指ピンチ（ズーム）操作を超低遅延・高精度にエミュレーションします</string>
+
+    <string name="prefs_enable_accessibility_shizuku">Shizukuでアクセシビリティを有効化</string>
+    <string name="prefs_enable_accessibility_shizuku_summary">Shizuku特権シェル経由でアクセシビリティサービスを即座に有効化します</string>
+    <string name="prefs_enable_accessibility_shizuku_success">アクセシビリティサービスを有効化しました</string>
+    <string name="prefs_enable_accessibility_shizuku_failed">有効化に失敗しました: %1$s</string>
+    <string name="prefs_shizuku_not_ready">Shizukuが未起動または権限がありません</string>
 
     <string name="prefs_mouse_key_up">カーソル上移動</string>
     <string name="prefs_mouse_key_down">カーソル下移動</string>
@@ -64,14 +70,18 @@ BACKダブルタップで割り当てなし、5秒でキャンセル（BACK単�
     <string name="prefs_category_shizuku">Shizuku（特権Binder）</string>
     <string name="prefs_shizuku_service_status">Shizukuサービス状態</string>
     <string name="prefs_shizuku_permission_status">Shizuku権限状態</string>
+    <string name="prefs_shizuku_request_permission">Shizuku権限をリクエスト</string>
+    <string name="prefs_shizuku_request_permission_summary">許可ダイアログを表示してftvrcmへのShizuku利用を許可します</string>
     <string name="prefs_shizuku_open_app">Shizukuアプリを開く</string>
-    <string name="prefs_shizuku_open_app_summary">Shizukuアプリを起動してサービス状態を確認します</string>
+    <string name="prefs_shizuku_open_app_summary">Shizukuアプリを起動し、「承認されたアプリケーション」からftvrcmを許可してください</string>
+    <string name="prefs_shizuku_open_app_dialog_title">Shizukuアプリでの許可手順</string>
+    <string name="prefs_shizuku_open_app_dialog_message">Shizukuアプリが起動したら、画面内の「承認されたアプリケーション」を開き、ftvrcmをONにしてください。</string>
     <string name="prefs_shizuku_test_injection">Shizukuタッチ注入テスト</string>
     <string name="prefs_shizuku_test_injection_summary">特権Binder経由でInputManagerへの疎通を確認します</string>
     <string name="prefs_shizuku_status_running">起動中（接続OK）</string>
     <string name="prefs_shizuku_status_stopped">停止中（Shizukuアプリで起動してください）</string>
     <string name="prefs_shizuku_permission_granted">許可済み（特権Binder利用可能）</string>
-    <string name="prefs_shizuku_permission_denied">未許可（Shizukuアプリで許可してください）</string>
+    <string name="prefs_shizuku_permission_denied">未許可（リクエストまたはShizukuアプリで許可してください）</string>
 
     <string name="prefs_screen_mouse_title">タッチ操作の詳細設定</string>
     <string name="prefs_screen_mouse_summary">カーソル設定と動作チューニング</string>

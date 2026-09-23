@@ -30,6 +30,11 @@
             android:defaultValue="LONG_PRESS"
             app:useSimpleSummaryProvider="true" />
 
+        <Preference
+            android:key="enable_accessibility_shizuku"
+            android:title="@string/prefs_enable_accessibility_shizuku"
+            android:summary="@string/prefs_enable_accessibility_shizuku_summary" />
+
     </PreferenceCategory>
 
     <!-- タッチ操作方式 -->
@@ -58,9 +63,19 @@
                     android:title="@string/prefs_shizuku_permission_status" />
 
                 <Preference
+                    android:key="shizuku_request_permission"
+                    android:title="@string/prefs_shizuku_request_permission"
+                    android:summary="@string/prefs_shizuku_request_permission_summary" />
+
+                <Preference
                     android:key="shizuku_open_app"
                     android:title="@string/prefs_shizuku_open_app"
                     android:summary="@string/prefs_shizuku_open_app_summary" />
+
+                <Preference
+                    android:key="shizuku_enable_accessibility"
+                    android:title="@string/prefs_enable_accessibility_shizuku"
+                    android:summary="@string/prefs_enable_accessibility_shizuku_summary" />
 
                 <Preference
                     android:key="shizuku_test_injection"

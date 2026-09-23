@@ -61,6 +61,62 @@ class ShizukuTouchInjector(
                 false
             }
         }
+
+        fun requestPermission(requestCode: Int) {
+            try {
+                if (isShizukuAvailable() && !isPermissionGranted()) {
+                    Shizuku.requestPermission(requestCode)
+                }
+            } catch (t: Throwable) {
+                Log.w("ShizukuTouchInjector", "Failed to request Shizuku permission", t)
+            }
+        }
+
+        /**
+         * Shizuku 特権シェルを用いて RemoteControlAccessibilityService を有効化する。
+         */
+        fun enableAccessibilityService(): Pair<Boolean, String> {
+            if (!isPermissionGranted()) {
+                return Pair(false, "Shizukuが未起動または権限がありません")
+            }
+            return try {
+                val targetService = "com.ftvrcm/com.ftvrcm.service.RemoteControlAccessibilityService"
+                val cmd = """
+                    current=${'$'}(settings get secure enabled_accessibility_services)
+                    if [ -z "${'$'}current" ] || [ "${'$'}current" = "null" ]; then
+                        settings put secure enabled_accessibility_services "$targetService"
+                    elif ! echo "${'$'}current" | grep -q "$targetService"; then
+                        settings put secure enabled_accessibility_services "${'$'}current:$targetService"
+                    fi
+                    settings put secure accessibility_enabled 1
+                """.trimIndent()
+
+                val newProcessMethod = Shizuku::class.java.getDeclaredMethod(
+                    "newProcess",
+                    Array<String>::class.java,
+                    Array<String>::class.java,
+                    String::class.java
+                )
+                newProcessMethod.isAccessible = true
+                val process = newProcessMethod.invoke(
+                    null,
+                    arrayOf("sh", "-c", cmd),
+                    null,
+                    null
+                ) as Process
+
+                val exitCode = process.waitFor()
+                if (exitCode == 0) {
+                    Pair(true, "アクセシビリティサービスを有効化しました")
+                } else {
+                    val error = process.errorStream.bufferedReader().readText()
+                    Pair(false, "有効化に失敗しました (code: $exitCode): $error")
+                }
+            } catch (e: Exception) {
+                Log.e("ShizukuTouchInjector", "Failed to enable accessibility service", e)
+                Pair(false, "エラー: ${e.message}")
+            }
+        }
     }
 
     @Synchronized

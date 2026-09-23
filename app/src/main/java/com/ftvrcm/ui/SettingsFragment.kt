@@ -89,6 +89,24 @@ class SettingsFragment : PreferenceFragmentCompat() {
             true
         }
 
+        val enableA11yTop = findPreference<Preference>("enable_accessibility_shizuku")
+        enableA11yTop?.setOnPreferenceClickListener {
+            enableAccessibilityViaShizuku()
+            true
+        }
+
+        val enableA11ySub = findPreference<Preference>("shizuku_enable_accessibility")
+        enableA11ySub?.setOnPreferenceClickListener {
+            enableAccessibilityViaShizuku()
+            true
+        }
+
+        val requestPermPref = findPreference<Preference>("shizuku_request_permission")
+        requestPermPref?.setOnPreferenceClickListener {
+            requestShizukuPermission()
+            true
+        }
+
         val shizukuOpenApp = findPreference<Preference>("shizuku_open_app")
         shizukuOpenApp?.setOnPreferenceClickListener {
             openShizukuApp()
@@ -180,9 +198,13 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
     private fun refreshShizukuPreferences() {
         val isShizuku = SettingsStore(requireContext()).isUseShizuku()
+        val a11yEnabled = isAccessibilityServiceEnabled()
 
         // トップレベル: Shizuku設定サブスクリーンの表示/非表示を切り替える
         findPreference<Preference>("screen_shizuku")?.isVisible = isShizuku
+
+        // トップレベル: アクセシビリティ有効化（未有効かつShizuku使用時のみ表示）
+        findPreference<Preference>("enable_accessibility_shizuku")?.isVisible = !a11yEnabled && isShizuku
 
         val isAlive = ShizukuTouchInjector.isShizukuAvailable()
         val isGranted = ShizukuTouchInjector.isPermissionGranted()
@@ -195,12 +217,67 @@ class SettingsFragment : PreferenceFragmentCompat() {
             if (isGranted) getString(R.string.prefs_shizuku_permission_granted)
             else getString(R.string.prefs_shizuku_permission_denied)
 
+        findPreference<Preference>("shizuku_request_permission")?.apply {
+            isEnabled = isAlive && !isGranted
+            isVisible = !isGranted
+        }
+
+        findPreference<Preference>("shizuku_enable_accessibility")?.apply {
+            isEnabled = isAlive && isGranted && !a11yEnabled
+            isVisible = !a11yEnabled
+        }
+
         findPreference<Preference>("shizuku_test_injection")?.isEnabled = isAlive && isGranted
 
         refreshDashboard()
     }
 
+    private fun requestShizukuPermission() {
+        if (!ShizukuTouchInjector.isShizukuAvailable()) {
+            Toast.makeText(requireContext(), getString(R.string.prefs_shizuku_status_stopped), Toast.LENGTH_LONG).show()
+            return
+        }
+        ShizukuTouchInjector.requestPermission(1001)
+    }
+
+    private fun enableAccessibilityViaShizuku() {
+        if (!ShizukuTouchInjector.isShizukuAvailable()) {
+            Toast.makeText(requireContext(), getString(R.string.prefs_shizuku_status_stopped), Toast.LENGTH_LONG).show()
+            return
+        }
+        if (!ShizukuTouchInjector.isPermissionGranted()) {
+            Toast.makeText(requireContext(), getString(R.string.prefs_shizuku_not_ready), Toast.LENGTH_LONG).show()
+            requestShizukuPermission()
+            return
+        }
+        val context = requireContext()
+        Thread {
+            val (success, message) = ShizukuTouchInjector.enableAccessibilityService()
+            activity?.runOnUiThread {
+                if (!isAdded) return@runOnUiThread
+                if (success) {
+                    Toast.makeText(context, getString(R.string.prefs_enable_accessibility_shizuku_success), Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, getString(R.string.prefs_enable_accessibility_shizuku_failed, message), Toast.LENGTH_LONG).show()
+                }
+                refreshRequiredStateSummary()
+                refreshShizukuPreferences()
+            }
+        }.start()
+    }
+
     private fun openShizukuApp() {
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.prefs_shizuku_open_app_dialog_title)
+            .setMessage(R.string.prefs_shizuku_open_app_dialog_message)
+            .setPositiveButton(R.string.prefs_shizuku_open_app) { _, _ ->
+                launchShizukuActivity()
+            }
+            .setNegativeButton(R.string.prefs_common_cancel, null)
+            .show()
+    }
+
+    private fun launchShizukuActivity() {
         val pm = requireContext().packageManager
         var intent = pm.getLaunchIntentForPackage("moe.shizuku.privileged.api")
         if (intent == null) {
