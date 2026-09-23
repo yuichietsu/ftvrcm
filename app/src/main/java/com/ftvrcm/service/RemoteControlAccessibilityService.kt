@@ -217,7 +217,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
         if (KeyCaptureState.isCapturing) return false
-        val keyCode = event.keyCode
 
         // Keep mode in sync with preferences even if they were changed externally (e.g. via ADB).
         syncModeFromSettingsIfNeeded()
@@ -328,12 +327,15 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             matchesAssignedKey(mouseKeyPinchOut, event) ||
             matchesAssignedKey(mouseKeyCursorDpadToggle, event)
 
-        // Toggle cursor/dpad mode.
+        // Toggle cursor/dpad mode (remote control passthrough toggle).
         if (matchesAssignedKey(mouseKeyCursorDpadToggle, event)) {
             when (event.action) {
                 KeyEvent.ACTION_DOWN -> {
                     if (event.repeatCount > 0) return true
                     isDpadMode = !isDpadMode
+                    clearMoveRepeat()
+                    clearPendingTapKey()
+                    clearPendingScrollRepeat()
                     updateCursorStyleForInputMode()
                     return true
                 }
@@ -342,15 +344,11 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             }
         }
 
-        // In DPAD mode, let physical DPAD keys behave as normal system navigation.
-        if (isDpadMode && (keyCode == KeyEvent.KEYCODE_DPAD_UP ||
-                keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
-                keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
-                keyCode == KeyEvent.KEYCODE_DPAD_RIGHT ||
-                keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
-                keyCode == KeyEvent.KEYCODE_BACK)) {
+        // In DPAD mode (remote control passthrough mode), pass through all other keys to the system.
+        if (isDpadMode) {
             clearMoveRepeat()
             clearPendingTapKey()
+            clearPendingScrollRepeat()
             return false
         }
 

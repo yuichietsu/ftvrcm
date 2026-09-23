@@ -60,9 +60,9 @@ class SettingsStore(context: Context) {
             putString(SettingsKeys.MOUSE_KEY_SCROLL_LEFT, "89")
             putString(SettingsKeys.MOUSE_KEY_SCROLL_RIGHT, "90")
 
-            // Pinch keys (default: unassigned)
-            putString(SettingsKeys.MOUSE_KEY_PINCH_IN, "0")
-            putString(SettingsKeys.MOUSE_KEY_PINCH_OUT, "0")
+            // Pinch keys (default: ズームアウト(ピンチイン)=85, ズームイン(ピンチアウト)=4)
+            putString(SettingsKeys.MOUSE_KEY_PINCH_IN, "85")
+            putString(SettingsKeys.MOUSE_KEY_PINCH_OUT, "4")
 
             // Swipe/scroll tuning
             putInt(SettingsKeys.MOUSE_SWIPE_DISTANCE_PERCENT, 28)
@@ -73,8 +73,6 @@ class SettingsStore(context: Context) {
             // Toggle cursor/dpad behavior (default: MENU)
             // NOTE: default uses the same key as mode toggle for convenience.
             putString(SettingsKeys.MOUSE_KEY_CURSOR_DPAD_TOGGLE, "82")
-
-
 
             // Cursor start position in mouse mode
             putString(SettingsKeys.MOUSE_CURSOR_START_POSITION, "center")
@@ -94,6 +92,8 @@ class SettingsStore(context: Context) {
                     "167:mouse_scroll_down",
                     "89:mouse_scroll_left",
                     "90:mouse_scroll_right",
+                    "85:mouse_pinch_in",
+                    "4:mouse_pinch_out",
                 ),
             )
         }
@@ -162,8 +162,8 @@ class SettingsStore(context: Context) {
     fun getMouseKeyScrollLeft(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_LEFT, "89")?.toIntOrNull() ?: 89
     fun getMouseKeyScrollRight(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_SCROLL_RIGHT, "90")?.toIntOrNull() ?: 90
 
-    fun getMouseKeyPinchIn(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_PINCH_IN, "0")?.toIntOrNull() ?: 0
-    fun getMouseKeyPinchOut(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_PINCH_OUT, "0")?.toIntOrNull() ?: 0
+    fun getMouseKeyPinchIn(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_PINCH_IN, "85")?.toIntOrNull() ?: 85
+    fun getMouseKeyPinchOut(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_PINCH_OUT, "4")?.toIntOrNull() ?: 4
 
     fun getMouseSwipeDistancePercent(): Int =
         prefs.getInt(SettingsKeys.MOUSE_SWIPE_DISTANCE_PERCENT, 28).coerceIn(5, 95)
