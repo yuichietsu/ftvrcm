@@ -121,6 +121,16 @@ class CursorOverlay(private val context: Context) {
         feedbackView?.addSwipeTrail(x1 = x1, y1 = y1, x2 = x2, y2 = y2)
     }
 
+    fun showPinchFeedback(
+        x1Start: Int, y1Start: Int, x1End: Int, y1End: Int,
+        x2Start: Int, y2Start: Int, x2End: Int, y2End: Int,
+    ) {
+        feedbackView?.addPinchTrail(
+            x1Start = x1Start, y1Start = y1Start, x1End = x1End, y1End = y1End,
+            x2Start = x2Start, y2Start = y2Start, x2End = x2End, y2End = y2End,
+        )
+    }
+
     fun showPinchFeedback(isZoomOut: Boolean) {
         val c = center()
         feedbackView?.addPinchEffect(c.x, c.y, isZoomOut = isZoomOut)
@@ -407,34 +417,45 @@ class CursorOverlay(private val context: Context) {
         }
 
         private inner class PinchEffect(
-            private val cx: Float,
-            private val cy: Float,
-            private val isZoomOut: Boolean,
+            private val x1Start: Float,
+            private val y1Start: Float,
+            private val x1End: Float,
+            private val y1End: Float,
+            private val x2Start: Float,
+            private val y2Start: Float,
+            private val x2End: Float,
+            private val y2End: Float,
             override val startedAtMs: Long,
             override val durationMs: Long,
         ) : Effect {
             override fun draw(canvas: Canvas, nowMs: Long) {
                 val t = ((nowMs - startedAtMs).toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
 
+                // Keep the trace visible, then fade out near the end.
                 val fade = when {
-                    t < 0.7f -> 1f
-                    else -> (1f - ((t - 0.7f) / 0.3f)).coerceIn(0f, 1f)
-                }
-
-                val startRadius = dp(18f)
-                val endRadius = dp(64f)
-                val radius = if (isZoomOut) {
-                    endRadius - (endRadius - startRadius) * t
-                } else {
-                    startRadius + (endRadius - startRadius) * t
+                    t < 0.75f -> 1f
+                    else -> (1f - ((t - 0.75f) / 0.25f)).coerceIn(0f, 1f)
                 }
 
                 val alpha = (fade * 255).toInt().coerceIn(0, 255)
-                pinchRingOuterPaint.alpha = alpha
-                pinchRingInnerPaint.alpha = alpha
+                traceOuterPaint.alpha = alpha
+                traceInnerPaint.alpha = alpha
 
-                canvas.drawCircle(cx, cy, radius, pinchRingOuterPaint)
-                canvas.drawCircle(cx, cy, radius, pinchRingInnerPaint)
+                // Draw trace lines for both fingers
+                canvas.drawLine(x1Start, y1Start, x1End, y1End, traceOuterPaint)
+                canvas.drawLine(x1Start, y1Start, x1End, y1End, traceInnerPaint)
+
+                canvas.drawLine(x2Start, y2Start, x2End, y2End, traceOuterPaint)
+                canvas.drawLine(x2Start, y2Start, x2End, y2End, traceInnerPaint)
+
+                // Animate moving dots for both fingers
+                val p1x = x1Start + (x1End - x1Start) * t
+                val p1y = y1Start + (y1End - y1Start) * t
+                val p2x = x2Start + (x2End - x2Start) * t
+                val p2y = y2Start + (y2End - y2Start) * t
+
+                drawMovingDot(canvas, p1x, p1y, alpha)
+                drawMovingDot(canvas, p2x, p2y, alpha)
             }
         }
 
@@ -469,18 +490,6 @@ class CursorOverlay(private val context: Context) {
             strokeWidth = dp(2.2f)
         }
 
-        private val pinchRingOuterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            color = 0xFFFFFFFF.toInt()
-            strokeWidth = dp(4.2f)
-        }
-
-        private val pinchRingInnerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            color = 0xFF000000.toInt()
-            strokeWidth = dp(2.2f)
-        }
-
         fun addSwipeTrail(x1: Int, y1: Int, x2: Int, y2: Int) {
             val now = SystemClock.uptimeMillis()
             effects.addLast(
@@ -496,18 +505,46 @@ class CursorOverlay(private val context: Context) {
             invalidate()
         }
 
-        fun addPinchEffect(centerX: Int, centerY: Int, isZoomOut: Boolean) {
+        fun addPinchTrail(
+            x1Start: Int, y1Start: Int, x1End: Int, y1End: Int,
+            x2Start: Int, y2Start: Int, x2End: Int, y2End: Int,
+        ) {
             val now = SystemClock.uptimeMillis()
             effects.addLast(
                 PinchEffect(
-                    cx = centerX.toFloat(),
-                    cy = centerY.toFloat(),
-                    isZoomOut = isZoomOut,
+                    x1Start = x1Start.toFloat(),
+                    y1Start = y1Start.toFloat(),
+                    x1End = x1End.toFloat(),
+                    y1End = y1End.toFloat(),
+                    x2Start = x2Start.toFloat(),
+                    y2Start = y2Start.toFloat(),
+                    x2End = x2End.toFloat(),
+                    y2End = y2End.toFloat(),
                     startedAtMs = now,
-                    durationMs = 260L,
+                    durationMs = 240L,
                 ),
             )
             invalidate()
+        }
+
+        fun addPinchEffect(centerX: Int, centerY: Int, isZoomOut: Boolean) {
+            val span = dp(70f)
+            val minGap = dp(20f)
+            val (startOffset, endOffset) = if (isZoomOut) {
+                span to minGap
+            } else {
+                minGap to span
+            }
+            addPinchTrail(
+                x1Start = (centerX - startOffset).toInt(),
+                y1Start = centerY,
+                x1End = (centerX - endOffset).toInt(),
+                y1End = centerY,
+                x2Start = (centerX + startOffset).toInt(),
+                y2Start = centerY,
+                x2End = (centerX + endOffset).toInt(),
+                y2End = centerY,
+            )
         }
 
         override fun onDraw(canvas: Canvas) {

@@ -1215,7 +1215,10 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 }
 
                 if (settings.isTouchVisualFeedbackEnabled()) {
-                    cursor.showPinchFeedback(isZoomOut = action == PinchAction.OUT)
+                    cursor.showPinchFeedback(
+                        x1Start = x1Start, y1Start = y1Start, x1End = x1End, y1End = y1End,
+                        x2Start = x2Start, y2Start = y2Start, x2End = x2End, y2End = y2End,
+                    )
                 }
 
                 Log.i(
@@ -1226,7 +1229,10 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
             EmulationMethod.SHIZUKU -> {
                 if (settings.isTouchVisualFeedbackEnabled()) {
-                    cursor.showPinchFeedback(isZoomOut = action == PinchAction.OUT)
+                    cursor.showPinchFeedback(
+                        x1Start = x1Start, y1Start = y1Start, x1End = x1End, y1End = y1End,
+                        x2Start = x2Start, y2Start = y2Start, x2End = x2End, y2End = y2End,
+                    )
                 }
 
                 shizukuExecutor.execute {
@@ -1283,7 +1289,10 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 )
 
                 if (accepted && settings.isTouchVisualFeedbackEnabled()) {
-                    cursor.showPinchFeedback(isZoomOut = action == PinchAction.OUT)
+                    cursor.showPinchFeedback(
+                        x1Start = x1Start, y1Start = y1Start, x1End = x1End, y1End = y1End,
+                        x2Start = x2Start, y2Start = y2Start, x2End = x2End, y2End = y2End,
+                    )
                 }
 
                 Log.i(
