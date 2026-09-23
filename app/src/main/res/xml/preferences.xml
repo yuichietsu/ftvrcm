@@ -30,14 +30,9 @@
             android:defaultValue="LONG_PRESS"
             app:useSimpleSummaryProvider="true" />
 
-        <Preference
-            android:key="enable_accessibility_shizuku"
-            android:title="@string/prefs_enable_accessibility_shizuku"
-            android:summary="@string/prefs_enable_accessibility_shizuku_summary" />
-
     </PreferenceCategory>
 
-    <!-- タッチ操作方式 -->
+    <!-- 高度なタッチ操作（Shizuku） -->
     <PreferenceCategory android:title="@string/prefs_category_mouse">
 
         <SwitchPreferenceCompat
@@ -46,7 +41,11 @@
             android:summary="@string/prefs_use_shizuku_summary"
             android:defaultValue="true" />
 
-        <!-- Shizuku設定サブスクリーン（Shizuku使用時のみ表示） -->
+        <Preference
+            android:key="shizuku_service_status"
+            android:title="@string/prefs_shizuku_service_status" />
+
+        <!-- Shizuku設定サブスクリーン -->
         <PreferenceScreen
             android:key="screen_shizuku"
             android:title="@string/prefs_screen_shizuku_title"
@@ -55,22 +54,8 @@
             <PreferenceCategory android:title="@string/prefs_category_shizuku">
 
                 <Preference
-                    android:key="shizuku_service_status"
-                    android:title="@string/prefs_shizuku_service_status" />
-
-                <Preference
-                    android:key="shizuku_permission_status"
-                    android:title="@string/prefs_shizuku_permission_status" />
-
-                <Preference
-                    android:key="shizuku_request_permission"
-                    android:title="@string/prefs_shizuku_request_permission"
-                    android:summary="@string/prefs_shizuku_request_permission_summary" />
-
-                <Preference
-                    android:key="shizuku_open_app"
-                    android:title="@string/prefs_shizuku_open_app"
-                    android:summary="@string/prefs_shizuku_open_app_summary" />
+                    android:key="shizuku_permission"
+                    android:title="@string/prefs_shizuku_permission_title" />
 
                 <Preference
                     android:key="shizuku_enable_accessibility"

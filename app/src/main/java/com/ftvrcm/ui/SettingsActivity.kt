@@ -30,6 +30,14 @@ class SettingsActivity : AppCompatActivity(),
         }
     }
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            val currentFragment = supportFragmentManager.findFragmentById(R.id.container) as? SettingsFragment
+            currentFragment?.restorePreferenceFocus()
+        }
+    }
+
     enum class ShizukuStatus {
         OFF,
         ON,

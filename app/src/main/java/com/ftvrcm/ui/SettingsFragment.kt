@@ -37,7 +37,10 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
     private val shizukuPermissionListener = Shizuku.OnRequestPermissionResultListener { _, _ ->
         activity?.runOnUiThread {
-            if (isAdded) refreshShizukuPreferences()
+            if (isAdded) {
+                refreshShizukuPreferences()
+                restorePreferenceFocus()
+            }
         }
     }
 
@@ -89,27 +92,25 @@ class SettingsFragment : PreferenceFragmentCompat() {
             true
         }
 
-        val enableA11yTop = findPreference<Preference>("enable_accessibility_shizuku")
-        enableA11yTop?.setOnPreferenceClickListener {
-            enableAccessibilityViaShizuku()
+        val shizukuServiceStatus = findPreference<Preference>("shizuku_service_status")
+        shizukuServiceStatus?.setOnPreferenceClickListener {
+            if (!ShizukuTouchInjector.isShizukuAvailable()) {
+                launchShizukuActivity()
+            } else {
+                Toast.makeText(requireContext(), getString(R.string.prefs_shizuku_status_running), Toast.LENGTH_SHORT).show()
+            }
+            true
+        }
+
+        val shizukuPermissionPref = findPreference<Preference>("shizuku_permission")
+        shizukuPermissionPref?.setOnPreferenceClickListener {
+            requestShizukuPermission()
             true
         }
 
         val enableA11ySub = findPreference<Preference>("shizuku_enable_accessibility")
         enableA11ySub?.setOnPreferenceClickListener {
             enableAccessibilityViaShizuku()
-            true
-        }
-
-        val requestPermPref = findPreference<Preference>("shizuku_request_permission")
-        requestPermPref?.setOnPreferenceClickListener {
-            requestShizukuPermission()
-            true
-        }
-
-        val shizukuOpenApp = findPreference<Preference>("shizuku_open_app")
-        shizukuOpenApp?.setOnPreferenceClickListener {
-            openShizukuApp()
             true
         }
 
@@ -194,11 +195,14 @@ class SettingsFragment : PreferenceFragmentCompat() {
         refreshRequiredStateSummary()
         refreshToggleKeySummary()
         refreshShizukuPreferences()
+        restorePreferenceFocus()
     }
 
     private fun refreshShizukuPreferences() {
         val isShizuku = SettingsStore(requireContext()).isUseShizuku()
         val a11yEnabled = isAccessibilityServiceEnabled()
+        val isAlive = ShizukuTouchInjector.isShizukuAvailable()
+        val isGranted = ShizukuTouchInjector.isPermissionGranted()
 
         // トップレベル: Shizuku設定サブスクリーン（非表示にせず非活性化）
         findPreference<Preference>("screen_shizuku")?.apply {
@@ -208,32 +212,22 @@ class SettingsFragment : PreferenceFragmentCompat() {
                       else getString(R.string.prefs_screen_shizuku_disabled_summary)
         }
 
-        // トップレベル: アクセシビリティ有効化（非表示にせず非活性化）
-        findPreference<Preference>("enable_accessibility_shizuku")?.apply {
+        // トップレベル: Shizukuサービス状態
+        findPreference<Preference>("shizuku_service_status")?.apply {
             isVisible = true
-            isEnabled = !a11yEnabled && isShizuku
-            summary = if (a11yEnabled) getString(R.string.prefs_enable_accessibility_shizuku_already_enabled)
-                      else getString(R.string.prefs_enable_accessibility_shizuku_summary)
+            summary = if (isAlive) getString(R.string.prefs_shizuku_status_running)
+                      else getString(R.string.prefs_shizuku_status_stopped)
         }
 
-        val isAlive = ShizukuTouchInjector.isShizukuAvailable()
-        val isGranted = ShizukuTouchInjector.isPermissionGranted()
-
-        findPreference<Preference>("shizuku_service_status")?.summary =
-            if (isAlive) getString(R.string.prefs_shizuku_status_running)
-            else getString(R.string.prefs_shizuku_status_stopped)
-
-        findPreference<Preference>("shizuku_permission_status")?.summary =
-            if (isGranted) getString(R.string.prefs_shizuku_permission_granted)
-            else getString(R.string.prefs_shizuku_permission_denied)
-
-        findPreference<Preference>("shizuku_request_permission")?.apply {
+        // サブスクリーン内: Shizuku権限の許可
+        findPreference<Preference>("shizuku_permission")?.apply {
             isVisible = true
             isEnabled = isAlive && !isGranted
-            summary = if (isGranted) getString(R.string.prefs_shizuku_request_permission_already_granted)
-                      else getString(R.string.prefs_shizuku_request_permission_summary)
+            summary = if (isGranted) getString(R.string.prefs_shizuku_permission_summary_granted)
+                      else getString(R.string.prefs_shizuku_permission_summary_request)
         }
 
+        // サブスクリーン内: アクセシビリティを有効化
         findPreference<Preference>("shizuku_enable_accessibility")?.apply {
             isVisible = true
             isEnabled = isAlive && isGranted && !a11yEnabled
@@ -241,6 +235,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
                       else getString(R.string.prefs_enable_accessibility_shizuku_summary)
         }
 
+        // サブスクリーン内: タッチ注入テスト
         findPreference<Preference>("shizuku_test_injection")?.isEnabled = isAlive && isGranted
 
         refreshDashboard()
@@ -284,17 +279,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
         }.start()
     }
 
-    private fun openShizukuApp() {
-        AlertDialog.Builder(requireContext())
-            .setTitle(R.string.prefs_shizuku_open_app_dialog_title)
-            .setMessage(R.string.prefs_shizuku_open_app_dialog_message)
-            .setPositiveButton(R.string.prefs_shizuku_open_app) { _, _ ->
-                launchShizukuActivity()
-            }
-            .setNegativeButton(R.string.prefs_common_cancel, null)
-            .show()
-    }
-
     private fun launchShizukuActivity() {
         val pm = requireContext().packageManager
         var intent = pm.getLaunchIntentForPackage("moe.shizuku.privileged.api")
@@ -328,11 +312,22 @@ class SettingsFragment : PreferenceFragmentCompat() {
         }.start()
     }
 
-    private fun restorePreferenceFocusSoon() {
+    fun restorePreferenceFocus() {
         try {
-            // On TV devices, dialogs/toasts can steal focus from Preference's RecyclerView.
-            // Restore focus so DPAD key navigation works without restarting the activity.
-            listView?.post { listView?.requestFocus() }
+            listView?.postDelayed({
+                if (!isAdded) return@postDelayed
+                val lv = listView ?: return@postDelayed
+                val saved = savedFocusedView.get()
+                if (saved != null && saved.isAttachedToWindow && saved.isShown) {
+                    saved.requestFocus()
+                } else {
+                    val current = lv.focusedChild
+                    if (current == null) {
+                        val child = lv.findViewHolderForAdapterPosition(0)?.itemView ?: lv.getChildAt(0)
+                        child?.requestFocus() ?: lv.requestFocus()
+                    }
+                }
+            }, 100)
         } catch (_: Throwable) {
         }
     }
