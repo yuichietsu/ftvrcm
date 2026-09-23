@@ -4,9 +4,23 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <!-- 固定ステータスバー：スクロールしても常に画面上部に表示 -->
+    <!-- Fragmentコンテナ -->
+    <FrameLayout
+        android:id="@+id/container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- 分割線 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:alpha="0.15"
+        android:background="?android:attr/textColorPrimary" />
+
+    <!-- 固定ステータスバー：スクロールしても常に画面下部に表示 -->
     <LinearLayout
-        android:id="@+id/dashboard_header"
+        android:id="@+id/dashboard_footer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -24,7 +38,7 @@
             android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/tv_separator"
+            android:id="@+id/tv_separator1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="  |  "
@@ -38,20 +52,21 @@
             android:layout_height="wrap_content"
             android:textSize="14sp" />
 
+        <TextView
+            android:id="@+id/tv_separator2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="  |  "
+            android:textSize="14sp"
+            android:alpha="0.35" />
+
+        <TextView
+            android:id="@+id/tv_shizuku_status"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:textSize="14sp" />
+
     </LinearLayout>
-
-    <!-- 分割線 -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:alpha="0.15"
-        android:background="?android:attr/textColorPrimary" />
-
-    <!-- Fragmentコンテナ -->
-    <FrameLayout
-        android:id="@+id/container"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
 
 </LinearLayout>

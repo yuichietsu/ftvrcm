@@ -20,7 +20,7 @@ class SettingsActivity : AppCompatActivity(),
         setContentView(R.layout.activity_settings)
 
         // 初期ダッシュボード表示（実際の状態はFragment起動後に更新される）
-        updateDashboard(touchEnabled = false, accessibilityOn = false)
+        updateDashboard(touchEnabled = false, accessibilityOn = false, shizukuStatus = ShizukuStatus.OFF)
 
         if (savedInstanceState == null) {
             supportFragmentManager
@@ -30,13 +30,20 @@ class SettingsActivity : AppCompatActivity(),
         }
     }
 
+    enum class ShizukuStatus {
+        OFF,
+        ON,
+        UNAVAILABLE,
+    }
+
     /**
-     * 画面上部の固定ステータスバーを更新する。
+     * 画面下部の固定ステータスバーを更新する。
      * SettingsFragment の refreshDashboard() から呼び出される。
      */
-    fun updateDashboard(touchEnabled: Boolean, accessibilityOn: Boolean) {
+    fun updateDashboard(touchEnabled: Boolean, accessibilityOn: Boolean, shizukuStatus: ShizukuStatus = ShizukuStatus.OFF) {
         val tvTouch = findViewById<TextView>(R.id.tv_touch_status) ?: return
         val tvAccessibility = findViewById<TextView>(R.id.tv_accessibility_status) ?: return
+        val tvShizuku = findViewById<TextView>(R.id.tv_shizuku_status) ?: return
 
         if (touchEnabled) {
             tvTouch.text = getString(R.string.prefs_dashboard_touch_enabled)
@@ -52,6 +59,21 @@ class SettingsActivity : AppCompatActivity(),
         } else {
             tvAccessibility.text = getString(R.string.prefs_dashboard_accessibility_off)
             tvAccessibility.setTextColor(Color.parseColor("#FF9800"))
+        }
+
+        when (shizukuStatus) {
+            ShizukuStatus.ON -> {
+                tvShizuku.text = getString(R.string.prefs_dashboard_shizuku_on)
+                tvShizuku.setTextColor(Color.parseColor("#4CAF50"))
+            }
+            ShizukuStatus.UNAVAILABLE -> {
+                tvShizuku.text = getString(R.string.prefs_dashboard_shizuku_stopped)
+                tvShizuku.setTextColor(Color.parseColor("#FF9800"))
+            }
+            ShizukuStatus.OFF -> {
+                tvShizuku.text = getString(R.string.prefs_dashboard_shizuku_off)
+                tvShizuku.setTextColor(Color.parseColor("#9E9E9E"))
+            }
         }
     }
 
@@ -77,4 +99,3 @@ class SettingsActivity : AppCompatActivity(),
         return true
     }
 }
-

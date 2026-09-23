@@ -11,6 +11,7 @@ object SettingsKeys {
     const val MOUSE_POINTER_SPEED = "mouse_pointer_speed" // int
 
     const val EMULATION_METHOD = "emulation_method" // String: SHIZUKU|ACCESSIBILITY_SERVICE
+    const val USE_SHIZUKU = "use_shizuku" // boolean
 
     const val MOUSE_KEY_UP = "mouse_key_up" // String/int
     const val MOUSE_KEY_DOWN = "mouse_key_down"

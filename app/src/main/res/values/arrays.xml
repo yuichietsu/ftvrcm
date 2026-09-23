@@ -1,13 +1,4 @@
 <resources>
-    <string-array name="emulation_method_entries">
-        <item>Shizuku（推奨・超低遅延・高精度ピンチ）</item>
-        <item>アクセシビリティサービス（標準）</item>
-    </string-array>
-
-    <string-array name="emulation_method_values">
-        <item>SHIZUKU</item>
-        <item>ACCESSIBILITY_SERVICE</item>
-    </string-array>
 
     <string-array name="toggle_trigger_entries">
         <item>長押し</item>

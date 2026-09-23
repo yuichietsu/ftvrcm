@@ -60,6 +60,9 @@ class SettingsStore(context: Context) {
             putString(SettingsKeys.MOUSE_KEY_SCROLL_LEFT, "89")
             putString(SettingsKeys.MOUSE_KEY_SCROLL_RIGHT, "90")
 
+            // Shizuku enabled by default
+            putBoolean(SettingsKeys.USE_SHIZUKU, true)
+
             // Pinch keys (default: ズームアウト(ピンチイン)=85, ズームイン(ピンチアウト)=4)
             putString(SettingsKeys.MOUSE_KEY_PINCH_IN, "85")
             putString(SettingsKeys.MOUSE_KEY_PINCH_OUT, "4")
@@ -143,12 +146,14 @@ class SettingsStore(context: Context) {
 
     fun getMousePointerSpeedPx(): Int = prefs.getInt(SettingsKeys.MOUSE_POINTER_SPEED, 10).coerceIn(1, 200)
 
+    fun isUseShizuku(): Boolean = prefs.getBoolean(SettingsKeys.USE_SHIZUKU, true)
+
+    fun setUseShizuku(enabled: Boolean) {
+        prefs.edit { putBoolean(SettingsKeys.USE_SHIZUKU, enabled) }
+    }
+
     fun getEmulationMethod(): EmulationMethod {
-        val value = prefs.getString(SettingsKeys.EMULATION_METHOD, EmulationMethod.SHIZUKU.name)
-        return when (value) {
-            EmulationMethod.ACCESSIBILITY_SERVICE.name -> EmulationMethod.ACCESSIBILITY_SERVICE
-            else -> EmulationMethod.SHIZUKU
-        }
+        return if (isUseShizuku()) EmulationMethod.SHIZUKU else EmulationMethod.ACCESSIBILITY_SERVICE
     }
 
     fun getMouseKeyUp(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_UP, "19")?.toIntOrNull() ?: 19

@@ -35,15 +35,13 @@
     <!-- タッチ操作方式 -->
     <PreferenceCategory android:title="@string/prefs_category_mouse">
 
-        <ListPreference
-            android:key="emulation_method"
-            android:title="@string/prefs_emulation_method"
-            android:entries="@array/emulation_method_entries"
-            android:entryValues="@array/emulation_method_values"
-            android:defaultValue="ACCESSIBILITY_SERVICE"
-            app:useSimpleSummaryProvider="true" />
+        <SwitchPreferenceCompat
+            android:key="use_shizuku"
+            android:title="@string/prefs_use_shizuku"
+            android:summary="@string/prefs_use_shizuku_summary"
+            android:defaultValue="true" />
 
-        <!-- Shizuku設定サブスクリーン（SHIZUKU選択時のみ表示） -->
+        <!-- Shizuku設定サブスクリーン（Shizuku使用時のみ表示） -->
         <PreferenceScreen
             android:key="screen_shizuku"
             android:title="@string/prefs_screen_shizuku_title"
@@ -58,11 +56,6 @@
                 <Preference
                     android:key="shizuku_permission_status"
                     android:title="@string/prefs_shizuku_permission_status" />
-
-                <Preference
-                    android:key="shizuku_request_permission"
-                    android:title="@string/prefs_shizuku_request_permission"
-                    android:summary="@string/prefs_shizuku_request_permission_summary" />
 
                 <Preference
                     android:key="shizuku_open_app"

@@ -22,7 +22,6 @@ import java.lang.ref.WeakReference
 import com.ftvrcm.R
 import com.ftvrcm.data.SettingsKeys
 import com.ftvrcm.data.SettingsStore
-import com.ftvrcm.domain.EmulationMethod
 import com.ftvrcm.domain.OperationMode
 import com.ftvrcm.domain.ToggleTrigger
 import com.ftvrcm.service.RemoteControlAccessibilityService
@@ -30,7 +29,6 @@ import com.ftvrcm.shizuku.ShizukuTouchInjector
 import rikka.shizuku.Shizuku
 
 private const val TAG = "SettingsFragment"
-private const val SHIZUKU_PERMISSION_REQUEST_CODE = 1001
 
 class SettingsFragment : PreferenceFragmentCompat() {
 
@@ -91,12 +89,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
             true
         }
 
-        val shizukuRequestPerm = findPreference<Preference>("shizuku_request_permission")
-        shizukuRequestPerm?.setOnPreferenceClickListener {
-            requestShizukuPermission()
-            true
-        }
-
         val shizukuOpenApp = findPreference<Preference>("shizuku_open_app")
         shizukuOpenApp?.setOnPreferenceClickListener {
             openShizukuApp()
@@ -121,6 +113,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 SettingsKeys.TOGGLE_KEYCODE,
                 SettingsKeys.TOGGLE_TRIGGER,
                 SettingsKeys.MOUSE_POINTER_SPEED,
+                SettingsKeys.USE_SHIZUKU,
                 SettingsKeys.EMULATION_METHOD,
                 -> {
                     refreshModeSummary()
@@ -186,7 +179,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
     }
 
     private fun refreshShizukuPreferences() {
-        val isShizuku = SettingsStore(requireContext()).getEmulationMethod() == EmulationMethod.SHIZUKU
+        val isShizuku = SettingsStore(requireContext()).isUseShizuku()
 
         // トップレベル: Shizuku設定サブスクリーンの表示/非表示を切り替える
         findPreference<Preference>("screen_shizuku")?.isVisible = isShizuku
@@ -202,28 +195,23 @@ class SettingsFragment : PreferenceFragmentCompat() {
             if (isGranted) getString(R.string.prefs_shizuku_permission_granted)
             else getString(R.string.prefs_shizuku_permission_denied)
 
-        findPreference<Preference>("shizuku_request_permission")?.isEnabled = isAlive && !isGranted
         findPreference<Preference>("shizuku_test_injection")?.isEnabled = isAlive && isGranted
-    }
 
-    private fun requestShizukuPermission() {
-        if (!ShizukuTouchInjector.isShizukuAvailable()) {
-            Toast.makeText(requireContext(), getString(R.string.prefs_shizuku_status_stopped), Toast.LENGTH_SHORT).show()
-            return
-        }
-        try {
-            Shizuku.requestPermission(SHIZUKU_PERMISSION_REQUEST_CODE)
-        } catch (t: Throwable) {
-            Toast.makeText(requireContext(), "権限リクエスト失敗: ${t.message}", Toast.LENGTH_LONG).show()
-        }
+        refreshDashboard()
     }
 
     private fun openShizukuApp() {
         val pm = requireContext().packageManager
-        val intent = pm.getLaunchIntentForPackage("moe.shizuku.privileged.api")
-        if (intent != null) {
+        var intent = pm.getLaunchIntentForPackage("moe.shizuku.privileged.api")
+        if (intent == null) {
+            intent = Intent().apply {
+                component = ComponentName("moe.shizuku.privileged.api", "moe.shizuku.manager.MainActivity")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        }
+        try {
             startActivity(intent)
-        } else {
+        } catch (_: Exception) {
             Toast.makeText(requireContext(), "Shizukuアプリが見つかりません (moe.shizuku.privileged.api)", Toast.LENGTH_LONG).show()
         }
     }
@@ -310,10 +298,20 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
     private fun refreshDashboard() {
         val activity = activity as? SettingsActivity ?: return
-        val mode = SettingsStore(requireContext()).getOperationMode()
+        val store = SettingsStore(requireContext())
+        val mode = store.getOperationMode()
+        val shizukuStatus = if (!store.isUseShizuku()) {
+            SettingsActivity.ShizukuStatus.OFF
+        } else if (ShizukuTouchInjector.isShizukuAvailable() && ShizukuTouchInjector.isPermissionGranted()) {
+            SettingsActivity.ShizukuStatus.ON
+        } else {
+            SettingsActivity.ShizukuStatus.UNAVAILABLE
+        }
+
         activity.updateDashboard(
             touchEnabled = (mode == OperationMode.MOUSE),
             accessibilityOn = isAccessibilityServiceEnabled(),
+            shizukuStatus = shizukuStatus,
         )
     }
 

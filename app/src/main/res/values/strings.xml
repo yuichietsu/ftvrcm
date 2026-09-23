@@ -31,7 +31,8 @@ BACKダブルタップで割り当てなし、5秒でキャンセル（BACK単�
     <string name="prefs_touch_visual_feedback">タッチ操作フィードバック</string>
     <string name="prefs_touch_visual_feedback_summary">タップ、スワイプ、スクロールが発生したことを視覚的にお知らせします</string>
 
-    <string name="prefs_emulation_method">タッチ操作の実現方法</string>
+    <string name="prefs_use_shizuku">Shizukuを使用する（推奨）</string>
+    <string name="prefs_use_shizuku_summary">Shizukuの特権Binder経由で即時注入し、タッチ操作の応答性を高速化します</string>
 
     <string name="prefs_mouse_key_up">カーソル上移動</string>
     <string name="prefs_mouse_key_down">カーソル下移動</string>
@@ -63,8 +64,6 @@ BACKダブルタップで割り当てなし、5秒でキャンセル（BACK単�
     <string name="prefs_category_shizuku">Shizuku（特権Binder）</string>
     <string name="prefs_shizuku_service_status">Shizukuサービス状態</string>
     <string name="prefs_shizuku_permission_status">Shizuku権限状態</string>
-    <string name="prefs_shizuku_request_permission">Shizuku権限をリクエスト</string>
-    <string name="prefs_shizuku_request_permission_summary">タップしてShizukuの特権アクセスを許可します</string>
     <string name="prefs_shizuku_open_app">Shizukuアプリを開く</string>
     <string name="prefs_shizuku_open_app_summary">Shizukuアプリを起動してサービス状態を確認します</string>
     <string name="prefs_shizuku_test_injection">Shizukuタッチ注入テスト</string>
@@ -72,7 +71,7 @@ BACKダブルタップで割り当てなし、5秒でキャンセル（BACK単�
     <string name="prefs_shizuku_status_running">起動中（接続OK）</string>
     <string name="prefs_shizuku_status_stopped">停止中（Shizukuアプリで起動してください）</string>
     <string name="prefs_shizuku_permission_granted">許可済み（特権Binder利用可能）</string>
-    <string name="prefs_shizuku_permission_denied">未許可（タップしてリクエスト）</string>
+    <string name="prefs_shizuku_permission_denied">未許可（Shizukuアプリで許可してください）</string>
 
     <string name="prefs_screen_mouse_title">タッチ操作の詳細設定</string>
     <string name="prefs_screen_mouse_summary">カーソル設定と動作チューニング</string>
@@ -103,6 +102,9 @@ BACKダブルタップで割り当てなし、5秒でキャンセル（BACK単�
     <string name="prefs_dashboard_touch_disabled">タッチ操作: 無効</string>
     <string name="prefs_dashboard_accessibility_on">アクセシビリティ: ON</string>
     <string name="prefs_dashboard_accessibility_off">アクセシビリティ: OFF</string>
+    <string name="prefs_dashboard_shizuku_on">Shizuku: ON</string>
+    <string name="prefs_dashboard_shizuku_off">Shizuku: OFF</string>
+    <string name="prefs_dashboard_shizuku_stopped">Shizuku: 未起動</string>
 
     <string name="mode_normal">無効</string>
     <string name="mode_mouse">有効</string>
