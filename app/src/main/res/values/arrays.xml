@@ -1,16 +1,13 @@
 <resources>
     <string-array name="emulation_method_entries">
-        <item>アクセシビリティサービス</item>
-        <item>Shizuku（推奨・低遅延・高精度ピンチ）</item>
-        <item>ADBプロキシ（PC連携）</item>
+        <item>Shizuku（推奨・超低遅延・高精度ピンチ）</item>
+        <item>アクセシビリティサービス（標準）</item>
     </string-array>
 
     <string-array name="emulation_method_values">
-        <item>ACCESSIBILITY_SERVICE</item>
         <item>SHIZUKU</item>
-        <item>PROXY</item>
+        <item>ACCESSIBILITY_SERVICE</item>
     </string-array>
-
 
     <string-array name="toggle_trigger_entries">
         <item>長押し</item>
@@ -22,16 +19,6 @@
         <item>LONG_PRESS</item>
         <item>DOUBLE_TAP</item>
         <item>SINGLE_TAP</item>
-    </string-array>
-
-    <string-array name="distance_double_scale_entries">
-        <item>2倍</item>
-        <item>0.5倍</item>
-    </string-array>
-
-    <string-array name="distance_double_scale_values">
-        <item>2.0</item>
-        <item>0.5</item>
     </string-array>
 
     <string-array name="key_entries">

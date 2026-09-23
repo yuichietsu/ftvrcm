@@ -78,43 +78,6 @@
 
         </PreferenceScreen>
 
-        <!-- ADBプロキシ設定サブスクリーン（PROXY選択時のみ表示） -->
-        <PreferenceScreen
-            android:key="screen_proxy"
-
-            android:title="@string/prefs_screen_proxy_title"
-            android:summary="@string/prefs_screen_proxy_summary">
-
-            <EditTextPreference
-                android:key="proxy_host"
-                android:title="@string/prefs_proxy_host"
-                android:defaultValue=""
-                app:useSimpleSummaryProvider="true" />
-
-            <EditTextPreference
-                android:key="proxy_port"
-                android:title="@string/prefs_proxy_port"
-                android:defaultValue="8787"
-                app:useSimpleSummaryProvider="true" />
-
-            <EditTextPreference
-                android:key="proxy_token"
-                android:title="@string/prefs_proxy_token"
-                android:defaultValue=""
-                app:useSimpleSummaryProvider="true" />
-
-            <Preference
-                android:key="proxy_grant_accessibility"
-                android:title="@string/prefs_proxy_grant_accessibility"
-                android:summary="@string/prefs_proxy_grant_accessibility_summary" />
-
-            <Preference
-                android:key="proxy_health_check"
-                android:title="@string/prefs_proxy_health_check"
-                android:summary="@string/prefs_proxy_health_check_summary" />
-
-        </PreferenceScreen>
-
     </PreferenceCategory>
 
     <!-- キーマッピング（サブスクリーン） -->
@@ -258,14 +221,6 @@
                     android:summary="@string/prefs_mouse_swipe_distance_summary"
                     app:showSeekBarValue="true" />
 
-                <ListPreference
-                    android:key="mouse_swipe_double_scale"
-                    android:title="@string/prefs_mouse_swipe_double_scale"
-                    android:entries="@array/distance_double_scale_entries"
-                    android:entryValues="@array/distance_double_scale_values"
-                    android:defaultValue="2.0"
-                    app:useSimpleSummaryProvider="true" />
-
                 <SwitchPreferenceCompat
                     android:key="mouse_scroll_repeat_longpress"
                     android:title="@string/prefs_mouse_scroll_repeat_longpress"
@@ -291,14 +246,6 @@
                     android:defaultValue="28"
                     android:summary="@string/prefs_mouse_pinch_distance_summary"
                     app:showSeekBarValue="true" />
-
-                <ListPreference
-                    android:key="mouse_pinch_double_scale"
-                    android:title="@string/prefs_mouse_pinch_double_scale"
-                    android:entries="@array/distance_double_scale_entries"
-                    android:entryValues="@array/distance_double_scale_values"
-                    android:defaultValue="2.0"
-                    app:useSimpleSummaryProvider="true" />
 
             </PreferenceCategory>
 

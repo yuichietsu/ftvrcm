@@ -182,7 +182,7 @@ class ShizukuTouchInjector(
         }
 
         try {
-            Thread.sleep(35)
+            Thread.sleep(18)
         } catch (_: InterruptedException) {
         }
 
@@ -281,7 +281,7 @@ class ShizukuTouchInjector(
         return ok
     }
 
-    fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long = 200): Boolean {
+    fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long = 120): Boolean {
         val type = "shizuku_swipe"
         record(type = type, status = "DISPATCHING", detail = "x1=$x1,y1=$y1 -> x2=$x2,y2=$y2 durationMs=$durationMs")
 
@@ -384,7 +384,7 @@ class ShizukuTouchInjector(
         y2Start: Int,
         x2End: Int,
         y2End: Int,
-        durationMs: Long = 240,
+        durationMs: Long = 140,
         isZoomOut: Boolean = false,
     ): Boolean {
         val type = if (isZoomOut) "shizuku_pinch_out" else "shizuku_pinch_in"
@@ -539,7 +539,7 @@ class ShizukuTouchInjector(
         y2Start: Int,
         x2End: Int,
         y2End: Int,
-        durationMs: Long = 240,
+        durationMs: Long = 140,
     ): Boolean {
         return pinch(
             x1Start = x1Start,
@@ -564,7 +564,7 @@ class ShizukuTouchInjector(
         y2Start: Int,
         x2End: Int,
         y2End: Int,
-        durationMs: Long = 240,
+        durationMs: Long = 140,
     ): Boolean {
         return pinch(
             x1Start = x1Start,

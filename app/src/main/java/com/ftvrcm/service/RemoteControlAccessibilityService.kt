@@ -22,12 +22,10 @@ import com.ftvrcm.domain.OperationMode
 import com.ftvrcm.domain.ToggleTrigger
 import com.ftvrcm.mouse.CursorOverlay
 import com.ftvrcm.mouse.GestureController
-import com.ftvrcm.proxy.ProxyInputClient
 import com.ftvrcm.shizuku.ShizukuTouchInjector
 import com.ftvrcm.util.KeyCaptureState
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicBoolean
 
 class RemoteControlAccessibilityService : AccessibilityService() {
 
@@ -52,12 +50,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private var shizukuInjector: ShizukuTouchInjector? = null
     private val shizukuExecutor: ExecutorService = Executors.newSingleThreadExecutor()
 
-    private var proxyInput: ProxyInputClient? = null
-    private var proxyHost: String? = null
-    private var proxyPort: Int? = null
-    private var proxyToken: String? = null
-
-
     private var mode: OperationMode = OperationMode.NORMAL
 
     private var lastCursorX: Int = 0
@@ -66,32 +58,13 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private var tapKeyIsDown: Boolean = false
     private var tapKeyLongPressTriggered: Boolean = false
 
-    private var pendingTapAtMs: Long = 0L
-    private var pendingTapX: Int = 0
-    private var pendingTapY: Int = 0
-    private val commitSingleTapRunnable = Runnable {
-        val x = pendingTapX
-        val y = pendingTapY
-        pendingTapAtMs = 0L
-        dispatchTap(x, y)
-    }
-
     private var scrollSelectKeyIsDown: Boolean = false
     private var scrollSelectAction: SwipeAction? = null
     private var scrollSelectKeyLongPressTriggered: Boolean = false
 
     private var isDpadMode: Boolean = false
 
-    private val proxyExecutor: ExecutorService = Executors.newSingleThreadExecutor()
-    private val proxyInputInFlight = AtomicBoolean(false)
-
-    private var enterMouseModeInProgress: Boolean = false
-
     private val tapKeyLongPressRunnable = Runnable {
-        // If long-press was recognized, it should not later become a single-tap.
-        mainHandler.removeCallbacks(commitSingleTapRunnable)
-        pendingTapAtMs = 0L
-
         if (mode != OperationMode.MOUSE) return@Runnable
         if (!tapKeyIsDown) return@Runnable
         if (tapKeyLongPressTriggered) return@Runnable
@@ -100,35 +73,21 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         clearMoveRepeat()
         val c = cursor.center()
 
+        if (settings.isTouchVisualFeedbackEnabled()) {
+            cursor.showTapFeedback(isLongPress = true)
+        }
+
         when (settings.getEmulationMethod()) {
             EmulationMethod.ACCESSIBILITY_SERVICE -> {
-                if (settings.isTouchVisualFeedbackEnabled()) {
-                    cursor.showTapFeedback(isLongPress = true)
-                }
                 gestures.longPress(c.x, c.y)
             }
 
             EmulationMethod.SHIZUKU -> {
-                if (settings.isTouchVisualFeedbackEnabled()) {
-                    cursor.showTapFeedback(isLongPress = true)
-                }
                 shizukuExecutor.execute {
                     val ok = shizuku().longPress(c.x, c.y)
                     if (!ok) {
                         mainHandler.post { showShizukuErrorToast() }
                     }
-                }
-            }
-
-            EmulationMethod.PROXY -> {
-                val accepted = dispatchProxyInput(
-                    op = "longPress",
-                    block = { proxy()?.longPress(c.x, c.y) == true },
-                    onCompletedOnMainThread = { _ -> },
-                )
-
-                if (accepted && settings.isTouchVisualFeedbackEnabled()) {
-                    cursor.showTapFeedback(isLongPress = true)
                 }
             }
         }
@@ -150,24 +109,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private val commitToggleTapRunnable = Runnable {
         pendingToggleTapAtMs = 0L
         pendingToggleTapKeyCode = null
-    }
-
-    private var pendingSwipeAtMs: Long = 0L
-    private var pendingSwipeAction: SwipeAction? = null
-    private val commitSwipeRunnable = Runnable {
-        val action = pendingSwipeAction ?: return@Runnable
-        pendingSwipeAtMs = 0L
-        pendingSwipeAction = null
-        dispatchScrollOrSwipe(action, distanceScale = 1.0f)
-    }
-
-    private var pendingPinchAtMs: Long = 0L
-    private var pendingPinchAction: PinchAction? = null
-    private val commitPinchRunnable = Runnable {
-        val action = pendingPinchAction ?: return@Runnable
-        pendingPinchAtMs = 0L
-        pendingPinchAction = null
-        dispatchPinch(action, distanceScale = 1.0f)
     }
 
     private var moveKeyCode: Int? = null
@@ -198,7 +139,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             if (!scrollSelectKeyIsDown) return
             val action = scrollSelectAction ?: return
 
-            dispatchScrollOrSwipe(action, distanceScale = 1.0f)
+            dispatchScrollOrSwipe(action)
             mainHandler.postDelayed(this, settings.getMouseScrollRepeatIntervalMs().toLong())
         }
     }
@@ -210,9 +151,8 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         if (!settings.isMouseScrollRepeatLongPress()) return@Runnable
 
         scrollSelectKeyLongPressTriggered = true
-        clearPendingSwipe()
         val action = scrollSelectAction ?: return@Runnable
-        dispatchScrollOrSwipe(action, distanceScale = 1.0f)
+        dispatchScrollOrSwipe(action)
         mainHandler.postDelayed(scrollRepeatRunnable, settings.getMouseScrollRepeatIntervalMs().toLong())
     }
 
@@ -260,23 +200,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 // ignore
             }
         }
-    }
-
-    private fun proxy(): ProxyInputClient? {
-        val host = settings.getProxyHost()
-        val port = settings.getProxyPort()
-        val token = settings.getProxyToken()
-
-        val current = proxyInput
-        if (current != null && proxyHost == host && proxyPort == port && proxyToken == token) return current
-
-        proxyInput = ProxyInputClient(this, host = host, port = port, token = token).also {
-            proxyHost = host
-            proxyPort = port
-            proxyToken = token
-        }
-
-        return proxyInput
     }
 
     private fun shizuku(): ShizukuTouchInjector {
@@ -471,12 +394,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                     clearMoveRepeat()
                     val c = cursor.center()
 
-                    // For accessibility injection, show feedback immediately for responsiveness.
-                    if (settings.getEmulationMethod() == EmulationMethod.ACCESSIBILITY_SERVICE && settings.isTouchVisualFeedbackEnabled()) {
-                        cursor.showTapFeedback(isLongPress = false)
-                    }
-
-                    scheduleTapOrDoubleTap(c.x, c.y)
+                    dispatchTap(c.x, c.y)
                     return true
                 }
 
@@ -522,7 +440,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
                     clearMoveRepeat()
 
-                    scheduleSwipeOrDoubleSwipe(scrollAction)
+                    dispatchScrollOrSwipe(scrollAction)
                     return true
                 }
 
@@ -543,7 +461,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                     return true
                 }
                 KeyEvent.ACTION_UP -> {
-                    schedulePinchOrDoublePinch(pinchAction)
+                    dispatchPinch(pinchAction)
                     return true
                 }
                 else -> return true
@@ -590,14 +508,8 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         clearPendingToggleTap()
         clearPendingTapKey()
         clearPendingScrollRepeat()
-        clearPendingSwipe()
-        clearPendingPinch()
         clearMoveRepeat()
         cursor.hide()
-        try {
-            proxyExecutor.shutdownNow()
-        } catch (_: Throwable) {
-        }
         try {
             shizukuExecutor.shutdownNow()
         } catch (_: Throwable) {
@@ -605,66 +517,13 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         super.onDestroy()
     }
 
-    private fun dispatchProxy(op: String, block: () -> Unit) {
-        // Never do network I/O on the main thread (Fire OS throws NetworkOnMainThreadException).
-        proxyExecutor.execute {
-            try {
-                block()
-            } catch (t: Throwable) {
-                Log.w(tag, "proxy dispatch failed op=$op (${t.javaClass.simpleName}: ${t.message})")
-            }
-        }
-    }
-
-    private fun dispatchProxyInput(
-        op: String,
-        block: () -> Boolean,
-        onCompletedOnMainThread: (ok: Boolean) -> Unit,
-    ): Boolean {
-        // Avoid request queues: allow only one in-flight proxy input; drop subsequent inputs.
-        if (!proxyInputInFlight.compareAndSet(false, true)) {
-            Log.i(tag, "proxy input dropped (busy) op=$op")
-            return false
-        }
-
-        proxyExecutor.execute {
-            val ok = try {
-                block()
-            } catch (t: Throwable) {
-                Log.w(tag, "proxy input failed op=$op (${t.javaClass.simpleName}: ${t.message})")
-                false
-            } finally {
-                proxyInputInFlight.set(false)
-            }
-
-            mainHandler.post {
-                try {
-                    onCompletedOnMainThread(ok)
-                } catch (_: Throwable) {
-                }
-                if (!ok) {
-                    showProxyErrorToast()
-                }
-            }
-        }
-
-        return true
-    }
-
     private fun toggleMode() {
         clearMoveRepeat()
         clearPendingTapKey()
-        clearPendingSwipe()
-        clearPendingPinch()
         clearPendingToggleTap()
         val target = mode.toggle()
 
         if (target == OperationMode.MOUSE) {
-            if (enterMouseModeInProgress) {
-                showToast("切り替え処理中です…")
-                return
-            }
-
             when (settings.getEmulationMethod()) {
                 EmulationMethod.ACCESSIBILITY_SERVICE -> {
                     if (!canPerformGesturesViaAccessibility()) {
@@ -687,35 +546,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                     }
 
                     applyMode(target)
-                    return
-                }
-
-                EmulationMethod.PROXY -> {
-
-                    enterMouseModeInProgress = true
-
-                    // Run health check off the main thread; apply mode only if it succeeds.
-                    proxyExecutor.execute {
-                        val result = try {
-                            proxy()?.healthCheck()
-                        } catch (t: Throwable) {
-                            ProxyInputClient.HealthCheckResult(
-                                ok = false,
-                                detail = "${t.javaClass.simpleName}: ${t.message}",
-                            )
-                        }
-
-                        mainHandler.post {
-                            enterMouseModeInProgress = false
-                            if (result?.ok == true) {
-                                applyMode(target)
-                            } else {
-                                val detail = (result?.detail ?: "unknown error").trim().take(200)
-                                showToast("タッチ操作へ切り替えできません（ADBプロキシに接続できません）: $detail")
-                            }
-                        }
-                    }
-
                     return
                 }
             }
@@ -760,22 +590,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun showProxyErrorToast() {
-        val detail = getLastProxyErrorDetail()
-        showToast("ADB操作に失敗しました${if (!detail.isNullOrBlank()) ": $detail" else ""}")
-    }
-
-    private fun getLastProxyErrorDetail(maxLen: Int = 120): String? {
-        return try {
-            val prefs = getSharedPreferences(SettingsKeys.PREFS_NAME, MODE_PRIVATE)
-            val status = prefs.getString(SettingsKeys.LAST_GESTURE_STATUS, "") ?: ""
-            if (status != "FAILED") return null
-            val detail = prefs.getString(SettingsKeys.LAST_GESTURE_DETAIL, "") ?: ""
-            detail.trim().take(maxLen).ifEmpty { null }
-        } catch (_: Throwable) {
-            null
-        }
-    }
 
     private fun showShizukuErrorToast() {
         val detail = getLastShizukuErrorDetail()
@@ -803,8 +617,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         clearPendingTapKey()
         clearPendingToggle()
         clearPendingToggleTap()
-        clearPendingSwipe()
-        clearPendingPinch()
 
         mode = current
         Log.i(tag, "mode synced from prefs -> $mode")
@@ -827,33 +639,13 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     }
 
     private fun triggerScreenshot() {
-        if (settings.getEmulationMethod() != EmulationMethod.PROXY) {
-            showToast("スクリーンショットはADBプロキシが必要です")
-            return
-        }
-
-        val wasVisible = cursor.isVisible()
-        if (wasVisible) {
-            cursor.hide()
-        }
-
-        proxyExecutor.execute {
-            val result = runCatching { proxy()?.captureScreenshot() }
-                .getOrNull()
-
-            mainHandler.post {
-                if (wasVisible && mode == OperationMode.MOUSE) {
-                    cursor.show()
-                    updateCursorStyleForInputMode()
-                }
-
-                if (result?.ok == true) {
-                    showToast("スクリーンショットを保存しました")
-                } else {
-                    val detail = result?.detail?.trim()?.take(120)
-                    showToast("スクリーンショットに失敗しました（ADB）${if (!detail.isNullOrEmpty()) ": $detail" else ""}")
-                }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val ok = performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)
+            if (!ok) {
+                showToast("スクリーンショットの撮影に失敗しました")
             }
+        } else {
+            showToast("スクリーンショットはAndroid 9以上で利用可能です")
         }
     }
 
@@ -879,49 +671,16 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         mainHandler.postDelayed(commitToggleTapRunnable, doubleTapTimeoutMs)
     }
 
-    private fun scheduleSwipeOrDoubleSwipe(action: SwipeAction) {
-        val now = SystemClock.uptimeMillis()
-        val doubleTapTimeoutMs = ViewConfiguration.getDoubleTapTimeout().toLong()
-
-        if (pendingSwipeAtMs != 0L && pendingSwipeAction == action && now - pendingSwipeAtMs <= doubleTapTimeoutMs) {
-            mainHandler.removeCallbacks(commitSwipeRunnable)
-            pendingSwipeAtMs = 0L
-            pendingSwipeAction = null
-            dispatchScrollOrSwipe(action, distanceScale = settings.getMouseSwipeDoubleScale())
-            return
-        }
-
-        pendingSwipeAtMs = now
-        pendingSwipeAction = action
-        mainHandler.postDelayed(commitSwipeRunnable, doubleTapTimeoutMs)
-    }
-
-    private fun schedulePinchOrDoublePinch(action: PinchAction) {
-        val now = SystemClock.uptimeMillis()
-        val doubleTapTimeoutMs = ViewConfiguration.getDoubleTapTimeout().toLong()
-
-        if (pendingPinchAtMs != 0L && pendingPinchAction == action && now - pendingPinchAtMs <= doubleTapTimeoutMs) {
-            mainHandler.removeCallbacks(commitPinchRunnable)
-            pendingPinchAtMs = 0L
-            pendingPinchAction = null
-            dispatchPinch(action, distanceScale = settings.getMousePinchDoubleScale())
-            return
-        }
-
-        pendingPinchAtMs = now
-        pendingPinchAction = action
-        mainHandler.postDelayed(commitPinchRunnable, doubleTapTimeoutMs)
-    }
-
     private fun clearPendingTapKey() {
         mainHandler.removeCallbacks(tapKeyLongPressRunnable)
-        mainHandler.removeCallbacks(commitSingleTapRunnable)
         tapKeyIsDown = false
         tapKeyLongPressTriggered = false
-        pendingTapAtMs = 0L
     }
 
     private fun dispatchTap(x: Int, y: Int) {
+        if (settings.isTouchVisualFeedbackEnabled()) {
+            cursor.showTapFeedback(isLongPress = false)
+        }
         when (settings.getEmulationMethod()) {
             EmulationMethod.ACCESSIBILITY_SERVICE -> {
                 Log.i(tag, "tap via accessibility at (${x},${y})")
@@ -930,9 +689,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
             EmulationMethod.SHIZUKU -> {
                 Log.i(tag, "tap via Shizuku at (${x},${y})")
-                if (settings.isTouchVisualFeedbackEnabled()) {
-                    cursor.showTapFeedback(isLongPress = false)
-                }
                 shizukuExecutor.execute {
                     val ok = shizuku().tap(x, y)
                     if (!ok) {
@@ -940,23 +696,16 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                     }
                 }
             }
-
-            EmulationMethod.PROXY -> {
-                Log.i(tag, "tap via proxy at (${x},${y})")
-                val accepted = dispatchProxyInput(
-                    op = "tap",
-                    block = { proxy()?.tap(x, y) == true },
-                    onCompletedOnMainThread = { _ -> },
-                )
-
-                if (accepted && settings.isTouchVisualFeedbackEnabled()) {
-                    cursor.showTapFeedback(isLongPress = false)
-                }
-            }
         }
     }
 
     private fun dispatchDoubleTap(x: Int, y: Int) {
+        if (settings.isTouchVisualFeedbackEnabled()) {
+            cursor.showTapFeedback(isLongPress = false)
+            mainHandler.postDelayed({
+                cursor.showTapFeedback(isLongPress = false)
+            }, 90L)
+        }
         when (settings.getEmulationMethod()) {
             EmulationMethod.ACCESSIBILITY_SERVICE -> {
                 Log.i(tag, "doubleTap via accessibility at (${x},${y})")
@@ -965,12 +714,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
             EmulationMethod.SHIZUKU -> {
                 Log.i(tag, "doubleTap via Shizuku at (${x},${y})")
-                if (settings.isTouchVisualFeedbackEnabled()) {
-                    cursor.showTapFeedback(isLongPress = false)
-                    mainHandler.postDelayed({
-                        cursor.showTapFeedback(isLongPress = false)
-                    }, 90L)
-                }
                 shizukuExecutor.execute {
                     val ok = shizuku().doubleTap(x, y)
                     if (!ok) {
@@ -978,42 +721,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                     }
                 }
             }
-
-            EmulationMethod.PROXY -> {
-                Log.i(tag, "doubleTap via proxy at (${x},${y})")
-                val accepted = dispatchProxyInput(
-                    op = "doubleTap",
-                    block = { proxy()?.doubleTap(x, y) == true },
-                    onCompletedOnMainThread = { _ -> },
-                )
-
-                if (accepted && settings.isTouchVisualFeedbackEnabled()) {
-                    cursor.showTapFeedback(isLongPress = false)
-                    mainHandler.postDelayed({
-                        cursor.showTapFeedback(isLongPress = false)
-                    }, 90L)
-                }
-            }
         }
-    }
-
-
-    private fun scheduleTapOrDoubleTap(x: Int, y: Int) {
-        val now = SystemClock.uptimeMillis()
-        val doubleTapTimeoutMs = ViewConfiguration.getDoubleTapTimeout().toLong()
-
-        if (pendingTapAtMs != 0L && now - pendingTapAtMs <= doubleTapTimeoutMs) {
-            // Convert to double tap.
-            mainHandler.removeCallbacks(commitSingleTapRunnable)
-            pendingTapAtMs = 0L
-            dispatchDoubleTap(x, y)
-            return
-        }
-
-        pendingTapAtMs = now
-        pendingTapX = x
-        pendingTapY = y
-        mainHandler.postDelayed(commitSingleTapRunnable, doubleTapTimeoutMs)
     }
 
     private fun clearPendingScrollRepeat() {
@@ -1021,7 +729,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         mainHandler.removeCallbacks(scrollRepeatRunnable)
     }
 
-    private fun dispatchScrollOrSwipe(action: SwipeAction, distanceScale: Float) {
+    private fun dispatchScrollOrSwipe(action: SwipeAction) {
         val c = cursor.center()
         val visualFeedback = settings.isTouchVisualFeedbackEnabled()
         when (settings.getEmulationMethod()) {
@@ -1051,8 +759,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 val w = dm.widthPixels
                 val h = dm.heightPixels
                 val distancePercent = settings.getMouseSwipeDistancePercent()
-                val baseDistance = ((minOf(w, h) * (distancePercent / 100.0))).toInt().coerceIn(40, minOf(w, h) - 1)
-                val distance = (baseDistance * distanceScale).toInt().coerceIn(40, minOf(w, h) - 1)
+                val distance = ((minOf(w, h) * (distancePercent / 100.0))).toInt().coerceIn(40, minOf(w, h) - 1)
 
                 fun clampX(x: Int) = x.coerceIn(0, w - 1)
                 fun clampY(y: Int) = y.coerceIn(0, h - 1)
@@ -1095,94 +802,18 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                     "swipe via Shizuku action=$action center=(${c.x},${c.y}) distance=$distance (${distancePercent}%)",
                 )
             }
-
-            EmulationMethod.PROXY -> {
-
-                val dm = resources.displayMetrics
-                val w = dm.widthPixels
-                val h = dm.heightPixels
-                val distancePercent = settings.getMouseSwipeDistancePercent()
-                val baseDistance = ((minOf(w, h) * (distancePercent / 100.0))).toInt().coerceIn(40, minOf(w, h) - 1)
-                val distance = (baseDistance * distanceScale).toInt().coerceIn(40, minOf(w, h) - 1)
-
-                fun clampX(x: Int) = x.coerceIn(0, w - 1)
-                fun clampY(y: Int) = y.coerceIn(0, h - 1)
-
-                // Swipe starting at the current cursor center.
-                when (action) {
-                    SwipeAction.UP -> {
-                        val x1 = clampX(c.x)
-                        val y1 = clampY(c.y)
-                        val x2 = clampX(c.x)
-                        val y2 = clampY(c.y - distance)
-                        val accepted = dispatchProxyInput(
-                            op = "swipe_up",
-                            block = { proxy()?.swipe(x1, y1, x2, y2) == true },
-                            onCompletedOnMainThread = { _ -> },
-                        )
-                        if (accepted && visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
-                    }
-
-                    SwipeAction.DOWN -> {
-                        val x1 = clampX(c.x)
-                        val y1 = clampY(c.y)
-                        val x2 = clampX(c.x)
-                        val y2 = clampY(c.y + distance)
-                        val accepted = dispatchProxyInput(
-                            op = "swipe_down",
-                            block = { proxy()?.swipe(x1, y1, x2, y2) == true },
-                            onCompletedOnMainThread = { _ -> },
-                        )
-                        if (accepted && visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
-                    }
-
-                    SwipeAction.LEFT -> {
-                        val x1 = clampX(c.x)
-                        val y1 = clampY(c.y)
-                        val x2 = clampX(c.x - distance)
-                        val y2 = clampY(c.y)
-                        val accepted = dispatchProxyInput(
-                            op = "swipe_left",
-                            block = { proxy()?.swipe(x1, y1, x2, y2) == true },
-                            onCompletedOnMainThread = { _ -> },
-                        )
-                        if (accepted && visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
-                    }
-
-                    SwipeAction.RIGHT -> {
-                        val x1 = clampX(c.x)
-                        val y1 = clampY(c.y)
-                        val x2 = clampX(c.x + distance)
-                        val y2 = clampY(c.y)
-                        val accepted = dispatchProxyInput(
-                            op = "swipe_right",
-                            block = { proxy()?.swipe(x1, y1, x2, y2) == true },
-                            onCompletedOnMainThread = { _ -> },
-                        )
-                        if (accepted && visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
-                    }
-                }
-
-                Log.i(
-                    tag,
-                    "swipe via proxy action=$action center=(${c.x},${c.y}) distance=$distance (${distancePercent}%)",
-                )
-            }
         }
     }
 
-    private fun dispatchPinch(action: PinchAction, distanceScale: Float) {
+    private fun dispatchPinch(action: PinchAction) {
         val dm = resources.displayMetrics
         val w = dm.widthPixels
         val h = dm.heightPixels
         val minSide = minOf(w, h)
         val distancePercent = settings.getMousePinchDistancePercent()
         val baseDistance = ((minSide * (distancePercent / 100.0))).toInt().coerceIn(40, minSide - 1)
-        // 中心に近い位置の距離（innerOffset）は倍率に関わらず一定
         val innerOffset = (baseDistance * 0.15f).toInt().coerceIn(24, (baseDistance / 3).coerceAtLeast(25))
-        // そこから遠ざかる移動距離（travel）が倍率（distanceScale）に応じて拡大される
-        val baseTravel = ((baseDistance / 2) - innerOffset).coerceAtLeast(20)
-        val travel = (baseTravel * distanceScale).toInt().coerceAtMost((minSide / 2) - innerOffset - 1)
+        val travel = ((baseDistance / 2) - innerOffset).coerceAtLeast(20).coerceAtMost((minSide / 2) - innerOffset - 1)
         val outerOffset = innerOffset + travel
 
         val c = cursor.center()
@@ -1226,7 +857,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
                 Log.i(
                     tag,
-                    "pinch via accessibility action=$action center=(${c.x},${c.y}) travel=$travel (scale=$distanceScale) inner=$innerOffset outer=$outerOffset",
+                    "pinch via accessibility action=$action center=(${c.x},${c.y}) travel=$travel inner=$innerOffset outer=$outerOffset",
                 )
             }
 
@@ -1256,51 +887,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
                 Log.i(
                     tag,
-                    "pinch via Shizuku action=$action center=(${c.x},${c.y}) travel=$travel (scale=$distanceScale) inner=$innerOffset outer=$outerOffset",
-                )
-            }
-
-            EmulationMethod.PROXY -> {
-
-                val accepted = dispatchProxyInput(
-                    op = if (action == PinchAction.IN) "pinch_in" else "pinch_out",
-                    block = {
-                        when (action) {
-                            PinchAction.IN -> proxy()?.pinchIn(
-                                x1Start,
-                                y1Start,
-                                x1End,
-                                y1End,
-                                x2Start,
-                                y2Start,
-                                x2End,
-                                y2End,
-                            ) == true
-                            PinchAction.OUT -> proxy()?.pinchOut(
-                                x1Start,
-                                y1Start,
-                                x1End,
-                                y1End,
-                                x2Start,
-                                y2Start,
-                                x2End,
-                                y2End,
-                            ) == true
-                        }
-                    },
-                    onCompletedOnMainThread = { _ -> },
-                )
-
-                if (accepted && settings.isTouchVisualFeedbackEnabled()) {
-                    cursor.showPinchFeedback(
-                        x1Start = x1Start, y1Start = y1Start, x1End = x1End, y1End = y1End,
-                        x2Start = x2Start, y2Start = y2Start, x2End = x2End, y2End = y2End,
-                    )
-                }
-
-                Log.i(
-                    tag,
-                    "pinch via proxy action=$action center=(${c.x},${c.y}) travel=$travel (scale=$distanceScale) inner=$innerOffset outer=$outerOffset",
+                    "pinch via Shizuku action=$action center=(${c.x},${c.y}) travel=$travel inner=$innerOffset outer=$outerOffset",
                 )
             }
         }
@@ -1336,18 +923,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         mainHandler.removeCallbacks(commitToggleTapRunnable)
         pendingToggleTapAtMs = 0L
         pendingToggleTapKeyCode = null
-    }
-
-    private fun clearPendingSwipe() {
-        mainHandler.removeCallbacks(commitSwipeRunnable)
-        pendingSwipeAtMs = 0L
-        pendingSwipeAction = null
-    }
-
-    private fun clearPendingPinch() {
-        mainHandler.removeCallbacks(commitPinchRunnable)
-        pendingPinchAtMs = 0L
-        pendingPinchAction = null
     }
 
     private fun clearPendingToggle() {
@@ -1443,27 +1018,14 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                                 }
                                 gestures.longPress(c.x, c.y)
                             }
-                            EmulationMethod.PROXY -> {
-                                dispatchProxyInput(
-                                    op = "longPress",
-                                    block = { proxy()?.longPress(c.x, c.y) == true },
-                                    onCompletedOnMainThread = { _ -> },
-                                )
-                            }
                         }
                     }
-                    "swipe_up" -> dispatchScrollOrSwipe(SwipeAction.UP, 1.0f)
-                    "swipe_down" -> dispatchScrollOrSwipe(SwipeAction.DOWN, 1.0f)
-                    "swipe_left" -> dispatchScrollOrSwipe(SwipeAction.LEFT, 1.0f)
-                    "swipe_right" -> dispatchScrollOrSwipe(SwipeAction.RIGHT, 1.0f)
-                    "pinch_in" -> {
-                        val scale = intent.getFloatExtra("scale", 1.0f)
-                        dispatchPinch(PinchAction.IN, scale)
-                    }
-                    "pinch_out" -> {
-                        val scale = intent.getFloatExtra("scale", 1.0f)
-                        dispatchPinch(PinchAction.OUT, scale)
-                    }
+                    "swipe_up" -> dispatchScrollOrSwipe(SwipeAction.UP)
+                    "swipe_down" -> dispatchScrollOrSwipe(SwipeAction.DOWN)
+                    "swipe_left" -> dispatchScrollOrSwipe(SwipeAction.LEFT)
+                    "swipe_right" -> dispatchScrollOrSwipe(SwipeAction.RIGHT)
+                    "pinch_in" -> dispatchPinch(PinchAction.IN)
+                    "pinch_out" -> dispatchPinch(PinchAction.OUT)
                 }
             }
         }

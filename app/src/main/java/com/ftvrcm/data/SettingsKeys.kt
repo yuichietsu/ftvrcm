@@ -10,12 +10,7 @@ object SettingsKeys {
 
     const val MOUSE_POINTER_SPEED = "mouse_pointer_speed" // int
 
-    const val EMULATION_METHOD = "emulation_method" // String: ACCESSIBILITY_SERVICE|PROXY
-
-    // Proxy: FireTV app -> PC proxy -> adb -> FireTV
-    const val PROXY_HOST = "proxy_host" // String: hostname/IP
-    const val PROXY_PORT = "proxy_port" // String (EditTextPreference) / store as Int
-    const val PROXY_TOKEN = "proxy_token" // String
+    const val EMULATION_METHOD = "emulation_method" // String: SHIZUKU|ACCESSIBILITY_SERVICE
 
     const val MOUSE_KEY_UP = "mouse_key_up" // String/int
     const val MOUSE_KEY_DOWN = "mouse_key_down"
@@ -33,9 +28,7 @@ object SettingsKeys {
 
     // Swipe/scroll tuning
     const val MOUSE_SWIPE_DISTANCE_PERCENT = "mouse_swipe_distance_percent" // int (SeekBarPreference)
-    const val MOUSE_SWIPE_DOUBLE_SCALE = "mouse_swipe_double_scale" // String (ListPreference) / Float
     const val MOUSE_PINCH_DISTANCE_PERCENT = "mouse_pinch_distance_percent" // int (SeekBarPreference)
-    const val MOUSE_PINCH_DOUBLE_SCALE = "mouse_pinch_double_scale" // String (ListPreference) / Float
     const val MOUSE_SCROLL_REPEAT_LONGPRESS = "mouse_scroll_repeat_longpress" // boolean
     const val MOUSE_SCROLL_REPEAT_INTERVAL_MS = "mouse_scroll_repeat_interval_ms" // int (SeekBarPreference)
 

@@ -25,7 +25,6 @@ import com.ftvrcm.data.SettingsStore
 import com.ftvrcm.domain.EmulationMethod
 import com.ftvrcm.domain.OperationMode
 import com.ftvrcm.domain.ToggleTrigger
-import com.ftvrcm.proxy.ProxyInputClient
 import com.ftvrcm.service.RemoteControlAccessibilityService
 import com.ftvrcm.shizuku.ShizukuTouchInjector
 import rikka.shizuku.Shizuku
@@ -37,7 +36,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
 
     private var listener: SharedPreferences.OnSharedPreferenceChangeListener? = null
-    @Volatile private var proxyHealthCheckRunning: Boolean = false
 
     private val shizukuPermissionListener = Shizuku.OnRequestPermissionResultListener { _, _ ->
         activity?.runOnUiThread {
@@ -120,23 +118,10 @@ class SettingsFragment : PreferenceFragmentCompat() {
             true
         }
 
-        val proxyHealth = findPreference<Preference>("proxy_health_check")
-        proxyHealth?.setOnPreferenceClickListener {
-            runProxyHealthCheck()
-            true
-        }
-
-        val proxyGrantAccessibility = findPreference<Preference>("proxy_grant_accessibility")
-        proxyGrantAccessibility?.setOnPreferenceClickListener {
-            runProxyGrantAccessibility()
-            true
-        }
-
         refreshModeSummary()
         refreshRequiredStateSummary()
         refreshToggleKeySummary()
         refreshShizukuPreferences()
-        refreshProxyPreferences()
 
         val prefs = preferenceManager.sharedPreferences ?: return
         val l = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -146,14 +131,10 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 SettingsKeys.TOGGLE_TRIGGER,
                 SettingsKeys.MOUSE_POINTER_SPEED,
                 SettingsKeys.EMULATION_METHOD,
-                SettingsKeys.PROXY_HOST,
-                SettingsKeys.PROXY_PORT,
-                SettingsKeys.PROXY_TOKEN,
                 -> {
                     refreshModeSummary()
                     refreshToggleKeySummary()
                     refreshShizukuPreferences()
-                    refreshProxyPreferences()
                 }
             }
 
@@ -211,7 +192,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
         refreshRequiredStateSummary()
         refreshToggleKeySummary()
         refreshShizukuPreferences()
-        refreshProxyPreferences()
     }
 
     private fun refreshShizukuPreferences() {
@@ -270,126 +250,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
                     .setPositiveButton(getString(android.R.string.ok)) { _, _ -> }
                     .show()
                 refreshShizukuPreferences()
-            }
-        }.start()
-    }
-
-
-    private fun refreshProxyPreferences() {
-        val isProxy = SettingsStore(requireContext()).getEmulationMethod() == EmulationMethod.PROXY
-
-        // トップレベル: ADBプロキシ設定サブスクリーンの表示/非表示を切り替える
-        findPreference<Preference>("screen_proxy")?.isVisible = isProxy
-
-        // サブスクリーン内コンテキスト: ボタンは常に有効（プロキシモード前提で表示されるため）
-        findPreference<Preference>("proxy_health_check")?.let {
-            it.isEnabled = true
-            it.summary = getString(R.string.prefs_proxy_health_check_summary)
-        }
-        findPreference<Preference>("proxy_grant_accessibility")?.let {
-            it.isEnabled = true
-            it.summary = getString(R.string.prefs_proxy_grant_accessibility_summary)
-        }
-    }
-
-    private fun runProxyGrantAccessibility() {
-        val context = requireContext()
-        val pref = findPreference<Preference>("proxy_grant_accessibility")
-
-        if (proxyHealthCheckRunning) {
-            Toast.makeText(context, getString(R.string.prefs_proxy_grant_accessibility_running), Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        proxyHealthCheckRunning = true
-        pref?.isEnabled = false
-        pref?.summary = getString(R.string.prefs_proxy_grant_accessibility_running)
-
-        Thread {
-            val store = SettingsStore(context.applicationContext)
-            val host = store.getProxyHost()
-            val port = store.getProxyPort()
-            val token = store.getProxyToken()
-            val component = ComponentName(context.applicationContext, RemoteControlAccessibilityService::class.java).flattenToString()
-
-            val result = ProxyInputClient(
-                context.applicationContext,
-                host = host,
-                port = port,
-                token = token,
-            ).grantAccessibility(component)
-
-            activity?.runOnUiThread {
-                if (!isAdded) return@runOnUiThread
-                proxyHealthCheckRunning = false
-                refreshProxyPreferences()
-
-                if (result.ok) {
-                    Toast.makeText(context, "ADBでアクセシビリティを有効化しました", Toast.LENGTH_LONG).show()
-                    refreshRequiredStateSummary()
-                    restorePreferenceFocusSoon()
-                } else {
-                    val dialog = AlertDialog.Builder(context)
-                        .setTitle("ADB付与に失敗")
-                        .setMessage(result.detail.trim().take(2000))
-                        .setPositiveButton(getString(android.R.string.ok)) { _, _ -> }
-                        .create()
-
-                    dialog.setOnDismissListener {
-                        restorePreferenceFocusSoon()
-                    }
-                    dialog.show()
-                }
-            }
-        }.start()
-    }
-
-    private fun runProxyHealthCheck() {
-        val context = requireContext()
-        val pref = findPreference<Preference>("proxy_health_check")
-
-        if (proxyHealthCheckRunning) {
-            Toast.makeText(context, getString(R.string.prefs_proxy_health_check_running), Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        proxyHealthCheckRunning = true
-        pref?.isEnabled = false
-        pref?.summary = getString(R.string.prefs_proxy_health_check_running)
-
-        Thread {
-            val store = SettingsStore(context.applicationContext)
-            val host = store.getProxyHost()
-            val port = store.getProxyPort()
-            val token = store.getProxyToken()
-
-            val result = ProxyInputClient(
-                context.applicationContext,
-                host = host,
-                port = port,
-                token = token,
-            ).healthCheck()
-
-            activity?.runOnUiThread {
-                if (!isAdded) return@runOnUiThread
-                proxyHealthCheckRunning = false
-                refreshProxyPreferences()
-
-                if (result.ok) {
-                    Toast.makeText(context, "プロキシ疎通OK", Toast.LENGTH_LONG).show()
-                    restorePreferenceFocusSoon()
-                } else {
-                    val dialog = AlertDialog.Builder(context)
-                        .setTitle("プロキシ疎通NG")
-                        .setMessage(result.detail.trim().take(2000))
-                        .setPositiveButton(getString(android.R.string.ok)) { _, _ -> }
-                        .create()
-
-                    dialog.setOnDismissListener {
-                        restorePreferenceFocusSoon()
-                    }
-                    dialog.show()
-                }
             }
         }.start()
     }

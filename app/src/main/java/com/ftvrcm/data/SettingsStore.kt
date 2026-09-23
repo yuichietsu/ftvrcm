@@ -46,12 +46,7 @@ class SettingsStore(context: Context) {
 
             putInt(SettingsKeys.MOUSE_POINTER_SPEED, 10)
 
-            putString(SettingsKeys.EMULATION_METHOD, EmulationMethod.ACCESSIBILITY_SERVICE.name)
-
-            // Proxy target (PC proxy server)
-            putString(SettingsKeys.PROXY_HOST, "")
-            putString(SettingsKeys.PROXY_PORT, "8787")
-            putString(SettingsKeys.PROXY_TOKEN, "")
+            putString(SettingsKeys.EMULATION_METHOD, EmulationMethod.SHIZUKU.name)
 
             putString(SettingsKeys.MOUSE_KEY_UP, "19")
             putString(SettingsKeys.MOUSE_KEY_DOWN, "20")
@@ -71,9 +66,7 @@ class SettingsStore(context: Context) {
 
             // Swipe/scroll tuning
             putInt(SettingsKeys.MOUSE_SWIPE_DISTANCE_PERCENT, 28)
-            putString(SettingsKeys.MOUSE_SWIPE_DOUBLE_SCALE, "2.0")
             putInt(SettingsKeys.MOUSE_PINCH_DISTANCE_PERCENT, 28)
-            putString(SettingsKeys.MOUSE_PINCH_DOUBLE_SCALE, "2.0")
             putBoolean(SettingsKeys.MOUSE_SCROLL_REPEAT_LONGPRESS, true)
             putInt(SettingsKeys.MOUSE_SCROLL_REPEAT_INTERVAL_MS, 120)
 
@@ -152,21 +145,12 @@ class SettingsStore(context: Context) {
     fun getMousePointerSpeedPx(): Int = prefs.getInt(SettingsKeys.MOUSE_POINTER_SPEED, 10).coerceIn(1, 200)
 
     fun getEmulationMethod(): EmulationMethod {
-        val value = prefs.getString(SettingsKeys.EMULATION_METHOD, EmulationMethod.ACCESSIBILITY_SERVICE.name)
+        val value = prefs.getString(SettingsKeys.EMULATION_METHOD, EmulationMethod.SHIZUKU.name)
         return when (value) {
-            EmulationMethod.SHIZUKU.name -> EmulationMethod.SHIZUKU
-            EmulationMethod.PROXY.name -> EmulationMethod.PROXY
-            else -> EmulationMethod.ACCESSIBILITY_SERVICE
+            EmulationMethod.ACCESSIBILITY_SERVICE.name -> EmulationMethod.ACCESSIBILITY_SERVICE
+            else -> EmulationMethod.SHIZUKU
         }
     }
-
-
-    fun getProxyHost(): String = prefs.getString(SettingsKeys.PROXY_HOST, "") ?: ""
-
-    fun getProxyPort(): Int = (prefs.getString(SettingsKeys.PROXY_PORT, "8787")?.toIntOrNull() ?: 8787)
-        .coerceIn(1, 65535)
-
-    fun getProxyToken(): String = prefs.getString(SettingsKeys.PROXY_TOKEN, "") ?: ""
 
     fun getMouseKeyUp(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_UP, "19")?.toIntOrNull() ?: 19
     fun getMouseKeyDown(): Int = prefs.getString(SettingsKeys.MOUSE_KEY_DOWN, "20")?.toIntOrNull() ?: 20
@@ -185,16 +169,8 @@ class SettingsStore(context: Context) {
     fun getMouseSwipeDistancePercent(): Int =
         prefs.getInt(SettingsKeys.MOUSE_SWIPE_DISTANCE_PERCENT, 28).coerceIn(5, 95)
 
-    fun getMouseSwipeDoubleScale(): Float =
-        (prefs.getString(SettingsKeys.MOUSE_SWIPE_DOUBLE_SCALE, "2.0")?.toFloatOrNull() ?: 2.0f)
-            .coerceIn(0.3f, 3.0f)
-
     fun getMousePinchDistancePercent(): Int =
         prefs.getInt(SettingsKeys.MOUSE_PINCH_DISTANCE_PERCENT, 28).coerceIn(5, 95)
-
-    fun getMousePinchDoubleScale(): Float =
-        (prefs.getString(SettingsKeys.MOUSE_PINCH_DOUBLE_SCALE, "2.0")?.toFloatOrNull() ?: 2.0f)
-            .coerceIn(0.3f, 3.0f)
 
     fun isMouseScrollRepeatLongPress(): Boolean =
         prefs.getBoolean(SettingsKeys.MOUSE_SCROLL_REPEAT_LONGPRESS, true)
