@@ -1,18 +1,20 @@
 package com.ftvrcm.ui
 
+import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.GestureDetector
 import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.ListView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.ftvrcm.R
-import android.os.SystemClock
-import android.view.ViewConfiguration
-import android.content.SharedPreferences
 import com.ftvrcm.data.SettingsKeys
+import com.ftvrcm.shizuku.ShizukuTouchInjector
 
 class TouchTestActivity : AppCompatActivity() {
 
@@ -175,6 +177,67 @@ class TouchTestActivity : AppCompatActivity() {
             listDetector.onTouchEvent(event)
             false
         }
+
+        handleIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        val op = intent?.getStringExtra("op") ?: return
+        Thread {
+            val injector = ShizukuTouchInjector(applicationContext)
+            when (op) {
+                "tap" -> {
+                    val x = intent.getIntExtra("x", 336)
+                    val y = intent.getIntExtra("y", 469)
+                    injector.tap(x, y)
+                }
+                "double_tap" -> {
+                    val x = intent.getIntExtra("x", 490)
+                    val y = intent.getIntExtra("y", 676)
+                    injector.doubleTap(x, y)
+                }
+                "long_press" -> {
+                    val x = intent.getIntExtra("x", 960)
+                    val y = intent.getIntExtra("y", 469)
+                    injector.longPress(x, y)
+                }
+                "swipe" -> {
+                    val x1 = intent.getIntExtra("x1", 1430)
+                    val y1 = intent.getIntExtra("y1", 900)
+                    val x2 = intent.getIntExtra("x2", 1430)
+                    val y2 = intent.getIntExtra("y2", 650)
+                    injector.swipe(x1, y1, x2, y2)
+                }
+                "pinch_in" -> {
+                    val cX = intent.getIntExtra("cx", 1430)
+                    val cY = intent.getIntExtra("cy", 838)
+                    val span = intent.getIntExtra("span", 300)
+                    injector.pinchIn(
+                        x1Start = cX - span, y1Start = cY,
+                        x1End = cX - 60, y1End = cY,
+                        x2Start = cX + span, y2Start = cY,
+                        x2End = cX + 60, y2End = cY,
+                    )
+                }
+                "pinch_out" -> {
+                    val cX = intent.getIntExtra("cx", 1430)
+                    val cY = intent.getIntExtra("cy", 838)
+                    val span = intent.getIntExtra("span", 300)
+                    injector.pinchOut(
+                        x1Start = cX - 60, y1Start = cY,
+                        x1End = cX - span, y1End = cY,
+                        x2Start = cX + 60, y2Start = cY,
+                        x2End = cX + span, y2End = cY,
+                    )
+                }
+            }
+        }.start()
     }
 
     override fun onDestroy() {

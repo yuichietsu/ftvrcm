@@ -153,8 +153,13 @@ class SettingsStore(context: Context) {
 
     fun getEmulationMethod(): EmulationMethod {
         val value = prefs.getString(SettingsKeys.EMULATION_METHOD, EmulationMethod.ACCESSIBILITY_SERVICE.name)
-        return if (value == EmulationMethod.PROXY.name) EmulationMethod.PROXY else EmulationMethod.ACCESSIBILITY_SERVICE
+        return when (value) {
+            EmulationMethod.SHIZUKU.name -> EmulationMethod.SHIZUKU
+            EmulationMethod.PROXY.name -> EmulationMethod.PROXY
+            else -> EmulationMethod.ACCESSIBILITY_SERVICE
+        }
     }
+
 
     fun getProxyHost(): String = prefs.getString(SettingsKeys.PROXY_HOST, "") ?: ""
 

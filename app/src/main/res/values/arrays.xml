@@ -1,13 +1,16 @@
 <resources>
     <string-array name="emulation_method_entries">
         <item>アクセシビリティサービス</item>
-        <item>ADBプロキシ（上級者向け）</item>
+        <item>Shizuku（推奨・低遅延・高精度ピンチ）</item>
+        <item>ADBプロキシ（PC連携）</item>
     </string-array>
 
     <string-array name="emulation_method_values">
         <item>ACCESSIBILITY_SERVICE</item>
+        <item>SHIZUKU</item>
         <item>PROXY</item>
     </string-array>
+
 
     <string-array name="toggle_trigger_entries">
         <item>長押し</item>

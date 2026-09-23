@@ -27,13 +27,45 @@ import com.ftvrcm.domain.OperationMode
 import com.ftvrcm.domain.ToggleTrigger
 import com.ftvrcm.proxy.ProxyInputClient
 import com.ftvrcm.service.RemoteControlAccessibilityService
+import com.ftvrcm.shizuku.ShizukuTouchInjector
+import rikka.shizuku.Shizuku
 
 private const val TAG = "SettingsFragment"
+private const val SHIZUKU_PERMISSION_REQUEST_CODE = 1001
 
 class SettingsFragment : PreferenceFragmentCompat() {
 
+
     private var listener: SharedPreferences.OnSharedPreferenceChangeListener? = null
     @Volatile private var proxyHealthCheckRunning: Boolean = false
+
+    private val shizukuPermissionListener = Shizuku.OnRequestPermissionResultListener { _, _ ->
+        activity?.runOnUiThread {
+            if (isAdded) refreshShizukuPreferences()
+        }
+    }
+
+    private val shizukuBinderReceivedListener = Shizuku.OnBinderReceivedListener {
+        activity?.runOnUiThread {
+            if (isAdded) refreshShizukuPreferences()
+        }
+    }
+
+    private val shizukuBinderDeadListener = Shizuku.OnBinderDeadListener {
+        activity?.runOnUiThread {
+            if (isAdded) refreshShizukuPreferences()
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        try {
+            Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
+            Shizuku.addBinderReceivedListener(shizukuBinderReceivedListener)
+            Shizuku.addBinderDeadListener(shizukuBinderDeadListener)
+        } catch (_: Throwable) {
+        }
+    }
 
     /**
      * hide 直前にフォーカスしていた View の弱参照。
@@ -42,6 +74,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
     private var savedFocusedView = WeakReference<android.view.View>(null)
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
+
         preferenceManager.sharedPreferencesName = SettingsKeys.PREFS_NAME
         setPreferencesFromResource(R.xml.preferences, rootKey)
 
@@ -69,6 +102,24 @@ class SettingsFragment : PreferenceFragmentCompat() {
             true
         }
 
+        val shizukuRequestPerm = findPreference<Preference>("shizuku_request_permission")
+        shizukuRequestPerm?.setOnPreferenceClickListener {
+            requestShizukuPermission()
+            true
+        }
+
+        val shizukuOpenApp = findPreference<Preference>("shizuku_open_app")
+        shizukuOpenApp?.setOnPreferenceClickListener {
+            openShizukuApp()
+            true
+        }
+
+        val shizukuTest = findPreference<Preference>("shizuku_test_injection")
+        shizukuTest?.setOnPreferenceClickListener {
+            runShizukuTestInjection()
+            true
+        }
+
         val proxyHealth = findPreference<Preference>("proxy_health_check")
         proxyHealth?.setOnPreferenceClickListener {
             runProxyHealthCheck()
@@ -84,6 +135,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         refreshModeSummary()
         refreshRequiredStateSummary()
         refreshToggleKeySummary()
+        refreshShizukuPreferences()
         refreshProxyPreferences()
 
         val prefs = preferenceManager.sharedPreferences ?: return
@@ -100,9 +152,11 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 -> {
                     refreshModeSummary()
                     refreshToggleKeySummary()
+                    refreshShizukuPreferences()
                     refreshProxyPreferences()
                 }
             }
+
 
             when (key) {
                 SettingsKeys.MOUSE_KEY_UP,
@@ -156,9 +210,70 @@ class SettingsFragment : PreferenceFragmentCompat() {
         refreshModeSummary()
         refreshRequiredStateSummary()
         refreshToggleKeySummary()
+        refreshShizukuPreferences()
         refreshProxyPreferences()
-
     }
+
+    private fun refreshShizukuPreferences() {
+        val isShizuku = SettingsStore(requireContext()).getEmulationMethod() == EmulationMethod.SHIZUKU
+
+        // トップレベル: Shizuku設定サブスクリーンの表示/非表示を切り替える
+        findPreference<Preference>("screen_shizuku")?.isVisible = isShizuku
+
+        val isAlive = ShizukuTouchInjector.isShizukuAvailable()
+        val isGranted = ShizukuTouchInjector.isPermissionGranted()
+
+        findPreference<Preference>("shizuku_service_status")?.summary =
+            if (isAlive) getString(R.string.prefs_shizuku_status_running)
+            else getString(R.string.prefs_shizuku_status_stopped)
+
+        findPreference<Preference>("shizuku_permission_status")?.summary =
+            if (isGranted) getString(R.string.prefs_shizuku_permission_granted)
+            else getString(R.string.prefs_shizuku_permission_denied)
+
+        findPreference<Preference>("shizuku_request_permission")?.isEnabled = isAlive && !isGranted
+        findPreference<Preference>("shizuku_test_injection")?.isEnabled = isAlive && isGranted
+    }
+
+    private fun requestShizukuPermission() {
+        if (!ShizukuTouchInjector.isShizukuAvailable()) {
+            Toast.makeText(requireContext(), getString(R.string.prefs_shizuku_status_stopped), Toast.LENGTH_SHORT).show()
+            return
+        }
+        try {
+            Shizuku.requestPermission(SHIZUKU_PERMISSION_REQUEST_CODE)
+        } catch (t: Throwable) {
+            Toast.makeText(requireContext(), "権限リクエスト失敗: ${t.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun openShizukuApp() {
+        val pm = requireContext().packageManager
+        val intent = pm.getLaunchIntentForPackage("moe.shizuku.privileged.api")
+        if (intent != null) {
+            startActivity(intent)
+        } else {
+            Toast.makeText(requireContext(), "Shizukuアプリが見つかりません (moe.shizuku.privileged.api)", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun runShizukuTestInjection() {
+        val context = requireContext()
+        Thread {
+            val injector = ShizukuTouchInjector(context.applicationContext)
+            val result = injector.testConnection()
+            activity?.runOnUiThread {
+                if (!isAdded) return@runOnUiThread
+                AlertDialog.Builder(context)
+                    .setTitle(if (result.ok) "Shizuku接続テスト成功" else "Shizuku接続テスト失敗")
+                    .setMessage(result.detail)
+                    .setPositiveButton(getString(android.R.string.ok)) { _, _ -> }
+                    .show()
+                refreshShizukuPreferences()
+            }
+        }.start()
+    }
+
 
     private fun refreshProxyPreferences() {
         val isProxy = SettingsStore(requireContext()).getEmulationMethod() == EmulationMethod.PROXY
@@ -294,8 +409,15 @@ class SettingsFragment : PreferenceFragmentCompat() {
             preferenceManager.sharedPreferences?.unregisterOnSharedPreferenceChangeListener(l)
         }
         listener = null
+        try {
+            Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener)
+            Shizuku.removeBinderReceivedListener(shizukuBinderReceivedListener)
+            Shizuku.removeBinderDeadListener(shizukuBinderDeadListener)
+        } catch (_: Throwable) {
+        }
         super.onDestroy()
     }
+
 
     private fun refreshModeSummary() {
         // operation_mode_current は削除済み。ダッシュボードのみ更新する。

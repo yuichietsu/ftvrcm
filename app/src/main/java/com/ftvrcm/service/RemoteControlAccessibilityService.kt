@@ -2,6 +2,11 @@ package com.ftvrcm.service
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -18,6 +23,7 @@ import com.ftvrcm.domain.ToggleTrigger
 import com.ftvrcm.mouse.CursorOverlay
 import com.ftvrcm.mouse.GestureController
 import com.ftvrcm.proxy.ProxyInputClient
+import com.ftvrcm.shizuku.ShizukuTouchInjector
 import com.ftvrcm.util.KeyCaptureState
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -43,10 +49,14 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     private lateinit var cursor: CursorOverlay
     private lateinit var gestures: GestureController
 
+    private var shizukuInjector: ShizukuTouchInjector? = null
+    private val shizukuExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+
     private var proxyInput: ProxyInputClient? = null
     private var proxyHost: String? = null
     private var proxyPort: Int? = null
     private var proxyToken: String? = null
+
 
     private var mode: OperationMode = OperationMode.NORMAL
 
@@ -98,6 +108,18 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 gestures.longPress(c.x, c.y)
             }
 
+            EmulationMethod.SHIZUKU -> {
+                if (settings.isTouchVisualFeedbackEnabled()) {
+                    cursor.showTapFeedback(isLongPress = true)
+                }
+                shizukuExecutor.execute {
+                    val ok = shizuku().longPress(c.x, c.y)
+                    if (!ok) {
+                        mainHandler.post { showShizukuErrorToast() }
+                    }
+                }
+            }
+
             EmulationMethod.PROXY -> {
                 val accepted = dispatchProxyInput(
                     op = "longPress",
@@ -111,6 +133,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             }
         }
     }
+
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private var pendingToggleKeyCode: Int? = null
@@ -219,6 +242,16 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 lastCursorX = p.x
                 lastCursorY = p.y
             }
+
+            try {
+                val filter = IntentFilter("com.ftvrcm.CMD")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    registerReceiver(cmdReceiver, filter, Context.RECEIVER_EXPORTED)
+                } else {
+                    registerReceiver(cmdReceiver, filter)
+                }
+            } catch (_: Throwable) {
+            }
         } catch (t: Throwable) {
             Log.e(tag, "service init failed (${t.javaClass.simpleName}: ${t.message})")
             try {
@@ -245,6 +278,11 @@ class RemoteControlAccessibilityService : AccessibilityService() {
 
         return proxyInput
     }
+
+    private fun shizuku(): ShizukuTouchInjector {
+        return shizukuInjector ?: ShizukuTouchInjector(this).also { shizukuInjector = it }
+    }
+
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         // no-op
@@ -544,6 +582,10 @@ class RemoteControlAccessibilityService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        try {
+            unregisterReceiver(cmdReceiver)
+        } catch (_: Throwable) {
+        }
         clearPendingToggle()
         clearPendingToggleTap()
         clearPendingTapKey()
@@ -554,6 +596,10 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         cursor.hide()
         try {
             proxyExecutor.shutdownNow()
+        } catch (_: Throwable) {
+        }
+        try {
+            shizukuExecutor.shutdownNow()
         } catch (_: Throwable) {
         }
         super.onDestroy()
@@ -630,7 +676,22 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                     return
                 }
 
+                EmulationMethod.SHIZUKU -> {
+                    if (!ShizukuTouchInjector.isShizukuAvailable()) {
+                        showToast("タッチ操作へ切り替えできません（Shizukuサービスが起動していません）")
+                        return
+                    }
+                    if (!ShizukuTouchInjector.isPermissionGranted()) {
+                        showToast("タッチ操作へ切り替えできません（Shizukuの権限が付与されていません）")
+                        return
+                    }
+
+                    applyMode(target)
+                    return
+                }
+
                 EmulationMethod.PROXY -> {
+
                     enterMouseModeInProgress = true
 
                     // Run health check off the main thread; apply mode only if it succeeds.
@@ -715,6 +776,24 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             null
         }
     }
+
+    private fun showShizukuErrorToast() {
+        val detail = getLastShizukuErrorDetail()
+        showToast("Shizuku操作に失敗しました${if (!detail.isNullOrBlank()) ": $detail" else ""}")
+    }
+
+    private fun getLastShizukuErrorDetail(maxLen: Int = 120): String? {
+        return try {
+            val prefs = getSharedPreferences(SettingsKeys.PREFS_NAME, MODE_PRIVATE)
+            val status = prefs.getString(SettingsKeys.LAST_GESTURE_STATUS, "") ?: ""
+            if (status != "FAILED") return null
+            val detail = prefs.getString(SettingsKeys.LAST_GESTURE_DETAIL, "") ?: ""
+            detail.trim().take(maxLen).ifEmpty { null }
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
 
     private fun syncModeFromSettingsIfNeeded() {
         val current = settings.getOperationMode()
@@ -849,6 +928,19 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 gestures.tap(x, y)
             }
 
+            EmulationMethod.SHIZUKU -> {
+                Log.i(tag, "tap via Shizuku at (${x},${y})")
+                if (settings.isTouchVisualFeedbackEnabled()) {
+                    cursor.showTapFeedback(isLongPress = false)
+                }
+                shizukuExecutor.execute {
+                    val ok = shizuku().tap(x, y)
+                    if (!ok) {
+                        mainHandler.post { showShizukuErrorToast() }
+                    }
+                }
+            }
+
             EmulationMethod.PROXY -> {
                 Log.i(tag, "tap via proxy at (${x},${y})")
                 val accepted = dispatchProxyInput(
@@ -871,6 +963,22 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 gestures.doubleTap(x, y)
             }
 
+            EmulationMethod.SHIZUKU -> {
+                Log.i(tag, "doubleTap via Shizuku at (${x},${y})")
+                if (settings.isTouchVisualFeedbackEnabled()) {
+                    cursor.showTapFeedback(isLongPress = false)
+                    mainHandler.postDelayed({
+                        cursor.showTapFeedback(isLongPress = false)
+                    }, 90L)
+                }
+                shizukuExecutor.execute {
+                    val ok = shizuku().doubleTap(x, y)
+                    if (!ok) {
+                        mainHandler.post { showShizukuErrorToast() }
+                    }
+                }
+            }
+
             EmulationMethod.PROXY -> {
                 Log.i(tag, "doubleTap via proxy at (${x},${y})")
                 val accepted = dispatchProxyInput(
@@ -888,6 +996,7 @@ class RemoteControlAccessibilityService : AccessibilityService() {
             }
         }
     }
+
 
     private fun scheduleTapOrDoubleTap(x: Int, y: Int) {
         val now = SystemClock.uptimeMillis()
@@ -937,7 +1046,58 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 }
             }
 
+            EmulationMethod.SHIZUKU -> {
+                val dm = resources.displayMetrics
+                val w = dm.widthPixels
+                val h = dm.heightPixels
+                val distancePercent = settings.getMouseSwipeDistancePercent()
+                val baseDistance = ((minOf(w, h) * (distancePercent / 100.0))).toInt().coerceIn(40, minOf(w, h) - 1)
+                val distance = (baseDistance * distanceScale).toInt().coerceIn(40, minOf(w, h) - 1)
+
+                fun clampX(x: Int) = x.coerceIn(0, w - 1)
+                fun clampY(y: Int) = y.coerceIn(0, h - 1)
+
+                val x1: Int
+                val y1: Int
+                val x2: Int
+                val y2: Int
+
+                when (action) {
+                    SwipeAction.UP -> {
+                        x1 = clampX(c.x); y1 = clampY(c.y)
+                        x2 = clampX(c.x); y2 = clampY(c.y - distance)
+                    }
+                    SwipeAction.DOWN -> {
+                        x1 = clampX(c.x); y1 = clampY(c.y)
+                        x2 = clampX(c.x); y2 = clampY(c.y + distance)
+                    }
+                    SwipeAction.LEFT -> {
+                        x1 = clampX(c.x); y1 = clampY(c.y)
+                        x2 = clampX(c.x - distance); y2 = clampY(c.y)
+                    }
+                    SwipeAction.RIGHT -> {
+                        x1 = clampX(c.x); y1 = clampY(c.y)
+                        x2 = clampX(c.x + distance); y2 = clampY(c.y)
+                    }
+                }
+
+                if (visualFeedback) cursor.showSwipeTrail(x1, y1, x2, y2)
+
+                shizukuExecutor.execute {
+                    val ok = shizuku().swipe(x1, y1, x2, y2)
+                    if (!ok) {
+                        mainHandler.post { showShizukuErrorToast() }
+                    }
+                }
+
+                Log.i(
+                    tag,
+                    "swipe via Shizuku action=$action center=(${c.x},${c.y}) distance=$distance (${distancePercent}%)",
+                )
+            }
+
             EmulationMethod.PROXY -> {
+
                 val dm = resources.displayMetrics
                 val w = dm.widthPixels
                 val h = dm.heightPixels
@@ -1064,7 +1224,35 @@ class RemoteControlAccessibilityService : AccessibilityService() {
                 )
             }
 
+            EmulationMethod.SHIZUKU -> {
+                if (settings.isTouchVisualFeedbackEnabled()) {
+                    cursor.showPinchFeedback(isZoomOut = action == PinchAction.OUT)
+                }
+
+                shizukuExecutor.execute {
+                    val ok = when (action) {
+                        PinchAction.IN -> shizuku().pinchIn(
+                            x1Start, y1Start, x1End, y1End,
+                            x2Start, y2Start, x2End, y2End,
+                        )
+                        PinchAction.OUT -> shizuku().pinchOut(
+                            x1Start, y1Start, x1End, y1End,
+                            x2Start, y2Start, x2End, y2End,
+                        )
+                    }
+                    if (!ok) {
+                        mainHandler.post { showShizukuErrorToast() }
+                    }
+                }
+
+                Log.i(
+                    tag,
+                    "pinch via Shizuku action=$action center=(${c.x},${c.y}) distance=$distance (${distancePercent}%)",
+                )
+            }
+
             EmulationMethod.PROXY -> {
+
                 val accepted = dispatchProxyInput(
                     op = if (action == PinchAction.IN) "pinch_in" else "pinch_out",
                     block = {
@@ -1188,6 +1376,79 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         moveDx = 0
         moveDy = 0
         moveTicks = 0
+    }
+
+    private val cmdReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val op = intent?.getStringExtra("op") ?: return
+            Log.i(tag, "received cmd broadcast: op=$op")
+            mainHandler.post {
+                when (op) {
+                    "toggle_mode" -> toggleMode()
+                    "set_mode" -> {
+                        val target = intent.getStringExtra("mode")
+                        if (target == "MOUSE" && mode != OperationMode.MOUSE) toggleMode()
+                        else if (target == "NORMAL" && mode != OperationMode.NORMAL) toggleMode()
+                    }
+                    "move_cursor" -> {
+                        val dx = intent.getIntExtra("dx", 0)
+                        val dy = intent.getIntExtra("dy", 0)
+                        cursor.moveBy(dx, dy)
+                        val p = cursor.position()
+                        lastCursorX = p.x
+                        lastCursorY = p.y
+                    }
+                    "set_cursor" -> {
+                        val x = intent.getIntExtra("x", 0)
+                        val y = intent.getIntExtra("y", 0)
+                        cursor.setPosition(x, y)
+                        lastCursorX = x
+                        lastCursorY = y
+                    }
+                    "tap" -> {
+                        val c = cursor.center()
+                        dispatchTap(c.x, c.y)
+                    }
+                    "double_tap" -> {
+                        val c = cursor.center()
+                        dispatchDoubleTap(c.x, c.y)
+                    }
+                    "long_press" -> {
+                        val c = cursor.center()
+                        when (settings.getEmulationMethod()) {
+                            EmulationMethod.SHIZUKU -> {
+                                if (settings.isTouchVisualFeedbackEnabled()) {
+                                    cursor.showTapFeedback(isLongPress = true)
+                                }
+                                shizukuExecutor.execute {
+                                    val ok = shizuku().longPress(c.x, c.y)
+                                    if (!ok) mainHandler.post { showShizukuErrorToast() }
+                                }
+                            }
+                            EmulationMethod.ACCESSIBILITY_SERVICE -> {
+                                if (settings.isTouchVisualFeedbackEnabled()) {
+                                    cursor.showTapFeedback(isLongPress = true)
+                                }
+                                gestures.longPress(c.x, c.y)
+                            }
+                            EmulationMethod.PROXY -> {
+                                dispatchProxyInput(
+                                    op = "longPress",
+                                    block = { proxy()?.longPress(c.x, c.y) == true },
+                                    onCompletedOnMainThread = { _ -> },
+                                )
+                            }
+                        }
+                    }
+                    "swipe_up" -> dispatchScrollOrSwipe(SwipeAction.UP, 1.0f)
+                    "swipe_down" -> dispatchScrollOrSwipe(SwipeAction.DOWN, 1.0f)
+                    "swipe_left" -> dispatchScrollOrSwipe(SwipeAction.LEFT, 1.0f)
+                    "swipe_right" -> dispatchScrollOrSwipe(SwipeAction.RIGHT, 1.0f)
+                    "pinch_in" -> dispatchPinch(PinchAction.IN, 1.0f)
+                    "pinch_out" -> dispatchPinch(PinchAction.OUT, 1.0f)
+                }
+            }
+        }
     }
 
     private companion object {

@@ -43,9 +43,45 @@
             android:defaultValue="ACCESSIBILITY_SERVICE"
             app:useSimpleSummaryProvider="true" />
 
+        <!-- Shizuku設定サブスクリーン（SHIZUKU選択時のみ表示） -->
+        <PreferenceScreen
+            android:key="screen_shizuku"
+            android:title="@string/prefs_screen_shizuku_title"
+            android:summary="@string/prefs_screen_shizuku_summary">
+
+            <PreferenceCategory android:title="@string/prefs_category_shizuku">
+
+                <Preference
+                    android:key="shizuku_service_status"
+                    android:title="@string/prefs_shizuku_service_status" />
+
+                <Preference
+                    android:key="shizuku_permission_status"
+                    android:title="@string/prefs_shizuku_permission_status" />
+
+                <Preference
+                    android:key="shizuku_request_permission"
+                    android:title="@string/prefs_shizuku_request_permission"
+                    android:summary="@string/prefs_shizuku_request_permission_summary" />
+
+                <Preference
+                    android:key="shizuku_open_app"
+                    android:title="@string/prefs_shizuku_open_app"
+                    android:summary="@string/prefs_shizuku_open_app_summary" />
+
+                <Preference
+                    android:key="shizuku_test_injection"
+                    android:title="@string/prefs_shizuku_test_injection"
+                    android:summary="@string/prefs_shizuku_test_injection_summary" />
+
+            </PreferenceCategory>
+
+        </PreferenceScreen>
+
         <!-- ADBプロキシ設定サブスクリーン（PROXY選択時のみ表示） -->
         <PreferenceScreen
             android:key="screen_proxy"
+
             android:title="@string/prefs_screen_proxy_title"
             android:summary="@string/prefs_screen_proxy_summary">
 
