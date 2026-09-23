@@ -161,10 +161,6 @@
                 android:summary="@string/prefs_mouse_key_cursor_dpad_toggle_summary"
                 android:defaultValue="82" />
 
-            <com.ftvrcm.ui.KeyCapturePreference
-                android:key="screenshot_key"
-                android:title="@string/prefs_screenshot_key"
-                android:defaultValue="0" />
 
         </PreferenceCategory>
 
@@ -253,20 +249,6 @@
 
     </PreferenceScreen>
 
-    <!-- システム：OS設定へのリンク -->
-    <PreferenceCategory android:title="@string/prefs_category_system">
-
-        <Preference
-            android:key="open_accessibility_settings"
-            android:title="@string/prefs_open_accessibility_settings"
-            android:summary="@string/prefs_open_accessibility_settings_summary" />
-
-        <Preference
-            android:key="open_app_details_settings"
-            android:title="@string/prefs_open_app_details_settings"
-            android:summary="@string/prefs_open_app_details_settings_summary" />
-
-    </PreferenceCategory>
 
     <!-- ツール：テストとリセット -->
     <PreferenceCategory android:title="@string/prefs_category_tools">

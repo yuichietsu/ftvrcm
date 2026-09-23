@@ -302,19 +302,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         // 2) Mouse mode key mapping
         if (mode != OperationMode.MOUSE) return false
 
-        // 2.1) Screenshot capture (mouse mode only)
-        val screenshotKey = settings.getScreenshotKey()
-        if (matchesAssignedKey(screenshotKey, event)) {
-            return when (event.action) {
-                KeyEvent.ACTION_DOWN -> {
-                    if (event.repeatCount > 0) return true
-                    triggerScreenshot()
-                    true
-                }
-                KeyEvent.ACTION_UP -> true
-                else -> true
-            }
-        }
 
         val mouseKeyUp = settings.getMouseKeyUp()
         val mouseKeyDown = settings.getMouseKeyDown()
@@ -638,16 +625,6 @@ class RemoteControlAccessibilityService : AccessibilityService() {
         cursor.setStyle(if (isDpadMode) CursorOverlay.CursorStyle.DPAD else CursorOverlay.CursorStyle.POINTER)
     }
 
-    private fun triggerScreenshot() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            val ok = performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)
-            if (!ok) {
-                showToast("スクリーンショットの撮影に失敗しました")
-            }
-        } else {
-            showToast("スクリーンショットはAndroid 9以上で利用可能です")
-        }
-    }
 
     private fun matchesAssignedKey(assigned: Int, event: KeyEvent): Boolean {
         if (assigned == 0) return false

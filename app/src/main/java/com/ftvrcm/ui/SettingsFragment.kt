@@ -78,15 +78,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
         preferenceScreen?.let { disableIconSpaceReservedRecursively(it) }
 
-        val openAccessibility = findPreference<Preference>("open_accessibility_settings")
-        openAccessibility?.setOnPreferenceClickListener {
-            openAccessibilitySettings()
-        }
-
-        val openAppDetails = findPreference<Preference>("open_app_details_settings")
-        openAppDetails?.setOnPreferenceClickListener {
-            openAppDetailsSettings()
-        }
 
         val resetDefaults = findPreference<Preference>("reset_defaults")
         resetDefaults?.setOnPreferenceClickListener {
@@ -381,47 +372,4 @@ class SettingsFragment : PreferenceFragmentCompat() {
             .show()
     }
 
-    private fun openAccessibilitySettings(): Boolean {
-        val context = requireContext()
-        val me = ComponentName(context, RemoteControlAccessibilityService::class.java)
-
-        val intents = listOf(
-            // Newer Android builds can open the details page for a specific service.
-            Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS")
-                .putExtra("android.provider.extra.ACCESSIBILITY_COMPONENT_NAME", me.flattenToString()),
-            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS),
-            // As a last resort, guide user to this app's details page.
-            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                .setData(Uri.parse("package:${context.packageName}")),
-        )
-
-        return startFirstAvailable(intents)
-    }
-
-    private fun openAppDetailsSettings(): Boolean {
-        val context = requireContext()
-        val intents = listOf(
-            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                .setData(Uri.parse("package:${context.packageName}")),
-            Intent(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS),
-        )
-        return startFirstAvailable(intents)
-    }
-
-    private fun startFirstAvailable(intents: List<Intent>): Boolean {
-        val context = requireContext()
-        for (rawIntent in intents) {
-            val intent = Intent(rawIntent).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            try {
-                startActivity(intent)
-                return true
-            } catch (e: ActivityNotFoundException) {
-            } catch (e: SecurityException) {
-            } catch (e: Exception) {
-            }
-        }
-
-        Toast.makeText(context, "設定画面を開けませんでした（端末側制限の可能性）", Toast.LENGTH_LONG).show()
-        return true
-    }
 }

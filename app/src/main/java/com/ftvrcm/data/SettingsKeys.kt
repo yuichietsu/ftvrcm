@@ -34,7 +34,6 @@ object SettingsKeys {
 
     const val MOUSE_KEY_CURSOR_DPAD_TOGGLE = "mouse_key_cursor_dpad_toggle" // String/int
 
-    const val SCREENSHOT_KEY = "screenshot_key" // String/int
 
     const val MOUSE_CURSOR_START_POSITION = "mouse_cursor_start_position" // String
     const val MOUSE_CURSOR_LAST_X = "mouse_cursor_last_x" // int
