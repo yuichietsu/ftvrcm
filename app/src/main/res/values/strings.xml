@@ -33,7 +33,7 @@ BACKダブルタップで割り当てなし、5秒でキャンセル（BACK単�
     <string name="prefs_touch_visual_feedback_summary">タップ、スワイプ、スクロールが発生したことを視覚的にお知らせします</string>
 
     <string name="prefs_use_shizuku">Shizukuを使用する（推奨）</string>
-    <string name="prefs_use_shizuku_summary">スマートフォンのような自然なスワイプや2本指ピンチ（ズーム）操作を超低遅延・高精度にエミュレーションします</string>
+    <string name="prefs_use_shizuku_summary">スマートフォンのような自然なスワイプや2本指ピンチ（ズーム）操作をエミュレーションします</string>
 
     <string name="prefs_enable_accessibility_shizuku">アクセシビリティを有効化</string>
     <string name="prefs_enable_accessibility_shizuku_summary">Shizuku経由でアクセシビリティサービスを即座に有効化します</string>
@@ -93,7 +93,7 @@ BACKダブルタップで割り当てなし、5秒でキャンセル（BACK単�
     <string name="prefs_category_tools">その他</string>
     <string name="prefs_category_tests">テスト</string>
     <string name="prefs_open_touch_test">タッチ操作テストを開く</string>
-    <string name="prefs_open_touch_test_summary">タップ/ダブルタップ/ロングタップを検知して表示します</string>
+    <string name="prefs_open_touch_test_summary">タップ/ダブルタップ/長押しの検知や、スワイプ・ピンチ（ズーム）の動作を確認できます</string>
 
     <string name="prefs_reset_confirm_message">設定をデフォルトに戻します。よろしいですか？</string>
     <string name="prefs_reset_confirm_positive">戻す</string>
