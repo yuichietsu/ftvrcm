@@ -3,7 +3,7 @@
 
     <string name="accessibility_service_description">リモコン入力を監視して操作モード切替・タッチ操作を行います</string>
 
-    <string name="prefs_category_mode">タッチ操作の有効化</string>
+    <string name="prefs_category_mode">タッチ操作の有効化キーの設定</string>
     <string name="prefs_mode_current">タッチ操作</string>
     <string name="prefs_mode_current_summary">%1$s</string>
 
@@ -17,7 +17,8 @@ BACKダブルタップで割り当てなし、5秒でキャンセル（BACK単�
     <string name="prefs_key_capture_clear">割り当てなし</string>
     <string name="prefs_key_capture_unassigned">未割り当て</string>
 
-    <string name="prefs_category_mouse">高度なタッチ操作（Shizuku）</string>
+    <string name="prefs_category_touch_settings">タッチ操作の設定</string>
+    <string name="prefs_category_shizuku_settings">Shizukuの設定</string>
     <string name="prefs_category_cursor">カーソル</string>
     <string name="prefs_category_gestures">スワイプ/ズーム</string>
     <string name="prefs_category_key_mapping_cursor">カーソル操作</string>
@@ -66,7 +67,7 @@ BACKダブルタップで割り当てなし、5秒でキャンセル（BACK単�
     <string name="prefs_mouse_key_cursor_dpad_toggle_summary">タッチ操作中に操作キー（方向、選択、戻る）はリモコン本来の動作ができます</string>
 
     <!-- サブスクリーンタイトル -->
-    <string name="prefs_screen_shizuku_title">Shizuku設定</string>
+    <string name="prefs_screen_shizuku_title">Shizukuの詳細設定</string>
     <string name="prefs_screen_shizuku_summary">権限の許可やアクセシビリティの有効化を行います</string>
     <string name="prefs_screen_shizuku_disabled_summary">「Shizukuを使用する」をONにすると設定できます</string>
     <string name="prefs_category_shizuku">設定とテスト</string>
@@ -89,7 +90,7 @@ BACKダブルタップで割り当てなし、5秒でキャンセル（BACK単�
     <string name="prefs_category_swipe">スワイプ/スクロール</string>
     <string name="prefs_category_tuning_swipe">スワイプ/スクロール</string>
     <string name="prefs_category_tuning_zoom">ズーム</string>
-    <string name="prefs_category_tools">ツール</string>
+    <string name="prefs_category_tools">その他</string>
     <string name="prefs_category_tests">テスト</string>
     <string name="prefs_open_touch_test">タッチ操作テストを開く</string>
     <string name="prefs_open_touch_test_summary">タップ/ダブルタップ/ロングタップを検知して表示します</string>
@@ -106,10 +107,9 @@ BACKダブルタップで割り当てなし、5秒でキャンセル（BACK単�
     <!-- ダッシュボード用テキスト -->
     <string name="prefs_dashboard_touch_enabled">タッチ操作: 有効</string>
     <string name="prefs_dashboard_touch_disabled">タッチ操作: 無効</string>
-    <string name="prefs_dashboard_accessibility_on">アクセシビリティ: ON</string>
-    <string name="prefs_dashboard_accessibility_off">アクセシビリティ: OFF</string>
-    <string name="prefs_dashboard_shizuku_on">Shizuku: ON</string>
-    <string name="prefs_dashboard_shizuku_off">Shizuku: OFF</string>
+    <string name="prefs_dashboard_accessibility_on">アクセシビリティ: 動作中</string>
+    <string name="prefs_dashboard_accessibility_off">アクセシビリティ: 停止中</string>
+    <string name="prefs_dashboard_shizuku_running">Shizuku: 起動中</string>
     <string name="prefs_dashboard_shizuku_stopped">Shizuku: 未起動</string>
 
     <string name="mode_normal">無効</string>

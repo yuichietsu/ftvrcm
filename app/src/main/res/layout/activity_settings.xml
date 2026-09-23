@@ -18,7 +18,7 @@
         android:alpha="0.15"
         android:background="?android:attr/textColorPrimary" />
 
-    <!-- 固定ステータスバー：スクロールしても常に画面下部に表示 -->
+    <!-- 固定ステータスバー：スクロールしても常に画面下部に表示（サービス稼働状況） -->
     <LinearLayout
         android:id="@+id/dashboard_footer"
         android:layout_width="match_parent"
@@ -30,22 +30,6 @@
         android:paddingBottom="8dp">
 
         <TextView
-            android:id="@+id/tv_touch_status"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tv_separator1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="  |  "
-            android:textSize="14sp"
-            android:alpha="0.35" />
-
-        <TextView
             android:id="@+id/tv_accessibility_status"
             android:layout_width="0dp"
             android:layout_weight="1"
@@ -53,7 +37,7 @@
             android:textSize="14sp" />
 
         <TextView
-            android:id="@+id/tv_separator2"
+            android:id="@+id/tv_separator"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="  |  "

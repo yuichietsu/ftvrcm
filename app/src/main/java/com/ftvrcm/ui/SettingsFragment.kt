@@ -11,6 +11,7 @@ import android.provider.Settings
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityManager
+import android.util.Log
 import android.widget.Toast
 import androidx.core.content.getSystemService
 import androidx.appcompat.app.AlertDialog
@@ -92,15 +93,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
             true
         }
 
-        val shizukuServiceStatus = findPreference<Preference>("shizuku_service_status")
-        shizukuServiceStatus?.setOnPreferenceClickListener {
-            if (!ShizukuTouchInjector.isShizukuAvailable()) {
-                launchShizukuActivity()
-            } else {
-                Toast.makeText(requireContext(), getString(R.string.prefs_shizuku_status_running), Toast.LENGTH_SHORT).show()
-            }
-            true
-        }
 
         val shizukuPermissionPref = findPreference<Preference>("shizuku_permission")
         shizukuPermissionPref?.setOnPreferenceClickListener {
@@ -212,12 +204,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
                       else getString(R.string.prefs_screen_shizuku_disabled_summary)
         }
 
-        // トップレベル: Shizukuサービス状態
-        findPreference<Preference>("shizuku_service_status")?.apply {
-            isVisible = true
-            summary = if (isAlive) getString(R.string.prefs_shizuku_status_running)
-                      else getString(R.string.prefs_shizuku_status_stopped)
-        }
 
         // サブスクリーン内: Shizuku権限の許可
         findPreference<Preference>("shizuku_permission")?.apply {
@@ -315,19 +301,53 @@ class SettingsFragment : PreferenceFragmentCompat() {
     fun restorePreferenceFocus() {
         try {
             listView?.postDelayed({
-                if (!isAdded) return@postDelayed
+                if (!isAdded || isHidden) return@postDelayed
                 val lv = listView ?: return@postDelayed
+
+                // 1. 直前のViewが生きていてフォーカス可能・活性なら再フォーカス
                 val saved = savedFocusedView.get()
-                if (saved != null && saved.isAttachedToWindow && saved.isShown) {
-                    saved.requestFocus()
-                } else {
-                    val current = lv.focusedChild
-                    if (current == null) {
-                        val child = lv.findViewHolderForAdapterPosition(0)?.itemView ?: lv.getChildAt(0)
-                        child?.requestFocus() ?: lv.requestFocus()
+                if (saved != null && saved.isAttachedToWindow && saved.isShown && saved.isFocusable && saved.isEnabled) {
+                    if (saved.requestFocus()) {
+                        Log.d(TAG, "Restored focus to saved view")
+                        return@postDelayed
                     }
                 }
-            }, 100)
+
+                // 2. 既に子Viewのいずれかに有効なフォーカスがあればそのまま維持
+                val current = lv.focusedChild
+                if (current != null && current.isFocusable && current.isEnabled) {
+                    Log.d(TAG, "Current child already focused: $current")
+                    return@postDelayed
+                }
+
+                // 3. カテゴリ見出しや非活性Preferenceをスキップし、フォーカス可能かつ活性な最初のアイテムを探してフォーカス
+                val adapter = lv.adapter
+                val itemCount = adapter?.itemCount ?: 0
+                for (i in 0 until itemCount) {
+                    val holder = lv.findViewHolderForAdapterPosition(i)
+                    val itemView = holder?.itemView
+                    if (itemView != null && itemView.isFocusable && itemView.isEnabled) {
+                        if (itemView.requestFocus()) {
+                            Log.d(TAG, "Restored focus to adapter position $i")
+                            return@postDelayed
+                        }
+                    }
+                }
+
+                // 4. ViewHolderが未生成の場合はRecyclerViewの直下の子Viewを走査
+                for (i in 0 until lv.childCount) {
+                    val child = lv.getChildAt(i)
+                    if (child != null && child.isFocusable && child.isEnabled) {
+                        if (child.requestFocus()) {
+                            Log.d(TAG, "Restored focus to child view at $i")
+                            return@postDelayed
+                        }
+                    }
+                }
+
+                Log.d(TAG, "Fallback: requestFocus on RecyclerView directly")
+                lv.requestFocus()
+            }, 150)
         } catch (_: Throwable) {
         }
     }
@@ -388,20 +408,9 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
     private fun refreshDashboard() {
         val activity = activity as? SettingsActivity ?: return
-        val store = SettingsStore(requireContext())
-        val mode = store.getOperationMode()
-        val shizukuStatus = if (!store.isUseShizuku()) {
-            SettingsActivity.ShizukuStatus.OFF
-        } else if (ShizukuTouchInjector.isShizukuAvailable() && ShizukuTouchInjector.isPermissionGranted()) {
-            SettingsActivity.ShizukuStatus.ON
-        } else {
-            SettingsActivity.ShizukuStatus.UNAVAILABLE
-        }
-
         activity.updateDashboard(
-            touchEnabled = (mode == OperationMode.MOUSE),
             accessibilityOn = isAccessibilityServiceEnabled(),
-            shizukuStatus = shizukuStatus,
+            shizukuRunning = ShizukuTouchInjector.isShizukuAvailable(),
         )
     }
 
