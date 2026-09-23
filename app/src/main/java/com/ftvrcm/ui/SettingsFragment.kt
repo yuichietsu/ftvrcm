@@ -200,11 +200,21 @@ class SettingsFragment : PreferenceFragmentCompat() {
         val isShizuku = SettingsStore(requireContext()).isUseShizuku()
         val a11yEnabled = isAccessibilityServiceEnabled()
 
-        // トップレベル: Shizuku設定サブスクリーンの表示/非表示を切り替える
-        findPreference<Preference>("screen_shizuku")?.isVisible = isShizuku
+        // トップレベル: Shizuku設定サブスクリーン（非表示にせず非活性化）
+        findPreference<Preference>("screen_shizuku")?.apply {
+            isVisible = true
+            isEnabled = isShizuku
+            summary = if (isShizuku) getString(R.string.prefs_screen_shizuku_summary)
+                      else getString(R.string.prefs_screen_shizuku_disabled_summary)
+        }
 
-        // トップレベル: アクセシビリティ有効化（未有効かつShizuku使用時のみ表示）
-        findPreference<Preference>("enable_accessibility_shizuku")?.isVisible = !a11yEnabled && isShizuku
+        // トップレベル: アクセシビリティ有効化（非表示にせず非活性化）
+        findPreference<Preference>("enable_accessibility_shizuku")?.apply {
+            isVisible = true
+            isEnabled = !a11yEnabled && isShizuku
+            summary = if (a11yEnabled) getString(R.string.prefs_enable_accessibility_shizuku_already_enabled)
+                      else getString(R.string.prefs_enable_accessibility_shizuku_summary)
+        }
 
         val isAlive = ShizukuTouchInjector.isShizukuAvailable()
         val isGranted = ShizukuTouchInjector.isPermissionGranted()
@@ -218,13 +228,17 @@ class SettingsFragment : PreferenceFragmentCompat() {
             else getString(R.string.prefs_shizuku_permission_denied)
 
         findPreference<Preference>("shizuku_request_permission")?.apply {
+            isVisible = true
             isEnabled = isAlive && !isGranted
-            isVisible = !isGranted
+            summary = if (isGranted) getString(R.string.prefs_shizuku_request_permission_already_granted)
+                      else getString(R.string.prefs_shizuku_request_permission_summary)
         }
 
         findPreference<Preference>("shizuku_enable_accessibility")?.apply {
+            isVisible = true
             isEnabled = isAlive && isGranted && !a11yEnabled
-            isVisible = !a11yEnabled
+            summary = if (a11yEnabled) getString(R.string.prefs_enable_accessibility_shizuku_already_enabled)
+                      else getString(R.string.prefs_enable_accessibility_shizuku_summary)
         }
 
         findPreference<Preference>("shizuku_test_injection")?.isEnabled = isAlive && isGranted
@@ -241,6 +255,10 @@ class SettingsFragment : PreferenceFragmentCompat() {
     }
 
     private fun enableAccessibilityViaShizuku() {
+        if (isAccessibilityServiceEnabled()) {
+            Toast.makeText(requireContext(), getString(R.string.prefs_enable_accessibility_shizuku_already_enabled), Toast.LENGTH_SHORT).show()
+            return
+        }
         if (!ShizukuTouchInjector.isShizukuAvailable()) {
             Toast.makeText(requireContext(), getString(R.string.prefs_shizuku_status_stopped), Toast.LENGTH_LONG).show()
             return
@@ -369,8 +387,8 @@ class SettingsFragment : PreferenceFragmentCompat() {
     }
 
     private fun refreshRequiredStateSummary() {
-        // status_accessibility_service は削除済み。ダッシュボードのみ更新する。
         refreshDashboard()
+        refreshShizukuPreferences()
     }
 
     private fun refreshDashboard() {

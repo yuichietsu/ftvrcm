@@ -36,6 +36,7 @@ BACKダブルタップで割り当てなし、5秒でキャンセル（BACK単�
 
     <string name="prefs_enable_accessibility_shizuku">Shizukuでアクセシビリティを有効化</string>
     <string name="prefs_enable_accessibility_shizuku_summary">Shizuku特権シェル経由でアクセシビリティサービスを即座に有効化します</string>
+    <string name="prefs_enable_accessibility_shizuku_already_enabled">既に有効です</string>
     <string name="prefs_enable_accessibility_shizuku_success">アクセシビリティサービスを有効化しました</string>
     <string name="prefs_enable_accessibility_shizuku_failed">有効化に失敗しました: %1$s</string>
     <string name="prefs_shizuku_not_ready">Shizukuが未起動または権限がありません</string>
@@ -67,11 +68,13 @@ BACKダブルタップで割り当てなし、5秒でキャンセル（BACK単�
     <!-- サブスクリーンタイトル -->
     <string name="prefs_screen_shizuku_title">Shizuku設定</string>
     <string name="prefs_screen_shizuku_summary">特権Binder接続と権限状態を確認します</string>
+    <string name="prefs_screen_shizuku_disabled_summary">「Shizukuを使用する」をONにすると設定できます</string>
     <string name="prefs_category_shizuku">Shizuku（特権Binder）</string>
     <string name="prefs_shizuku_service_status">Shizukuサービス状態</string>
     <string name="prefs_shizuku_permission_status">Shizuku権限状態</string>
     <string name="prefs_shizuku_request_permission">Shizuku権限をリクエスト</string>
     <string name="prefs_shizuku_request_permission_summary">許可ダイアログを表示してftvrcmへのShizuku利用を許可します</string>
+    <string name="prefs_shizuku_request_permission_already_granted">既に許可されています</string>
     <string name="prefs_shizuku_open_app">Shizukuアプリを開く</string>
     <string name="prefs_shizuku_open_app_summary">Shizukuアプリを起動し、「承認されたアプリケーション」からftvrcmを許可してください</string>
     <string name="prefs_shizuku_open_app_dialog_title">Shizukuアプリでの許可手順</string>
