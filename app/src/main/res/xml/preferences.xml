@@ -142,13 +142,13 @@
         <PreferenceCategory android:title="@string/prefs_category_key_mapping_pinch">
 
             <com.ftvrcm.ui.KeyCapturePreference
-                android:key="mouse_key_pinch_in"
-                android:title="@string/prefs_mouse_key_pinch_in"
+                android:key="mouse_key_pinch_out"
+                android:title="@string/prefs_mouse_key_pinch_out"
                 android:defaultValue="0" />
 
             <com.ftvrcm.ui.KeyCapturePreference
-                android:key="mouse_key_pinch_out"
-                android:title="@string/prefs_mouse_key_pinch_out"
+                android:key="mouse_key_pinch_in"
+                android:title="@string/prefs_mouse_key_pinch_in"
                 android:defaultValue="0" />
 
         </PreferenceCategory>

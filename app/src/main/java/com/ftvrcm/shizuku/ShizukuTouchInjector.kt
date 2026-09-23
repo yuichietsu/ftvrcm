@@ -385,9 +385,9 @@ class ShizukuTouchInjector(
         x2End: Int,
         y2End: Int,
         durationMs: Long = 140,
-        isZoomOut: Boolean = false,
+        isPinchOut: Boolean = false,
     ): Boolean {
-        val type = if (isZoomOut) "shizuku_pinch_out" else "shizuku_pinch_in"
+        val type = if (isPinchOut) "shizuku_pinch_out" else "shizuku_pinch_in"
         val detail = "p1=($x1Start,$y1Start->$x1End,$y1End) p2=($x2Start,$y2Start->$x2End,$y2End) durationMs=$durationMs"
         record(type = type, status = "DISPATCHING", detail = detail)
 
@@ -551,7 +551,7 @@ class ShizukuTouchInjector(
             x2End = x2End,
             y2End = y2End,
             durationMs = durationMs,
-            isZoomOut = false,
+            isPinchOut = false,
         )
     }
 
@@ -576,7 +576,7 @@ class ShizukuTouchInjector(
             x2End = x2End,
             y2End = y2End,
             durationMs = durationMs,
-            isZoomOut = true,
+            isPinchOut = true,
         )
     }
 

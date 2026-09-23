@@ -44,8 +44,8 @@ BACKダブルタップで割り当てなし、5秒でキャンセル（BACK単�
     <string name="prefs_mouse_key_scroll_left">左スクロール/スワイプ</string>
     <string name="prefs_mouse_key_scroll_right">右スクロール/スワイプ</string>
 
-    <string name="prefs_mouse_key_pinch_in">ズームイン</string>
-    <string name="prefs_mouse_key_pinch_out">ズームアウト</string>
+    <string name="prefs_mouse_key_pinch_out">ズームイン（ピンチアウト）</string>
+    <string name="prefs_mouse_key_pinch_in">ズームアウト（ピンチイン）</string>
 
     <string name="prefs_mouse_swipe_distance">スワイプ距離（%）</string>
     <string name="prefs_mouse_swipe_distance_summary">画面の短辺を100%としたときの移動割合</string>
