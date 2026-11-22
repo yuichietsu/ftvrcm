@@ -4,57 +4,59 @@ FireTV Stick用リモコンタッチ操作アプリケーション
 
 ## 概要
 
-ftvrcm（FireTV Remote Control Mouse）は、Fire TV Stickのリモコンで画面上のポインタを動かし、タッチ操作（タップ等）を行えるAndroid TVアプリです。リモコンの操作モードを「通常操作」と「タッチ操作」で切り替え、他のアプリケーション実行中でも常に操作モードを変更できます。
+ftvrcm（FireTV Remote Control Mouse）は、Fire TV Stickのリモコンで画面上のポインタを動かし、タッチ操作（タップ・スワイプ・ピンチズーム等）を行えるAndroid TVアプリです。リモコンの操作モードを「無効（通常操作）」と「有効（タッチ操作）」で切り替え、他のアプリケーション実行中でも常に操作モードを変更できます。
 
 ## 主な機能
 
 - **操作モード切り替え**：リモコンを通常動作またはタッチ操作モードで使用
-- **タッチ操作**：リモコンキーでポインタ移動・タップ/ロングタップ
-- **設定画面**：モード切り替えキー、タッチ操作キー割り当て、各種オプションを変更
+- **タッチ操作**：リモコンキーでカーソル移動・タップ/ロングタップ・4方向スワイプ/スクロール・2本指ピンチズーム
+- **Shizuku連携（推奨）**：Shizuku特権Binderによる0ms遅延のタッチ注入・ネイティブ2本指ピンチ操作・アプリ内からのアクセシビリティ即時有効化
+- **リモコン操作パススルー切り替え**：タッチ操作モード中でも、一時的にリモコン本来のキー操作（方向・選択・戻るなど）を透過可能
+- **設定画面**：有効化/無効化キー、キーマッピング、カーソル設定、動作チューニング、Shizuku設定を変更
 - **バックグラウンド監視**：他のアプリ実行中も操作モード切り替え可能
 - **軽量実装**：CPU・メモリ消費を最小限に抑えた設計
-
-※「カスタムアクション（ボタンに任意の処理を割り当て）」機能は、現行版では搭載していません。
 
 ## 使い方（利用者向け）
 
 ### 1. 初期設定（必須）
 
-1. 本アプリのアクセシビリティサービスを有効化します
-   - 端末の設定 → アクセシビリティ →（ダウンロードしたサービス等）→ `ftvrcm` をON
-2. 設定画面で「必要状態：アクセシビリティサービス」がONになっていることを確認します
+1. （推奨）Shizukuを起動し、アプリ内の **Shizukuの設定** → **Shizukuの詳細設定** → **Shizuku権限の許可** から権限を許可します
+2. 本アプリのアクセシビリティサービスを有効化します
+   - **Shizuku経由（簡単）**：**Shizukuの詳細設定** → **アクセシビリティを有効化** を選択
+   - **設定UI**：端末の **設定** → **ユーザーコントロール** → **アクセシビリティ**（または「ダウンロードしたサービス」）→ `ftvrcm` をON
+   - **ADB**：後述のADBコマンドで有効化
+3. 設定画面下部のステータスバーで「**アクセシビリティ: 動作中**」（およびShizuku利用時は「**Shizuku: 起動中**」）になっていることを確認します
 
 ### 2. 操作モード
 
-- **通常操作**：リモコンは通常どおり動作（十字キーでフォーカス移動、決定で選択など）
-- **タッチ操作**：画面上のカーソルを動かしてタッチ操作を行います
+- **無効（通常操作）**：リモコンは通常どおり動作（十字キーでフォーカス移動、決定で選択など）
+- **有効（タッチ操作）**：画面上のカーソルを動かしてタッチ操作を行います
 
-モード切り替えは、設定の「モード切り替えキー（デフォルト：`MENU` 長押し）」で行います。
+モード切り替えは、設定の「有効化/無効化キー（デフォルト：`MENU` 長押し）」で行います。
 
 ### 3. タッチ操作（カーソル操作）
 
 タッチ操作モード中は、設定したキーで以下を行います。
 
-- **移動**：上/下/左/右の移動キーでカーソル移動（押しっぱなしで連続移動・加速）
-- **タップ**：タップキー（短押し）
-- **ロングタップ**：タップキー（長押し）
-- **スクロール**：上/下/左/右スクロールキー（スクロール可能なビューに対してスクロール命令を送ります）
+- **カーソル移動**：十字キー（上/下/左/右）でカーソル移動（押しっぱなしで連続移動・加速）
+- **タップ / ロングタップ**：決定ボタン（短押し / 長押し）
+- **スワイプ / スクロール**：`CH+` / `CH-`（上下）、`巻き戻し` / `早送り`（左右）
+  - Shizuku有効時はスワイプジェスチャを注入し、無効時は `ACTION_SCROLL_*` を送出します
+- **ズーム操作（ピンチ）**：`戻る(BACK)`（ズームイン / ピンチアウト）、`再生/一時停止`（ズームアウト / ピンチイン）
 
-### 4. 「カーソル/方向キー切り替え」
+### 4. 「リモコン操作パススルー切り替え」
 
-タッチ操作モードでも、任意のキーで「カーソル/方向キー」を切り替えられます。
+タッチ操作モード中でも、設定したキー（デフォルト：`MENU` 短押し）でパススルーを切り替えられます。
 
-- **カーソル**：本アプリがキー入力を消費してカーソル操作します（カーソルは輪っか表示）
-- **方向キー**：`DPAD_UP/DOWN/LEFT/RIGHT/DPAD_CENTER` は通常操作として端末に渡します（カーソルはDPAD風表示）
-
-「方向キー」にしておくと、タッチ操作モードでも通常のフォーカス移動を行いやすくなります。
+- **カーソル**：本アプリがキー入力を消費してタッチ操作します（カーソルは輪っか表示）
+- **パススルー（方向キー）**：割り当てられたタッチ操作キーを含め、リモコン本来の操作としてシステムに渡します（カーソルはDPAD風アイコン表示）
 
 ### 5. 動作確認（タッチ操作テスト）
 
-設定画面 →「動作確認」→「タッチ操作テストを開く」から起動できます。
+設定画面 → **その他** → **タッチ操作テストを開く** から起動できます。
 
-- 画面上部に「最終ジェスチャ」が表示され、直近のクリック/スクロール命令が成功したか確認できます
-- ListView が用意されており、スクロールやタップが端末側で成立しているか確認できます
+- 画面上部に「最終ジェスチャ」が表示され、直近のタップ/スワイプ/ピンチ/スクロール命令の結果を確認できます
+- ボタン（タップ/長押し）、ListView（タップ/ダブルタップ/長押し/縦スクロール）、スワイプ/ズーム確認エリアが用意されています
 
 ## 対応デバイス
 
@@ -65,7 +67,8 @@ ftvrcm（FireTV Remote Control Mouse）は、Fire TV Stickのリモコンで画�
 
 - **言語**：Kotlin
 - **ビルドツール**：Gradle
-- **アーキテクチャ**：軽量構成（画面はPreference中心）
+- **アーキテクチャ**：軽量構成（Preference画面 + AccessibilityService）
+- **特権操作連携**：Shizuku API (`dev.rikka.shizuku`) + HiddenApiBypass
 - **設定保存**：SharedPreferences
 - **配布形式**：APK（野良アプリ）
 
@@ -78,15 +81,14 @@ ftvrcm（FireTV Remote Control Mouse）は、Fire TV Stickのリモコンで画�
 - [docs/diataxis/tutorials/development-setup.md](docs/diataxis/tutorials/development-setup.md) ― 開発環境構築：SDK セットアップ〜ビルド
 
 ### 作業ガイド（How-to）
+- [docs/diataxis/how-to/setup-shizuku.md](docs/diataxis/how-to/setup-shizuku.md) ― Shizuku をセットアップする
 - [docs/diataxis/how-to/enable-accessibility-service.md](docs/diataxis/how-to/enable-accessibility-service.md) ― AccessibilityService を有効化する
 - [docs/diataxis/how-to/build-and-install.md](docs/diataxis/how-to/build-and-install.md) ― APK をビルドしてインストールする
-- [docs/diataxis/how-to/setup-proxy-server.md](docs/diataxis/how-to/setup-proxy-server.md) ― プロキシサーバーを起動する
 - [docs/diataxis/how-to/touch-test.md](docs/diataxis/how-to/touch-test.md) ― タッチ操作テストの使い方
 - [docs/diataxis/how-to/troubleshooting.md](docs/diataxis/how-to/troubleshooting.md) ― トラブルシューティング
 
 ### リファレンス（Reference）
 - [docs/diataxis/reference/shared-preferences.md](docs/diataxis/reference/shared-preferences.md) ― SharedPreferences スキーマ（設定キー一覧）
-- [docs/diataxis/reference/proxy-server.md](docs/diataxis/reference/proxy-server.md) ― プロキシサーバー API・環境変数・CLI 引数
 
 ### 解説（Explanation）
 - [docs/diataxis/explanation/architecture.md](docs/diataxis/explanation/architecture.md) ― アーキテクチャ概要・設計思想
@@ -94,6 +96,7 @@ ftvrcm（FireTV Remote Control Mouse）は、Fire TV Stickのリモコンで画�
 ## 開発状況
 
 - ✅ 基本実装（アクセシビリティ + カーソル操作）
+- ✅ Shizuku特権Binderによる0msタッチ注入・2本指ピンチ操作
 - ✅ 動作確認画面（タッチ操作テスト）
 - ⏳ 実機検証を継続しつつ操作感を調整中
 
@@ -110,11 +113,10 @@ ftvrcm（FireTV Remote Control Mouse）は、Fire TV Stickのリモコンで画�
 4. `./gradlew :app:assembleDebug`
 5. 生成物: `app/build/outputs/apk/debug/app-debug.apk`
 
-
 ## Fire TVでアクセシビリティ項目が見当たらない場合（ADBで有効化）
 
 Fire OSのビルドや端末設定によっては、設定UIから「ダウンロードしたサービス（Accessibility Service）」のトグルが見つからないことがあります。
-この場合でも、ADBが使えるならシェルから有効化できることがあります。
+この場合はShizuku経由（アプリ内ボタン）またはADBシェルから有効化できます。
 
 1. Fire TVで`開発者オプション` → `ADBデバッグ`をON
 2. PCから接続（同一LAN）
@@ -125,17 +127,17 @@ Fire OSのビルドや端末設定によっては、設定UIから「ダウン�
 4. 反映しない場合は再起動
    - `adb reboot`
 
-有効化後、BACK長押しでモード切替できればOKです（設定画面の「現在のモード」でも確認できます）。
+有効化後、設定画面下部のステータスバーで「アクセシビリティ: 動作中」になることを確認してください。
 補足：このリポジトリでは `local.properties` を `.gitignore` 済みで、`sdk.dir` でSDK位置を指定できます。
 
 ## 既知の注意点（Fire TV）
 
-- 一部のFire OSでは、特定キーの長押しがシステム側に予約され、長押しイベントがアプリに届きにくい場合があります。
-- その場合は設定画面で「モード切り替えキー」を別のキーに変更してください（デフォルトは`BACK`長押し）。
+- 一部のFire OSでは、`BACK`キーなどの長押しがシステム側に予約され、長押しイベントがアプリに届きにくかったり、アクセシビリティサービスが無効化されたりする場合があります。
+- デフォルトの「有効化/無効化キー」は `MENU` 長押しに設定されています。変更する場合も `BACK` 長押しは避けることを推奨します。
 
 ## トラブルシュート
 
-- 設定UIにアクセシビリティのトグルが出ない場合は、[docs/diataxis/how-to/troubleshooting.md](docs/diataxis/how-to/troubleshooting.md) を参照してください（ADBで有効化できます）。
+- 設定UIにアクセシビリティのトグルが出ない場合やShizuku連携で問題が起きた場合は、[docs/diataxis/how-to/troubleshooting.md](docs/diataxis/how-to/troubleshooting.md) を参照してください。
 - ポインタは出るがクリックしない場合も、同ドキュメントに原因切り分けをまとめています。
 
 ## ライセンス
