@@ -47,13 +47,19 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
     private val shizukuBinderReceivedListener = Shizuku.OnBinderReceivedListener {
         activity?.runOnUiThread {
-            if (isAdded) refreshShizukuPreferences()
+            if (isAdded) {
+                refreshShizukuPreferences()
+                restorePreferenceFocus()
+            }
         }
     }
 
     private val shizukuBinderDeadListener = Shizuku.OnBinderDeadListener {
         activity?.runOnUiThread {
-            if (isAdded) refreshShizukuPreferences()
+            if (isAdded) {
+                refreshShizukuPreferences()
+                restorePreferenceFocus()
+            }
         }
     }
 
@@ -69,9 +75,20 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
     /**
      * hide 直前にフォーカスしていた View の弱参照。
-     * hide/show でViewは生きているため、アダプター位置でなく View 導第で直接復元する。
+     * hide/show でViewは生きているため、アダプター位置でなく View 参照で直接復元する。
      */
     private var savedFocusedView = WeakReference<android.view.View>(null)
+
+    private val restoreFocusRunnable = Runnable {
+        performRestorePreferenceFocus()
+    }
+
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        // Preference の有効/無効切り替え時に DefaultItemAnimator が ViewHolder を差し替えると
+        // フォーカスが外れるため、変更アニメーションを無効化する。
+        listView?.itemAnimator = null
+    }
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
 
@@ -177,7 +194,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         if (hidden) {
             savedFocusedView = WeakReference(listView?.focusedChild)
         } else {
-            savedFocusedView.get()?.requestFocus()
+            restorePreferenceFocus()
         }
     }
 
@@ -261,6 +278,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 }
                 refreshRequiredStateSummary()
                 refreshShizukuPreferences()
+                restorePreferenceFocus()
             }
         }.start()
     }
@@ -300,56 +318,74 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
     fun restorePreferenceFocus() {
         try {
-            listView?.postDelayed({
-                if (!isAdded || isHidden) return@postDelayed
-                val lv = listView ?: return@postDelayed
-
-                // 1. 直前のViewが生きていてフォーカス可能・活性なら再フォーカス
-                val saved = savedFocusedView.get()
-                if (saved != null && saved.isAttachedToWindow && saved.isShown && saved.isFocusable && saved.isEnabled) {
-                    if (saved.requestFocus()) {
-                        Log.d(TAG, "Restored focus to saved view")
-                        return@postDelayed
-                    }
-                }
-
-                // 2. 既に子Viewのいずれかに有効なフォーカスがあればそのまま維持
-                val current = lv.focusedChild
-                if (current != null && current.isFocusable && current.isEnabled) {
-                    Log.d(TAG, "Current child already focused: $current")
-                    return@postDelayed
-                }
-
-                // 3. カテゴリ見出しや非活性Preferenceをスキップし、フォーカス可能かつ活性な最初のアイテムを探してフォーカス
-                val adapter = lv.adapter
-                val itemCount = adapter?.itemCount ?: 0
-                for (i in 0 until itemCount) {
-                    val holder = lv.findViewHolderForAdapterPosition(i)
-                    val itemView = holder?.itemView
-                    if (itemView != null && itemView.isFocusable && itemView.isEnabled) {
-                        if (itemView.requestFocus()) {
-                            Log.d(TAG, "Restored focus to adapter position $i")
-                            return@postDelayed
-                        }
-                    }
-                }
-
-                // 4. ViewHolderが未生成の場合はRecyclerViewの直下の子Viewを走査
-                for (i in 0 until lv.childCount) {
-                    val child = lv.getChildAt(i)
-                    if (child != null && child.isFocusable && child.isEnabled) {
-                        if (child.requestFocus()) {
-                            Log.d(TAG, "Restored focus to child view at $i")
-                            return@postDelayed
-                        }
-                    }
-                }
-
-                Log.d(TAG, "Fallback: requestFocus on RecyclerView directly")
-                lv.requestFocus()
-            }, 150)
+            val lv = listView ?: return
+            lv.removeCallbacks(restoreFocusRunnable)
+            lv.post(restoreFocusRunnable)
         } catch (_: Throwable) {
         }
+    }
+
+    private fun performRestorePreferenceFocus() {
+        try {
+            if (!isAdded || isHidden) return
+            val lv = listView ?: return
+            if (lv.isComputingLayout) {
+                lv.post(restoreFocusRunnable)
+                return
+            }
+
+            // 1. 直前のViewが生きていてフォーカス可能・活性なら再フォーカス
+            val saved = savedFocusedView.get()
+            if (saved != null && saved.isAttachedToWindow && saved.isShown && saved.isFocusable && saved.isEnabled) {
+                if (saved.requestFocus()) {
+                    Log.d(TAG, "Restored focus to saved view")
+                    return
+                }
+            } else {
+                savedFocusedView.clear()
+            }
+
+            // 2. 既に子Viewのいずれかに有効なフォーカスがあればそのまま維持
+            val current = lv.focusedChild
+            if (current != null && current.isShown && current.isFocusable && current.isEnabled) {
+                Log.d(TAG, "Current child already focused: $current")
+                return
+            }
+
+            // 3. カテゴリ見出しや非活性Preferenceをスキップし、フォーカス可能かつ活性な最初のアイテムを探してフォーカス
+            val adapter = lv.adapter
+            val itemCount = adapter?.itemCount ?: 0
+            for (i in 0 until itemCount) {
+                val holder = lv.findViewHolderForAdapterPosition(i)
+                val itemView = holder?.itemView
+                if (itemView != null && itemView.isShown && itemView.isFocusable && itemView.isEnabled) {
+                    if (itemView.requestFocus()) {
+                        Log.d(TAG, "Restored focus to adapter position $i")
+                        return
+                    }
+                }
+            }
+
+            // 4. ViewHolderが未生成の場合はRecyclerViewの直下の子Viewを走査
+            for (i in 0 until lv.childCount) {
+                val child = lv.getChildAt(i)
+                if (child != null && child.isShown && child.isFocusable && child.isEnabled) {
+                    if (child.requestFocus()) {
+                        Log.d(TAG, "Restored focus to child view at $i")
+                        return
+                    }
+                }
+            }
+
+            Log.d(TAG, "Fallback: requestFocus on RecyclerView directly")
+            lv.requestFocus()
+        } catch (_: Throwable) {
+        }
+    }
+
+    override fun onDestroyView() {
+        listView?.removeCallbacks(restoreFocusRunnable)
+        super.onDestroyView()
     }
 
     override fun onDestroy() {
