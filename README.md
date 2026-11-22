@@ -16,6 +16,13 @@ ftvrcm（FireTV Remote Control Mouse）は、Fire TV Stickのリモコンで画�
 - **バックグラウンド監視**：他のアプリ実行中も操作モード切り替え可能
 - **軽量実装**：CPU・メモリ消費を最小限に抑えた設計
 
+## ダウンロード
+
+ビルド済みの署名付き APK は [GitHub Releases](https://github.com/yuichietsu/ftvrcm/releases) からダウンロードできます（最新 5 件の自動ビルドを掲載しています）。
+
+- **ファイル名**: `ftvrcm-v*-release.apk`
+- **インストール方法**: Downloader アプリや `adb install` 等で Fire TV Stick にインストールしてください。
+
 ## 使い方（利用者向け）
 
 ### 1. 初期設定（必須）
