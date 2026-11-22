@@ -59,8 +59,3 @@ release.keyPassword=<パスワード>
 ```
 
 生成物: `app/build/outputs/apk/release/app-release.apk`
-
-## 6. プロキシサーバー（オプション）
-
-ADB プロキシ方式を使う場合は Node.js（v18 以上）が必要です。
-詳細は [プロキシサーバーを起動する](../how-to/setup-proxy-server.md) を参照してください。
