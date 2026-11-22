@@ -3,6 +3,11 @@ name: FTVRCM - Build and Release APK
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/prompts/**'
+      - '.github/agents/**'
   workflow_dispatch:
 
 permissions:
