@@ -96,6 +96,7 @@ ftvrcm（FireTV Remote Control Mouse）は、Fire TV Stickのリモコンで画�
 
 ### リファレンス（Reference）
 - [docs/diataxis/reference/shared-preferences.md](docs/diataxis/reference/shared-preferences.md) ― SharedPreferences スキーマ（設定キー一覧）
+- [docs/diataxis/reference/app-compatibility.md](docs/diataxis/reference/app-compatibility.md) ― アプリ・ゲーム動作確認一覧（リモコンのみ / ftvrcm使用）
 
 ### 解説（Explanation）
 - [docs/diataxis/explanation/architecture.md](docs/diataxis/explanation/architecture.md) ― アーキテクチャ概要・設計思想

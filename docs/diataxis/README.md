@@ -26,6 +26,7 @@ ftvrcm のドキュメントは [Diátaxis](https://diataxis.fr/) の4領域に�
 | ファイル | 内容 |
 |---------|------|
 | [reference/shared-preferences.md](reference/shared-preferences.md) | SharedPreferences スキーマ（設定キー一覧） |
+| [reference/app-compatibility.md](reference/app-compatibility.md) | アプリ・ゲーム動作確認一覧（リモコンのみ / ftvrcm使用） |
 
 ## Explanation（解説）
 
