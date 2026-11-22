@@ -35,3 +35,6 @@ google-services.json
 
 # Node.js
 node_modules/
+
+# VS Code
+.vscode/
